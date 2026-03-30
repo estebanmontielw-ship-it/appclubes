@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Save } from "lucide-react"
+import { ProfileSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS, CIUDADES_PY } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
 import PhotoUpload from "@/components/profile/PhotoUpload"
@@ -88,11 +89,7 @@ export default function PerfilPage() {
   }
 
   if (!perfil) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
-      </div>
-    )
+    return <ProfileSkeleton />
   }
 
   const estadoColor: Record<string, "success" | "warning" | "destructive" | "secondary"> = {

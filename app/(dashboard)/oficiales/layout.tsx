@@ -53,17 +53,23 @@ export default function DashboardLayout({
       <Sidebar roles={roles} onLogout={handleLogout} />
 
       {/* Mobile sidebar overlay */}
-      {menuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          <div
-            className="fixed inset-0 bg-black/50"
-            onClick={() => setMenuOpen(false)}
-          />
-          <div className="fixed inset-y-0 left-0 w-64 bg-white z-50">
-            <Sidebar roles={roles} onLogout={handleLogout} />
-          </div>
+      <div
+        className={`fixed inset-0 z-50 md:hidden transition-opacity duration-200 ${
+          menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+        }`}
+      >
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={() => setMenuOpen(false)}
+        />
+        <div
+          className={`fixed inset-y-0 left-0 w-64 bg-white z-50 shadow-2xl transition-transform duration-200 ease-out ${
+            menuOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+        >
+          <Sidebar roles={roles} onLogout={handleLogout} />
         </div>
-      )}
+      </div>
 
       <div className="flex-1 flex flex-col min-h-screen">
         <Navbar

@@ -108,7 +108,7 @@ export default function CarnetPage() {
         <div
           className={`px-6 py-4 flex items-center gap-3 ${
             isVerified
-              ? "bg-gradient-to-r from-orange-500 to-orange-600"
+              ? "bg-gradient-to-r from-blue-800 to-blue-900"
               : "bg-gray-400"
           }`}
         >

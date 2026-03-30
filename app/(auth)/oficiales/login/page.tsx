@@ -59,23 +59,24 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-4 h-20 w-20 object-contain" />
-          <CardTitle className="text-2xl">CPB Oficiales</CardTitle>
-          <CardDescription>
-            Iniciá sesión para acceder al portal
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-red-50 px-4">
+      <Card className="w-full max-w-md shadow-lg border-0 shadow-gray-200/50">
+        <CardHeader className="text-center pb-2">
+          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain drop-shadow-sm" />
+          <CardTitle className="text-2xl font-bold text-gray-900">CPB Oficiales</CardTitle>
+          <CardDescription className="text-gray-500">
+            Confederación Paraguaya de Basketball
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-gray-700">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="tu@email.com"
+                className="h-11"
                 {...register("email")}
               />
               {errors.email && (
@@ -84,10 +85,10 @@ export default function LoginPage() {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password" className="text-gray-700">Contraseña</Label>
                 <Link
                   href="/oficiales/recuperar"
-                  className="text-sm text-primary hover:underline"
+                  className="text-xs text-primary hover:underline font-medium"
                 >
                   ¿Olvidaste tu contraseña?
                 </Link>
@@ -96,6 +97,7 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 placeholder="••••••••"
+                className="h-11"
                 {...register("password")}
               />
               {errors.password && (
@@ -103,14 +105,14 @@ export default function LoginPage() {
               )}
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={loading}>
+          <CardFooter className="flex flex-col gap-4 pt-2">
+            <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Iniciar sesión
             </Button>
-            <p className="text-sm text-muted-foreground text-center">
+            <p className="text-sm text-gray-500 text-center">
               ¿No tenés cuenta?{" "}
-              <Link href="/oficiales/registro" className="text-primary hover:underline font-medium">
+              <Link href="/oficiales/registro" className="text-primary hover:underline font-semibold">
                 Registrate
               </Link>
             </p>

@@ -50,18 +50,20 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
   ]
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 md:min-h-screen bg-white border-r">
+    <aside className="hidden md:flex md:flex-col md:w-64 md:min-h-screen bg-white border-r border-gray-100">
       {/* Logo */}
-      <div className="p-6 border-b">
-        <Link href="/oficiales" className="flex items-center gap-2">
-          <img src="/logo-cpb.jpg" alt="CPB" className="h-8 w-8 object-contain" />
-          <span className="font-semibold text-lg">Oficiales</span>
+      <div className="p-5 border-b border-gray-100">
+        <Link href="/oficiales" className="flex items-center gap-3">
+          <img src="/logo-cpb.jpg" alt="CPB" className="h-9 w-9 object-contain" />
+          <div>
+            <span className="font-bold text-base text-gray-900">CPB Oficiales</span>
+          </div>
         </Link>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-2">
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 mb-2">
           Mi cuenta
         </p>
         {userLinks.map((link) => (
@@ -76,8 +78,8 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
 
         {isAdmin && (
           <>
-            <div className="my-4 border-t" />
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-3 mb-2">
+            <div className="my-4 mx-3 border-t border-gray-100" />
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 mb-2">
               Administración
             </p>
             {adminLinks.map((link) => (
@@ -94,10 +96,10 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
       </nav>
 
       {/* Logout */}
-      <div className="p-4 border-t">
+      <div className="p-3 border-t border-gray-100">
         <button
           onClick={onLogout}
-          className="flex items-center gap-3 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-gray-100 rounded-md w-full transition-colors"
+          className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg w-full transition-all duration-150"
         >
           <LogOut className="h-4 w-4" />
           Cerrar sesión
@@ -122,13 +124,13 @@ function NavLink({
     <Link
       href={href}
       className={cn(
-        "flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+        "flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-150",
         active
-          ? "bg-primary/10 text-primary font-medium"
-          : "text-muted-foreground hover:text-foreground hover:bg-gray-100"
+          ? "bg-primary text-white font-medium shadow-sm"
+          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
       )}
     >
-      <Icon className="h-4 w-4" />
+      <Icon className={cn("h-[18px] w-[18px]", active ? "text-white" : "text-gray-400")} />
       {label}
     </Link>
   )

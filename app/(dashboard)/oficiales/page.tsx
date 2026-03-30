@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle } from "lucide-react"
+import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
 
@@ -36,11 +37,7 @@ export default function DashboardPage() {
   }, [])
 
   if (!data || !data.usuario) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-pulse text-muted-foreground">Cargando...</div>
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   const { usuario, unreadNotifications } = data
