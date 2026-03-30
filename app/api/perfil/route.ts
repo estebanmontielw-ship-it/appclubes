@@ -15,13 +15,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
-    const { telefono, ciudad } = await request.json()
+    const { telefono, ciudad, fotoCarnetUrl } = await request.json()
 
     const usuario = await prisma.usuario.update({
       where: { id: session.user.id },
       data: {
         ...(telefono && { telefono }),
         ...(ciudad && { ciudad }),
+        ...(fotoCarnetUrl !== undefined && { fotoCarnetUrl }),
       },
       include: { roles: true },
     })

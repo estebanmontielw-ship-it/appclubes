@@ -18,6 +18,7 @@ import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Save } from "lucide-react"
 import { ROL_LABELS, CIUDADES_PY } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
+import PhotoUpload from "@/components/profile/PhotoUpload"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
 
 interface PerfilData {
@@ -122,16 +123,15 @@ export default function PerfilPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Photo */}
-          {perfil.fotoCarnetUrl && (
-            <div className="flex justify-center mb-4">
-              <img
-                src={perfil.fotoCarnetUrl}
-                alt="Foto carnet"
-                className="h-24 w-24 rounded-full object-cover border-2 border-gray-200"
-              />
-            </div>
-          )}
+          {/* Photo Upload */}
+          <div className="mb-4">
+            <PhotoUpload
+              currentPhotoUrl={perfil.fotoCarnetUrl}
+              onPhotoUpdated={(url) =>
+                setPerfil((prev) => (prev ? { ...prev, fotoCarnetUrl: url } : prev))
+              }
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
