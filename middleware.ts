@@ -5,9 +5,10 @@ import { createClient } from "@/utils/supabase/middleware"
 export async function middleware(req: NextRequest) {
   const { supabase, response } = createClient(req)
 
+  // Refresh session — this is important for keeping cookies alive
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const pathname = req.nextUrl.pathname
 
@@ -17,22 +18,21 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/oficiales/recuperar") ||
     pathname.startsWith("/oficiales/verificar-email")
   const isPublicRoute = pathname.startsWith("/verificar")
-  const isAdminRoute = pathname.startsWith("/oficiales/admin")
-  const isCallbackRoute = pathname.startsWith("/api/auth/callback")
+  const isApiRoute = pathname.startsWith("/api")
 
-  // Public routes and callback — always allow
-  if (isPublicRoute || isCallbackRoute) {
+  // Public routes and API routes — always allow
+  if (isPublicRoute || isApiRoute) {
     return response
   }
 
-  // No session and protected route → redirect to login
-  if (!session && !isAuthRoute) {
+  // No user and protected route → redirect to login
+  if (!user && !isAuthRoute) {
     const redirectUrl = new URL("/oficiales/login", req.url)
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Has session and on auth route → redirect to dashboard
-  if (session && isAuthRoute) {
+  // Has user and on auth route → redirect to dashboard
+  if (user && isAuthRoute) {
     const redirectUrl = new URL("/oficiales", req.url)
     return NextResponse.redirect(redirectUrl)
   }

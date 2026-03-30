@@ -6,6 +6,7 @@ import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { loginSchema, type LoginFormData } from "@/lib/validations"
+import { createClient } from "@/utils/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,18 +30,17 @@ export default function LoginPage() {
   const onSubmit = async (data: LoginFormData) => {
     setLoading(true)
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+      const supabase = createClient()
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
       })
 
-      if (!res.ok) {
-        const error = await res.json()
+      if (error) {
         toast({
           variant: "destructive",
           title: "Error al iniciar sesión",
-          description: error.error,
+          description: "Email o contraseña incorrectos",
         })
         return
       }

@@ -3,20 +3,23 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
     const {
-      data: { session },
-    } = await supabase.auth.getSession()
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-    if (!session?.user) {
+    if (authError || !user) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
     const usuario = await prisma.usuario.findUnique({
-      where: { id: session.user.id },
+      where: { id: user.id },
       include: { roles: true },
     })
 
@@ -29,7 +32,8 @@ export async function GET() {
     })
 
     return NextResponse.json({ usuario, unreadNotifications })
-  } catch {
+  } catch (error) {
+    console.error("Error in /api/me:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
