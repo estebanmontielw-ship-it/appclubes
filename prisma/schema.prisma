@@ -1,0 +1,463 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── ROLES ───────────────────────────────────────────────
+enum TipoRol {
+  SUPER_ADMIN
+  INSTRUCTOR
+  DESIGNADOR
+  ARBITRO
+  MESA
+  ESTADISTICO
+}
+
+enum EstadoVerificacion {
+  PENDIENTE
+  VERIFICADO
+  RECHAZADO
+  SUSPENDIDO
+}
+
+// ─── USUARIOS ────────────────────────────────────────────
+model Usuario {
+  id                 String             @id @default(uuid())
+  email              String             @unique
+  nombre             String
+  apellido           String
+  cedula             String             @unique
+  fechaNacimiento    DateTime
+  telefono           String
+  ciudad             String
+  fotoCedulaUrl      String?
+  fotoCarnetUrl      String?
+  estadoVerificacion EstadoVerificacion @default(PENDIENTE)
+  verificadoPor      String?
+  verificadoEn       DateTime?
+  motivoRechazo      String?
+  qrToken            String?            @unique
+  activo             Boolean            @default(true)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  roles                UsuarioRol[]
+  inscripciones        Inscripcion[]
+  progresoModulos      ProgresoModulo[]
+  respuestasExamen     RespuestaExamen[]
+  certificados         Certificado[]
+  designaciones        Designacion[]
+  honorarios           Honorario[]
+  notificaciones       Notificacion[]
+  notifEnviadas        Notificacion[]     @relation("NotifEnviadas")
+  cursosComoInstructor Curso[]            @relation("InstructorCurso")
+
+  @@map("usuarios")
+}
+
+model UsuarioRol {
+  id        String   @id @default(uuid())
+  usuarioId String
+  rol       TipoRol
+  createdAt DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, rol])
+  @@map("usuario_roles")
+}
+
+// ─── CURSOS ──────────────────────────────────────────────
+enum DisciplinaCurso {
+  ARBITROS
+  MESA
+  ESTADISTICOS
+}
+
+enum NivelCurso {
+  A_INICIAL
+  B_ACTUALIZACION
+  C_AVANZADO
+}
+
+enum EstadoCurso {
+  BORRADOR
+  ACTIVO
+  INACTIVO
+}
+
+model Curso {
+  id            String          @id @default(uuid())
+  nombre        String
+  descripcion   String          @db.Text
+  disciplina    DisciplinaCurso
+  nivel         NivelCurso
+  precio        Decimal         @default(0) @db.Decimal(10, 2)
+  esGratuito    Boolean         @default(false)
+  estado        EstadoCurso     @default(BORRADOR)
+  imagen        String?
+  duracionTotal Int?
+  instructorId  String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  instructor    Usuario?      @relation("InstructorCurso", fields: [instructorId], references: [id])
+  modulos       Modulo[]
+  inscripciones Inscripcion[]
+  certificados  Certificado[]
+
+  @@map("cursos")
+}
+
+model Modulo {
+  id          String   @id @default(uuid())
+  cursoId     String
+  titulo      String
+  descripcion String?  @db.Text
+  contenido   String?  @db.Text
+  videoUrl    String?
+  archivoUrl  String?
+  orden       Int
+  duracion    Int?
+  createdAt   DateTime @default(now())
+
+  curso     Curso            @relation(fields: [cursoId], references: [id], onDelete: Cascade)
+  examen    Examen?
+  progresos ProgresoModulo[]
+
+  @@map("modulos")
+}
+
+model Examen {
+  id            String   @id @default(uuid())
+  moduloId      String   @unique
+  titulo        String
+  instrucciones String?  @db.Text
+  notaMinima    Int      @default(70)
+  createdAt     DateTime @default(now())
+
+  modulo     Modulo            @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+  preguntas  Pregunta[]
+  respuestas RespuestaExamen[]
+
+  @@map("examenes")
+}
+
+enum TipoPregunta {
+  OPCION_MULTIPLE
+  TEXTO_ABIERTO
+}
+
+model Pregunta {
+  id       String       @id @default(uuid())
+  examenId String
+  texto    String       @db.Text
+  tipo     TipoPregunta
+  orden    Int
+  puntaje  Int          @default(1)
+
+  examen     Examen            @relation(fields: [examenId], references: [id], onDelete: Cascade)
+  opciones   Opcion[]
+  respuestas RespuestaExamen[]
+
+  @@map("preguntas")
+}
+
+model Opcion {
+  id         String  @id @default(uuid())
+  preguntaId String
+  texto      String
+  esCorrecta Boolean @default(false)
+  orden      Int
+
+  pregunta Pregunta @relation(fields: [preguntaId], references: [id], onDelete: Cascade)
+
+  @@map("opciones")
+}
+
+// ─── INSCRIPCIONES Y PROGRESO ────────────────────────────
+enum EstadoInscripcion {
+  PENDIENTE_PAGO
+  ACTIVO
+  COMPLETADO
+  CANCELADO
+}
+
+model Inscripcion {
+  id        String            @id @default(uuid())
+  usuarioId String
+  cursoId   String
+  estado    EstadoInscripcion @default(PENDIENTE_PAGO)
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  curso   Curso   @relation(fields: [cursoId], references: [id])
+  pagos   Pago[]
+
+  @@unique([usuarioId, cursoId])
+  @@map("inscripciones")
+}
+
+// ─── PAGOS MANUALES ──────────────────────────────────────
+enum EstadoPago {
+  PENDIENTE_REVISION
+  CONFIRMADO
+  RECHAZADO
+}
+
+model Pago {
+  id             String     @id @default(uuid())
+  inscripcionId  String
+  monto          Decimal    @db.Decimal(10, 2)
+  comprobanteUrl String
+  referencia     String?
+  notas          String?
+  estado         EstadoPago @default(PENDIENTE_REVISION)
+  revisadoPor    String?
+  revisadoEn     DateTime?
+  motivoRechazo  String?
+  notasAdmin     String?
+  createdAt      DateTime   @default(now())
+
+  inscripcion Inscripcion @relation(fields: [inscripcionId], references: [id])
+
+  @@map("pagos")
+}
+
+model ProgresoModulo {
+  id           String    @id @default(uuid())
+  usuarioId    String
+  moduloId     String
+  completado   Boolean   @default(false)
+  iniciadoEn   DateTime  @default(now())
+  completadoEn DateTime?
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  modulo  Modulo  @relation(fields: [moduloId], references: [id])
+
+  @@unique([usuarioId, moduloId])
+  @@map("progreso_modulos")
+}
+
+model RespuestaExamen {
+  id              String   @id @default(uuid())
+  usuarioId       String
+  examenId        String
+  preguntaId      String
+  opcionId        String?
+  respuestaTexto  String?  @db.Text
+  esCorrecta      Boolean?
+  puntajeObtenido Int?
+  createdAt       DateTime @default(now())
+
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id])
+  examen   Examen   @relation(fields: [examenId], references: [id])
+  pregunta Pregunta @relation(fields: [preguntaId], references: [id])
+
+  @@map("respuestas_examenes")
+}
+
+// ─── CERTIFICADOS ────────────────────────────────────────
+model Certificado {
+  id        String   @id @default(uuid())
+  usuarioId String
+  cursoId   String
+  pdfUrl    String?
+  qrToken   String   @unique @default(uuid())
+  notaFinal Int?
+  emitidoEn DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+  curso   Curso   @relation(fields: [cursoId], references: [id])
+
+  @@unique([usuarioId, cursoId])
+  @@map("certificados")
+}
+
+// ─── RECURSOS GRATUITOS ──────────────────────────────────
+enum TipoRecurso {
+  PDF
+  VIDEO
+  LINK
+  IMAGEN
+}
+
+enum CategoriaRecurso {
+  REGLAMENTO
+  MANUAL
+  VIDEO_INSTRUCTIVO
+  FORMULARIO
+  OTRO
+}
+
+model Recurso {
+  id          String            @id @default(uuid())
+  titulo      String
+  descripcion String?           @db.Text
+  tipo        TipoRecurso
+  categoria   CategoriaRecurso  @default(OTRO)
+  url         String
+  esPublico   Boolean           @default(true)
+  disciplina  DisciplinaCurso?
+  activo      Boolean           @default(true)
+  createdAt   DateTime          @default(now())
+  creadoPor   String?
+
+  @@map("recursos")
+}
+
+// ─── NOTIFICACIONES ──────────────────────────────────────
+enum TipoNotificacion {
+  CARNET_VERIFICADO
+  CARNET_RECHAZADO
+  PAGO_CONFIRMADO
+  PAGO_RECHAZADO
+  CURSO_HABILITADO
+  EXAMEN_DISPONIBLE
+  MODULO_COMPLETADO
+  CERTIFICADO_EMITIDO
+  DESIGNACION_ASIGNADA
+  DESIGNACION_CANCELADA
+  PARTIDO_MODIFICADO
+  HONORARIO_PAGADO
+  MENSAJE_ADMIN
+  SISTEMA
+}
+
+model Notificacion {
+  id         String           @id @default(uuid())
+  usuarioId  String
+  tipo       TipoNotificacion
+  titulo     String
+  mensaje    String           @db.Text
+  link       String?
+  leido      Boolean          @default(false)
+  leidoEn    DateTime?
+  enviadoPor String?
+  createdAt  DateTime         @default(now())
+
+  usuario  Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  enviador Usuario? @relation("NotifEnviadas", fields: [enviadoPor], references: [id])
+
+  @@map("notificaciones")
+}
+
+// ─── PARTIDOS Y DESIGNACIONES (FASE 2) ───────────────────
+enum CategoriaPartido {
+  PRIMERA_DIVISION
+  SEGUNDA_DIVISION
+  FEMENINO
+  U21
+  U18
+  U16
+  U14
+  ESPECIAL
+}
+
+enum EstadoPartido {
+  PROGRAMADO
+  EN_CURSO
+  FINALIZADO
+  SUSPENDIDO
+  CANCELADO
+}
+
+model Partido {
+  id          String           @id @default(uuid())
+  fecha       DateTime
+  hora        String
+  cancha      String
+  ciudad      String
+  categoria   CategoriaPartido
+  equipoLocal String
+  equipoVisit String
+  descripcion String?
+  estado      EstadoPartido    @default(PROGRAMADO)
+  createdAt   DateTime         @default(now())
+  creadoPor   String?
+
+  designaciones Designacion[]
+  honorarios    Honorario[]
+
+  @@map("partidos")
+}
+
+enum RolDesignacion {
+  ARBITRO_PRINCIPAL
+  ARBITRO_ASISTENTE_1
+  ARBITRO_ASISTENTE_2
+  MESA_ANOTADOR
+  MESA_CRONOMETRADOR
+  MESA_OPERADOR_24S
+  MESA_ASISTENTE
+  ESTADISTICO
+}
+
+enum EstadoDesignacion {
+  PENDIENTE
+  CONFIRMADA
+  RECHAZADA
+  REEMPLAZADA
+}
+
+model Designacion {
+  id          String            @id @default(uuid())
+  partidoId   String
+  usuarioId   String
+  rol         RolDesignacion
+  estado      EstadoDesignacion @default(PENDIENTE)
+  notas       String?
+  createdAt   DateTime          @default(now())
+  asignadoPor String?
+
+  partido   Partido    @relation(fields: [partidoId], references: [id])
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id])
+  honorario Honorario?
+
+  @@map("designaciones")
+}
+
+// ─── ARANCELES Y HONORARIOS (FASE 3) ─────────────────────
+model Arancel {
+  id          String           @id @default(uuid())
+  categoria   CategoriaPartido
+  rol         RolDesignacion
+  monto       Decimal          @db.Decimal(10, 2)
+  descripcion String?
+  activo      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([categoria, rol])
+  @@map("aranceles")
+}
+
+enum EstadoHonorario {
+  PENDIENTE
+  PAGADO
+}
+
+model Honorario {
+  id            String          @id @default(uuid())
+  designacionId String          @unique
+  partidoId     String
+  usuarioId     String
+  monto         Decimal         @db.Decimal(10, 2)
+  estado        EstadoHonorario @default(PENDIENTE)
+  pagadoEn      DateTime?
+  comprobante   String?
+  notas         String?
+  createdAt     DateTime        @default(now())
+
+  designacion Designacion @relation(fields: [designacionId], references: [id])
+  partido     Partido     @relation(fields: [partidoId], references: [id])
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id])
+
+  @@map("honorarios")
+}
