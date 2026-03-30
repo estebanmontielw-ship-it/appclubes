@@ -21,9 +21,10 @@ import type { TipoRol } from "@prisma/client"
 interface SidebarProps {
   roles: TipoRol[]
   onLogout: () => void
+  mobile?: boolean
 }
 
-export default function Sidebar({ roles, onLogout }: SidebarProps) {
+export default function Sidebar({ roles, onLogout, mobile = false }: SidebarProps) {
   const pathname = usePathname()
   const isAdmin = roles.includes("SUPER_ADMIN") || roles.includes("INSTRUCTOR")
 
@@ -51,7 +52,7 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
   ]
 
   return (
-    <aside className="hidden md:flex md:flex-col md:w-64 md:min-h-screen bg-white border-r border-gray-100">
+    <aside className={mobile ? "flex flex-col w-full h-full bg-white" : "hidden md:flex md:flex-col md:w-64 md:min-h-screen bg-white border-r border-gray-100"}>
       {/* Logo */}
       <div className="p-5 border-b border-gray-100">
         <Link href="/oficiales" className="flex items-center gap-3">

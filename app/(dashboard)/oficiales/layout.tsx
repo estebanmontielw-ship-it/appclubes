@@ -63,11 +63,11 @@ export default function DashboardLayout({
           onClick={() => setMenuOpen(false)}
         />
         <div
-          className={`fixed inset-y-0 left-0 w-64 bg-white z-50 shadow-2xl transition-transform duration-200 ease-out ${
+          className={`fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl transition-transform duration-200 ease-out ${
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar roles={roles} onLogout={handleLogout} />
+          <Sidebar roles={roles} onLogout={handleLogout} mobile />
         </div>
       </div>
 
