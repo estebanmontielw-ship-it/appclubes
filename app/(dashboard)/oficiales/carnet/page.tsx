@@ -112,9 +112,7 @@ export default function CarnetPage() {
               : "bg-gray-400"
           }`}
         >
-          <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center">
-            <span className="text-white font-bold text-sm">CPB</span>
-          </div>
+          <img src="/logo-cpb.png" alt="CPB" className="h-10 w-10 object-contain" />
           <div>
             <p className="text-white font-semibold text-sm">
               CARNET OFICIAL CPB

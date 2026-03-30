@@ -35,9 +35,7 @@ export default async function VerificarPage({
       <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-sm border">
         {/* Logo */}
         <div className="text-center mb-6">
-          <div className="h-12 w-12 rounded-xl bg-orange-500 flex items-center justify-center mx-auto mb-3">
-            <span className="text-white font-bold">CPB</span>
-          </div>
+          <img src="/logo-cpb.png" alt="CPB" className="h-14 w-14 object-contain mx-auto mb-3" />
           <h1 className="text-lg font-medium">Verificación de Oficial CPB</h1>
           <p className="text-xs text-muted-foreground mt-1">
             Confederación Paraguaya de Basketball

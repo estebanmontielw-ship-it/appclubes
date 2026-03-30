@@ -88,7 +88,7 @@ export async function GET() {
 <body>
 <div class="card">
   <div class="header">
-    <div class="logo">CPB</div>
+    <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo-cpb.png" alt="CPB" style="height:36px;width:36px;object-fit:contain;" />
     <div class="header-text">
       <h1>CARNET OFICIAL CPB</h1>
       <p>Confederación Paraguaya de Basketball</p>

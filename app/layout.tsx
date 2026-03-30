@@ -5,6 +5,10 @@ import { Toaster } from "@/components/ui/toaster"
 export const metadata: Metadata = {
   title: "CPB Oficiales — Confederación Paraguaya de Basketball",
   description: "Portal de gestión de árbitros, oficiales de mesa y estadísticos de la CPB",
+  icons: {
+    icon: "/logo-cpb.png",
+    apple: "/logo-cpb.png",
+  },
 }
 
 export default function RootLayout({

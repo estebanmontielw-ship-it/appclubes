@@ -105,7 +105,7 @@ export async function GET(
 </head>
 <body>
 <div class="cert">
-  <div class="logo">CPB</div>
+  <img src="${process.env.NEXT_PUBLIC_BASE_URL}/logo-cpb.png" alt="CPB" style="height:48px;width:48px;object-fit:contain;margin:0 auto 8px;" />
   <div class="org">Confederación Paraguaya de Basketball</div>
   <h1>Certificado</h1>
   <p style="font-size: 16px; color: #6b7280; margin-bottom: 16px;">Se certifica que</p>

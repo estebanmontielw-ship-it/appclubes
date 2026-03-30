@@ -54,9 +54,7 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
       {/* Logo */}
       <div className="p-6 border-b">
         <Link href="/oficiales" className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-sm font-bold text-white">CPB</span>
-          </div>
+          <img src="/logo-cpb.png" alt="CPB" className="h-8 w-8 object-contain" />
           <span className="font-semibold text-lg">Oficiales</span>
         </Link>
       </div>
