@@ -2,6 +2,14 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import {
+  notifCarnetVerificado,
+  notifCarnetRechazado,
+} from "@/lib/notifications"
+import {
+  emailCarnetVerificado,
+  emailCarnetRechazado,
+} from "@/lib/email"
 
 // GET - Get single user details
 export async function GET(
@@ -41,7 +49,10 @@ export async function GET(
     })
 
     if (!usuario) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json({ usuario })
@@ -74,7 +85,10 @@ export async function PATCH(
     })
 
     if (adminRoles.length === 0) {
-      return NextResponse.json({ error: "Solo SUPER_ADMIN puede verificar" }, { status: 403 })
+      return NextResponse.json(
+        { error: "Solo SUPER_ADMIN puede verificar" },
+        { status: 403 }
+      )
     }
 
     const { accion, motivoRechazo } = await request.json()
@@ -118,6 +132,19 @@ export async function PATCH(
       data: updateData,
       include: { roles: true },
     })
+
+    // Send notification + email
+    if (accion === "verificar") {
+      await Promise.all([
+        notifCarnetVerificado(params.id),
+        emailCarnetVerificado(usuario.email, usuario.nombre),
+      ])
+    } else if (accion === "rechazar" && motivoRechazo) {
+      await Promise.all([
+        notifCarnetRechazado(params.id, motivoRechazo),
+        emailCarnetRechazado(usuario.email, usuario.nombre, motivoRechazo),
+      ])
+    }
 
     return NextResponse.json({ usuario })
   } catch {

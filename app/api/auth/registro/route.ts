@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
 import type { TipoRol } from "@prisma/client"
+import { emailBienvenida } from "@/lib/email"
 
 export async function POST(request: Request) {
   try {
@@ -92,6 +93,9 @@ export async function POST(request: Request) {
       },
       include: { roles: true },
     })
+
+    // Send welcome email (fire and forget)
+    emailBienvenida(email, nombre).catch(() => {})
 
     return NextResponse.json({ usuario }, { status: 201 })
   } catch (error: unknown) {
