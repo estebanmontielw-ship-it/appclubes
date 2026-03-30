@@ -42,10 +42,11 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
     { href: "/oficiales/admin", label: "Dashboard Admin", icon: LayoutDashboard },
     { href: "/oficiales/admin/usuarios", label: "Usuarios", icon: Users },
     { href: "/oficiales/admin/cursos", label: "Cursos", icon: BookOpen },
-    { href: "/oficiales/admin/pagos", label: "Pagos", icon: DollarSign },
+    { href: "/oficiales/admin/pagos", label: "Pagos cursos", icon: DollarSign },
+    { href: "/oficiales/admin/finanzas-cursos", label: "Finanzas cursos", icon: DollarSign },
     { href: "/oficiales/admin/recursos", label: "Recursos", icon: FileText },
     { href: "/oficiales/admin/partidos", label: "Partidos", icon: Calendar },
-    { href: "/oficiales/admin/finanzas", label: "Finanzas", icon: Wallet },
+    { href: "/oficiales/admin/finanzas", label: "Finanzas oficiales", icon: Wallet },
     { href: "/oficiales/admin/notificaciones", label: "Notificaciones", icon: Bell },
   ]
 

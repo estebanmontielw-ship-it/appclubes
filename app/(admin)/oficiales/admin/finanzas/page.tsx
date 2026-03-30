@@ -105,7 +105,10 @@ export default function AdminFinanzasPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Finanzas</h1>
+      <div>
+        <h1 className="text-2xl font-bold">Finanzas — Oficiales</h1>
+        <p className="text-sm text-muted-foreground mt-1">Honorarios y pagos a oficiales por partidos trabajados</p>
+      </div>
 
       <div className="flex gap-2">
         <Button variant={tab === "dashboard" ? "default" : "outline"} size="sm" onClick={() => setTab("dashboard")}>Dashboard</Button>
