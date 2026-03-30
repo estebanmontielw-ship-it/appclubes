@@ -85,7 +85,7 @@ export default function AdminLayout({
         <div className={`fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl transition-transform duration-200 ease-out ${
           menuOpen ? "translate-x-0" : "-translate-x-full"
         }`}>
-          <Sidebar roles={roles} onLogout={handleLogout} mobile />
+          <Sidebar roles={roles} onLogout={handleLogout} mobile onNavigate={() => setMenuOpen(false)} />
         </div>
       </div>
 

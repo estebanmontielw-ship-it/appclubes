@@ -67,7 +67,7 @@ export default function DashboardLayout({
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar roles={roles} onLogout={handleLogout} mobile />
+          <Sidebar roles={roles} onLogout={handleLogout} mobile onNavigate={() => setMenuOpen(false)} />
         </div>
       </div>
 

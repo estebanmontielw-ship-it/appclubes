@@ -22,9 +22,10 @@ interface SidebarProps {
   roles: TipoRol[]
   onLogout: () => void
   mobile?: boolean
+  onNavigate?: () => void
 }
 
-export default function Sidebar({ roles, onLogout, mobile = false }: SidebarProps) {
+export default function Sidebar({ roles, onLogout, mobile = false, onNavigate }: SidebarProps) {
   const pathname = usePathname()
   const isAdmin = roles.includes("SUPER_ADMIN") || roles.includes("INSTRUCTOR")
 
@@ -75,6 +76,7 @@ export default function Sidebar({ roles, onLogout, mobile = false }: SidebarProp
             icon={link.icon}
             label={link.label}
             active={pathname === link.href}
+            onClick={onNavigate}
           />
         ))}
 
@@ -91,6 +93,7 @@ export default function Sidebar({ roles, onLogout, mobile = false }: SidebarProp
                 icon={link.icon}
                 label={link.label}
                 active={pathname === link.href}
+                onClick={onNavigate}
               />
             ))}
           </>
@@ -116,15 +119,18 @@ function NavLink({
   icon: Icon,
   label,
   active,
+  onClick,
 }: {
   href: string
   icon: React.ComponentType<{ className?: string }>
   label: string
   active: boolean
+  onClick?: () => void
 }) {
   return (
     <Link
       href={href}
+      onClick={onClick}
       className={cn(
         "flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-150",
         active
