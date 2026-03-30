@@ -205,14 +205,12 @@ export default function CursoDetallePage() {
             const isAccessible = isActive && (idx === 0 || prevCompleted)
             const isLocked = isActive && !isAccessible
 
-            return (
+            const moduleContent = (
               <div
-                key={m.id}
-                className={`flex items-center gap-3 p-3 rounded-lg border ${
-                  isCompleted ? "bg-green-50/50 border-green-100" : isLocked ? "opacity-50" : ""
-                }`}
+                className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                  isCompleted ? "bg-green-50/50 border-green-100" : isLocked ? "opacity-50" : "hover:bg-gray-50 hover:border-gray-200"
+                } ${isAccessible || isCompleted ? "cursor-pointer" : ""}`}
               >
-                {/* Status icon */}
                 {isCompleted ? (
                   <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
                 ) : isLocked ? (
@@ -220,8 +218,6 @@ export default function CursoDetallePage() {
                 ) : (
                   <Circle className="h-5 w-5 text-muted-foreground flex-shrink-0" />
                 )}
-
-                {/* Info */}
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm ${isCompleted ? "text-green-700" : ""} ${isLocked ? "text-muted-foreground" : "font-medium"}`}>
                     {idx + 1}. {m.titulo}
@@ -232,23 +228,21 @@ export default function CursoDetallePage() {
                     {m.examen && <Badge variant="outline" className="text-[10px] py-0">Examen</Badge>}
                   </div>
                 </div>
-
-                {/* Action */}
                 {isActive && isAccessible && !isCompleted && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleComplete(m.id)}
-                    disabled={completando === m.id}
-                  >
-                    {completando === m.id ? (
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                    ) : (
-                      "Completar"
-                    )}
-                  </Button>
+                  <Badge variant="outline" className="text-xs">Abrir</Badge>
+                )}
+                {isCompleted && (
+                  <Badge variant="success" className="text-xs">Leer</Badge>
                 )}
               </div>
+            )
+
+            return isAccessible || isCompleted ? (
+              <Link key={m.id} href={`/oficiales/cursos/${curso.id}/modulo/${m.id}`}>
+                {moduleContent}
+              </Link>
+            ) : (
+              <div key={m.id}>{moduleContent}</div>
             )
           })}
         </CardContent>
