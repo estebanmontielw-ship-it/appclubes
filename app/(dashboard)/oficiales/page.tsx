@@ -25,12 +25,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch("/api/me")
-      .then((res) => res.json())
-      .then(setData)
+      .then((res) => {
+        if (!res.ok) throw new Error("Not ok")
+        return res.json()
+      })
+      .then((d) => {
+        if (d.usuario) setData(d)
+      })
       .catch(() => {})
   }, [])
 
-  if (!data) {
+  if (!data || !data.usuario) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-pulse text-muted-foreground">Cargando...</div>
@@ -39,7 +44,7 @@ export default function DashboardPage() {
   }
 
   const { usuario, unreadNotifications } = data
-  const roles = usuario.roles.map((r) => r.rol)
+  const roles = usuario.roles?.map((r) => r.rol) ?? []
   const isAdmin = roles.includes("SUPER_ADMIN")
 
   return (
