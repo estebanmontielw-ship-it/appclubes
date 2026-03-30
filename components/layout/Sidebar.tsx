@@ -12,8 +12,9 @@ import {
   Users,
   DollarSign,
   LayoutDashboard,
-  Settings,
   LogOut,
+  Calendar,
+  Wallet,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -32,6 +33,8 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
     { href: "/oficiales/carnet", label: "Mi carnet", icon: CreditCard },
     { href: "/oficiales/cursos", label: "Cursos", icon: BookOpen },
     { href: "/oficiales/recursos", label: "Recursos", icon: FileText },
+    { href: "/oficiales/mis-partidos", label: "Mis partidos", icon: Calendar },
+    { href: "/oficiales/mis-honorarios", label: "Mis honorarios", icon: Wallet },
     { href: "/oficiales/notificaciones", label: "Notificaciones", icon: Bell },
   ]
 
@@ -41,6 +44,8 @@ export default function Sidebar({ roles, onLogout }: SidebarProps) {
     { href: "/oficiales/admin/cursos", label: "Cursos", icon: BookOpen },
     { href: "/oficiales/admin/pagos", label: "Pagos", icon: DollarSign },
     { href: "/oficiales/admin/recursos", label: "Recursos", icon: FileText },
+    { href: "/oficiales/admin/partidos", label: "Partidos", icon: Calendar },
+    { href: "/oficiales/admin/finanzas", label: "Finanzas", icon: Wallet },
     { href: "/oficiales/admin/notificaciones", label: "Notificaciones", icon: Bell },
   ]
 
