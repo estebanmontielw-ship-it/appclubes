@@ -5,6 +5,8 @@ import { useParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import {
   ArrowLeft,
@@ -12,6 +14,7 @@ import {
   CheckCircle,
   Circle,
   Lock,
+  Upload,
   Loader2,
   User,
   Video,
@@ -162,12 +165,17 @@ export default function CursoDetallePage() {
       )}
 
       {inscripcion?.estado === "PENDIENTE_PAGO" && (
-        <Card className="border-yellow-200 bg-yellow-50">
-          <CardContent className="p-4 text-center">
-            <p className="font-medium text-yellow-800">Inscripción pendiente de pago</p>
-            <p className="text-sm text-yellow-700 mt-1">
-              Realizá la transferencia y subí el comprobante (Sprint 4).
-            </p>
+        <PagoForm cursoId={curso.id} monto={Number(curso.precio)} onSuccess={loadCurso} />
+      )}
+
+      {/* Certificate */}
+      {inscripcion?.estado === "COMPLETADO" && (
+        <Card className="border-green-200 bg-green-50">
+          <CardContent className="p-4 text-center space-y-2">
+            <p className="font-medium text-green-800">Curso completado</p>
+            <Button size="sm" onClick={() => window.open(`/api/cursos/${curso.id}/certificado`, "_blank")}>
+              Ver certificado
+            </Button>
           </CardContent>
         </Card>
       )}
@@ -246,5 +254,79 @@ export default function CursoDetallePage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function PagoForm({ cursoId, monto, onSuccess }: { cursoId: string; monto: number; onSuccess: () => void }) {
+  const { toast } = useToast()
+  const [file, setFile] = useState<File | null>(null)
+  const [referencia, setReferencia] = useState("")
+  const [notas, setNotas] = useState("")
+  const [uploading, setUploading] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!file) {
+      toast({ variant: "destructive", title: "Subí el comprobante de transferencia" })
+      return
+    }
+    setUploading(true)
+    try {
+      // Upload file
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("bucket", "comprobantes-pago")
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData })
+      if (!uploadRes.ok) throw new Error("Error uploading")
+      const { url } = await uploadRes.json()
+
+      // Create payment
+      const res = await fetch(`/api/cursos/${cursoId}/pago`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comprobanteUrl: url, referencia, notas, monto }),
+      })
+      if (res.ok) {
+        toast({ title: "Comprobante enviado. Te avisaremos cuando sea revisado." })
+        onSuccess()
+      } else {
+        const err = await res.json()
+        toast({ variant: "destructive", title: "Error", description: err.error })
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Error al enviar comprobante" })
+    } finally { setUploading(false) }
+  }
+
+  return (
+    <Card className="border-yellow-200">
+      <CardHeader><CardTitle className="text-lg">Pago por transferencia</CardTitle></CardHeader>
+      <CardContent className="space-y-4">
+        <div className="bg-yellow-50 rounded-lg p-4 text-sm space-y-1">
+          <p><strong>Banco:</strong> {process.env.NEXT_PUBLIC_BANCO_NOMBRE || "Consultar"}</p>
+          <p><strong>Cuenta:</strong> {process.env.NEXT_PUBLIC_BANCO_CUENTA || "Consultar"}</p>
+          <p><strong>Titular:</strong> {process.env.NEXT_PUBLIC_BANCO_TITULAR || "CPB"}</p>
+          <p><strong>Monto:</strong> Gs. {monto.toLocaleString("es-PY")}</p>
+        </div>
+        <div className="space-y-2">
+          <Label>Comprobante de transferencia *</Label>
+          <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50 transition-colors">
+            <Upload className="h-6 w-6 text-muted-foreground mb-1" />
+            <span className="text-sm text-muted-foreground">{file ? file.name : "Click para subir"}</span>
+            <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+          </label>
+        </div>
+        <div className="space-y-2">
+          <Label>Referencia bancaria (opcional)</Label>
+          <Input value={referencia} onChange={(e) => setReferencia(e.target.value)} placeholder="Nro. de transferencia" />
+        </div>
+        <div className="space-y-2">
+          <Label>Notas (opcional)</Label>
+          <Input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Algún detalle extra..." />
+        </div>
+        <Button className="w-full" onClick={handleSubmit} disabled={uploading}>
+          {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Enviar comprobante
+        </Button>
+      </CardContent>
+    </Card>
   )
 }
