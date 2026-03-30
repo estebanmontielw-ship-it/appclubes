@@ -62,7 +62,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <img src="/logo-cpb.png" alt="CPB" className="mx-auto mb-4 h-20 w-20 object-contain" />
+          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-4 h-20 w-20 object-contain" />
           <CardTitle className="text-2xl">CPB Oficiales</CardTitle>
           <CardDescription>
             Iniciá sesión para acceder al portal

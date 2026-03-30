@@ -180,7 +180,7 @@ export default function RegistroPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4 py-8">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
-          <img src="/logo-cpb.png" alt="CPB" className="mx-auto mb-4 h-20 w-20 object-contain" />
+          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-4 h-20 w-20 object-contain" />
           <CardTitle className="text-2xl">Registro — CPB Oficiales</CardTitle>
           <CardDescription>
             Paso {step} de 3 — {STEP_TITLES[step - 1]}
