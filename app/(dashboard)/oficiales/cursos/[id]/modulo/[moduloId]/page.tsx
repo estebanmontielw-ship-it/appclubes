@@ -216,6 +216,24 @@ export default function ModuloDetallePage() {
         </a>
       )}
 
+      {/* Exam link */}
+      {modulo.examen && (
+        <Link href={`/oficiales/cursos/${params.id}/examen/${modulo.examen.id}`}>
+          <Card className="border-2 border-primary/20 hover:border-primary/40 hover:shadow-md cursor-pointer transition-all bg-primary/5">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-primary/10">
+                <CheckCircle className="h-6 w-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold">{modulo.examen.titulo}</p>
+                <p className="text-sm text-muted-foreground mt-0.5">Rendí el examen para avanzar al siguiente módulo</p>
+              </div>
+              <ArrowRight className="h-5 w-5 text-primary" />
+            </CardContent>
+          </Card>
+        </Link>
+      )}
+
       {/* Complete + Navigate */}
       <div className="space-y-3 pt-4 border-t">
         {!isCompleted && (
