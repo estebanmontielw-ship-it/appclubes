@@ -66,27 +66,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Error al crear el usuario" }, { status: 500 })
     }
 
-    // Check auto-verification: match name against pre-verified list
+    // Check auto-verification: smart name matching against pre-verified list
     const fullNameNorm = normalizeName(`${nombre} ${apellido}`)
-    const preVerificado = await prisma.ctPreverificado.findFirst({
-      where: {
-        nombreNormalizado: { contains: fullNameNorm.split(" ")[0] },
-        usado: false,
-      },
+    const nameParts = fullNameNorm.split(" ").filter(p => p.length > 2) // ignore short particles
+
+    // Get all unused pre-verified entries
+    const allPreVerificados = await prisma.ctPreverificado.findMany({
+      where: { usado: false },
     })
 
-    // More precise match
+    // Smart matching: find best match
     let autoVerificado = false
-    let matchedPre: typeof preVerificado = null
-    if (preVerificado) {
-      // Check if at least first name and last name match
-      const preNorm = preVerificado.nombreNormalizado
-      const nameParts = fullNameNorm.split(" ")
-      const preParts = preNorm.split(" ")
-      const matchCount = nameParts.filter(p => preParts.includes(p)).length
-      if (matchCount >= 2) {
+    let matchedPre: typeof allPreVerificados[0] | null = null
+    let bestScore = 0
+
+    for (const pre of allPreVerificados) {
+      const preParts = pre.nombreNormalizado.split(" ").filter(p => p.length > 2)
+
+      // Count how many name parts match
+      const matchingParts = nameParts.filter(p => preParts.some(pp => pp === p || pp.startsWith(p) || p.startsWith(pp)))
+      const score = matchingParts.length
+
+      // Also check reverse: parts from pre that match in registration
+      const reverseMatching = preParts.filter(pp => nameParts.some(p => p === pp || p.startsWith(pp) || pp.startsWith(p)))
+      const reverseScore = reverseMatching.length
+
+      // Use the higher score
+      const finalScore = Math.max(score, reverseScore)
+
+      // Need at least 2 matching parts (first name + last name minimum)
+      if (finalScore >= 2 && finalScore > bestScore) {
+        bestScore = finalScore
+        matchedPre = pre
         autoVerificado = true
-        matchedPre = preVerificado
       }
     }
 
