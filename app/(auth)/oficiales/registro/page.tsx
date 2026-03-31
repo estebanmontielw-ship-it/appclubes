@@ -33,6 +33,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Loader2, ArrowLeft, ArrowRight, Upload, Gavel, ClipboardList, BarChart3 } from "lucide-react"
+import { getBarrios } from "@/lib/barrios"
 import { useToast } from "@/components/ui/use-toast"
 import { CIUDADES_PY } from "@/lib/constants"
 import type { TipoRol } from "@prisma/client"
@@ -69,6 +70,11 @@ export default function RegistroPage() {
   const [fotoCarnet, setFotoCarnet] = useState<File | null>(null)
   const [confirmaDatos, setConfirmaDatos] = useState(false)
   // Cropper state for foto carnet
+  // Barrio
+  const [selectedCiudad, setSelectedCiudad] = useState("")
+  const [barrio, setBarrio] = useState("")
+  const [barrioCustom, setBarrioCustom] = useState("")
+
   const [carnetSrc, setCarnetSrc] = useState<string | null>(null)
   const [carnetCrop, setCarnetCrop] = useState({ x: 0, y: 0 })
   const [carnetZoom, setCarnetZoom] = useState(1)
@@ -187,6 +193,7 @@ export default function RegistroPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...step1Data,
+          barrio: barrio === "Mi barrio no figura" ? barrioCustom : barrio,
           roles: selectedRoles,
           fotoCedulaUrl,
           fotoCarnetUrl,
@@ -312,7 +319,7 @@ export default function RegistroPage() {
               <div className="space-y-2">
                 <Label htmlFor="ciudad">Ciudad *</Label>
                 <Select
-                  onValueChange={(value) => step1Form.setValue("ciudad", value)}
+                  onValueChange={(value) => { step1Form.setValue("ciudad", value); setSelectedCiudad(value); setBarrio(""); setBarrioCustom("") }}
                   defaultValue={step1Data?.ciudad}
                 >
                   <SelectTrigger>
@@ -332,6 +339,25 @@ export default function RegistroPage() {
                   </p>
                 )}
               </div>
+
+              {selectedCiudad && (
+                <div className="space-y-2">
+                  <Label>Barrio</Label>
+                  <Select value={barrio} onValueChange={(v) => { setBarrio(v); if (v !== "Mi barrio no figura") setBarrioCustom("") }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccioná tu barrio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {getBarrios(selectedCiudad).map((b) => (
+                        <SelectItem key={b} value={b}>{b}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {barrio === "Mi barrio no figura" && (
+                    <Input placeholder="Escribí tu barrio" value={barrioCustom} onChange={(e) => setBarrioCustom(e.target.value)} />
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email *</Label>

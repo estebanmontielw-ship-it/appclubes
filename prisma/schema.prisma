@@ -35,6 +35,7 @@ model Usuario {
   fechaNacimiento    DateTime
   telefono           String
   ciudad             String
+  barrio             String?
   fotoCedulaUrl      String?
   fotoCarnetUrl      String?
   estadoVerificacion EstadoVerificacion @default(PENDIENTE)
