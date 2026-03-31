@@ -486,3 +486,68 @@ model Honorario {
 
   @@map("honorarios")
 }
+
+// ─── CUERPO TÉCNICO ──────────────────────────────────────
+
+enum RolCuerpoTecnico {
+  ENTRENADOR_NACIONAL
+  ENTRENADOR_EXTRANJERO
+  ASISTENTE
+  PREPARADOR_FISICO
+  FISIO
+  UTILERO
+}
+
+enum EstadoHabilitacion {
+  PENDIENTE
+  HABILITADO
+  RECHAZADO
+  SUSPENDIDO
+}
+
+model CuerpoTecnico {
+  id                  String             @id @default(uuid())
+  email               String             @unique
+  nombre              String
+  apellido            String
+  cedula              String             @unique
+  fechaNacimiento     DateTime
+  telefono            String
+  ciudad              String
+  genero              String             @default("Masculino")
+  nacionalidad        String             @default("Paraguaya")
+  rol                 RolCuerpoTecnico
+  fotoCarnetUrl       String?
+  fotoCedulaUrl       String?
+  tituloEntrenadorUrl String?
+  tieneTitulo         Boolean            @default(false)
+  razonSocial         String?
+  ruc                 String?
+  estadoHabilitacion  EstadoHabilitacion @default(PENDIENTE)
+  pagoVerificado      Boolean            @default(false)
+  pagoAutoVerificado  Boolean            @default(false)
+  comprobanteUrl      String?
+  montoHabilitacion   Decimal            @default(0) @db.Decimal(10, 2)
+  verificadoPor       String?
+  verificadoEn        DateTime?
+  motivoRechazo       String?
+  qrToken             String?            @unique
+  activo              Boolean            @default(true)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  @@map("cuerpo_tecnico")
+}
+
+model CtPreverificado {
+  id                 String   @id @default(uuid())
+  nombre             String
+  nombreNormalizado   String   @map("nombre_normalizado")
+  rol                String
+  datosFactura       String?  @map("datos_factura")
+  usado              Boolean  @default(false)
+  usuarioCtId        String?  @map("usuarioCtId")
+  createdAt          DateTime @default(now())
+
+  @@map("ct_preverificados")
+}
