@@ -23,9 +23,10 @@ interface SidebarProps {
   onLogout: () => void
   mobile?: boolean
   onNavigate?: () => void
+  pendingUsers?: number
 }
 
-export default function Sidebar({ roles, onLogout, mobile = false, onNavigate }: SidebarProps) {
+export default function Sidebar({ roles, onLogout, mobile = false, onNavigate, pendingUsers = 0 }: SidebarProps) {
   const pathname = usePathname()
   const isAdmin = roles.includes("SUPER_ADMIN") || roles.includes("INSTRUCTOR")
 
@@ -42,7 +43,7 @@ export default function Sidebar({ roles, onLogout, mobile = false, onNavigate }:
 
   const adminLinks = [
     { href: "/oficiales/admin", label: "Dashboard Admin", icon: LayoutDashboard },
-    { href: "/oficiales/admin/usuarios", label: "Usuarios", icon: Users },
+    { href: "/oficiales/admin/usuarios", label: "Usuarios", icon: Users, badge: pendingUsers },
     { href: "/oficiales/admin/cursos", label: "Cursos", icon: BookOpen },
     { href: "/oficiales/admin/pagos", label: "Pagos cursos", icon: DollarSign },
     { href: "/oficiales/admin/finanzas-cursos", label: "Finanzas cursos", icon: DollarSign },
@@ -94,6 +95,7 @@ export default function Sidebar({ roles, onLogout, mobile = false, onNavigate }:
                 label={link.label}
                 active={pathname === link.href}
                 onClick={onNavigate}
+                badge={(link as any).badge}
               />
             ))}
           </>
@@ -120,12 +122,14 @@ function NavLink({
   label,
   active,
   onClick,
+  badge,
 }: {
   href: string
   icon: React.ComponentType<{ className?: string }>
   label: string
   active: boolean
   onClick?: () => void
+  badge?: number
 }) {
   return (
     <Link
@@ -139,7 +143,15 @@ function NavLink({
       )}
     >
       <Icon className={cn("h-[18px] w-[18px]", active ? "text-white" : "text-gray-400")} />
-      {label}
+      <span className="flex-1">{label}</span>
+      {badge && badge > 0 ? (
+        <span className={cn(
+          "h-5 min-w-5 flex items-center justify-center rounded-full text-[10px] font-bold px-1",
+          active ? "bg-white text-primary" : "bg-red-500 text-white"
+        )}>
+          {badge > 99 ? "99+" : badge}
+        </span>
+      ) : null}
     </Link>
   )
 }

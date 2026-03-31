@@ -22,6 +22,7 @@ export default function AdminLayout({
   const [menuOpen, setMenuOpen] = useState(false)
   const [userData, setUserData] = useState<UserData | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingUsers, setPendingUsers] = useState(0)
   const [authorized, setAuthorized] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export default function AdminLayout({
           const data = await res.json()
           setUserData(data.usuario)
           setUnreadCount(data.unreadNotifications || 0)
+          setPendingUsers(data.pendingUsers || 0)
 
           const roles = data.usuario.roles.map((r: { rol: TipoRol }) => r.rol)
           if (
@@ -74,7 +76,7 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar roles={roles} onLogout={handleLogout} />
+      <Sidebar roles={roles} onLogout={handleLogout} pendingUsers={pendingUsers} />
 
       <div
         className={`fixed inset-0 z-50 md:hidden transition-opacity duration-200 ${
@@ -85,7 +87,7 @@ export default function AdminLayout({
         <div className={`fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl transition-transform duration-200 ease-out ${
           menuOpen ? "translate-x-0" : "-translate-x-full"
         }`}>
-          <Sidebar roles={roles} onLogout={handleLogout} mobile onNavigate={() => setMenuOpen(false)} />
+          <Sidebar roles={roles} onLogout={handleLogout} mobile onNavigate={() => setMenuOpen(false)} pendingUsers={pendingUsers} />
         </div>
       </div>
 

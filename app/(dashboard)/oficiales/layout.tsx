@@ -22,6 +22,7 @@ export default function DashboardLayout({
   const [menuOpen, setMenuOpen] = useState(false)
   const [userData, setUserData] = useState<UserData | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingUsers, setPendingUsers] = useState(0)
 
   useEffect(() => {
     async function loadUser() {
@@ -31,6 +32,7 @@ export default function DashboardLayout({
           const data = await res.json()
           setUserData(data.usuario)
           setUnreadCount(data.unreadNotifications || 0)
+          setPendingUsers(data.pendingUsers || 0)
         }
       } catch {
         // silently fail
@@ -50,7 +52,7 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar roles={roles} onLogout={handleLogout} />
+      <Sidebar roles={roles} onLogout={handleLogout} pendingUsers={pendingUsers} />
 
       {/* Mobile sidebar overlay */}
       <div
@@ -67,7 +69,7 @@ export default function DashboardLayout({
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar roles={roles} onLogout={handleLogout} mobile onNavigate={() => setMenuOpen(false)} />
+          <Sidebar roles={roles} onLogout={handleLogout} mobile onNavigate={() => setMenuOpen(false)} pendingUsers={pendingUsers} />
         </div>
       </div>
 

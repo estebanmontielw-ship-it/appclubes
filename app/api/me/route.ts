@@ -31,7 +31,16 @@ export async function GET() {
       where: { usuarioId: usuario.id, leido: false },
     })
 
-    return NextResponse.json({ usuario, unreadNotifications })
+    // If admin, count pending users
+    const isAdmin = usuario.roles.some((r) => r.rol === "SUPER_ADMIN" || r.rol === "INSTRUCTOR")
+    let pendingUsers = 0
+    if (isAdmin) {
+      pendingUsers = await prisma.usuario.count({
+        where: { estadoVerificacion: "PENDIENTE" },
+      })
+    }
+
+    return NextResponse.json({ usuario, unreadNotifications, pendingUsers })
   } catch (error) {
     console.error("Error in /api/me:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
