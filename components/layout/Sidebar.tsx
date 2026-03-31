@@ -58,6 +58,7 @@ function getNavSections(
             label: "Oficiales",
             icon: Users,
             subItems: [
+              { label: "Dashboard", href: "/oficiales/admin/usuarios/dashboard" },
               { label: "Todos", href: "/oficiales/admin/usuarios" },
               { label: "Pendientes", href: "/oficiales/admin/usuarios?estado=PENDIENTE", badge: badges.pendientesUsuarios },
             ],
@@ -66,6 +67,7 @@ function getNavSections(
             label: "Cuerpo Técnico",
             icon: Users,
             subItems: [
+              { label: "Dashboard", href: "/oficiales/admin/cuerpotecnico/dashboard" },
               { label: "Todos", href: "/oficiales/admin/cuerpotecnico" },
               { label: "Pendientes", href: "/oficiales/admin/cuerpotecnico?estado=PENDIENTE" },
             ],
