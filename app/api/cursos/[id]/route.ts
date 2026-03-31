@@ -21,6 +21,7 @@ export async function GET(
           orderBy: { orden: "asc" },
           include: {
             examen: { select: { id: true, titulo: true } },
+            secciones: { orderBy: { orden: "asc" } },
             ...(userId
               ? {
                   progresos: {

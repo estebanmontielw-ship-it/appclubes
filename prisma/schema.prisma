@@ -129,8 +129,33 @@ model Modulo {
   curso     Curso            @relation(fields: [cursoId], references: [id], onDelete: Cascade)
   examen    Examen?
   progresos ProgresoModulo[]
+  secciones ModuloSeccion[]
 
   @@map("modulos")
+}
+
+enum TipoSeccion {
+  CONTENIDO
+  TRUCO_MEMORIA
+  CASO_PRACTICO
+  TABLA_RESUMEN
+  MINI_QUIZ
+  TARJETAS_EXPANDIBLES
+}
+
+model ModuloSeccion {
+  id        String       @id @default(uuid())
+  moduloId  String
+  titulo    String
+  contenido String       @db.Text
+  tipo      TipoSeccion  @default(CONTENIDO)
+  orden     Int
+  metadata  String?      @db.Text  // JSON para datos extra (quiz options, cards, etc)
+  createdAt DateTime     @default(now())
+
+  modulo Modulo @relation(fields: [moduloId], references: [id], onDelete: Cascade)
+
+  @@map("modulo_secciones")
 }
 
 model Examen {
