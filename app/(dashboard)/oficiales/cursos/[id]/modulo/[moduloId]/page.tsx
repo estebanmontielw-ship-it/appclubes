@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -47,6 +47,8 @@ interface ModuloData {
 export default function ModuloDetallePage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const isPreview = searchParams.get("preview") === "true"
   const { toast } = useToast()
   const [modulo, setModulo] = useState<ModuloData | null>(null)
   const [allModulos, setAllModulos] = useState<ModuloData[]>([])
@@ -80,7 +82,7 @@ export default function ModuloDetallePage() {
   const currentIdx = allModulos.findIndex((m) => m.id === params.moduloId)
   const prevModulo = currentIdx > 0 ? allModulos[currentIdx - 1] : null
   const nextModulo = currentIdx < allModulos.length - 1 ? allModulos[currentIdx + 1] : null
-  const nextIsAccessible = nextModulo && (isCompleted || nextModulo.progresos?.[0]?.completado)
+  const nextIsAccessible = isPreview || (nextModulo && (isCompleted || nextModulo.progresos?.[0]?.completado))
 
   const handleComplete = async () => {
     setCompleting(true)
@@ -253,7 +255,7 @@ export default function ModuloDetallePage() {
 
       {/* Exam link */}
       {modulo.examen && (isLastSection || !hasSections) && (
-        <Link href={`/oficiales/cursos/${params.id}/examen/${modulo.examen.id}`}>
+        <Link href={`/oficiales/cursos/${params.id}/examen/${modulo.examen.id}${isPreview ? "?preview=true" : ""}`}>
           <Card className="border-2 border-primary/20 hover:border-primary/40 hover:shadow-md cursor-pointer transition-all bg-primary/5">
             <CardContent className="p-5 flex items-center gap-4">
               <div className="p-3 rounded-xl bg-primary/10">
@@ -282,7 +284,7 @@ export default function ModuloDetallePage() {
 
           <div className="flex gap-3">
             {prevModulo ? (
-              <Button variant="outline" className="flex-1" onClick={() => router.push(`/oficiales/cursos/${params.id}/modulo/${prevModulo.id}`)}>
+              <Button variant="outline" className="flex-1" onClick={() => router.push(`/oficiales/cursos/${params.id}/modulo/${prevModulo.id}${isPreview ? '?preview=true' : ''}`)}>
                 <ChevronLeft className="mr-1 h-4 w-4" /><span className="truncate">{prevModulo.titulo}</span>
               </Button>
             ) : (
@@ -291,7 +293,7 @@ export default function ModuloDetallePage() {
               </Link>
             )}
             {nextModulo && nextIsAccessible ? (
-              <Button variant={isCompleted ? "default" : "outline"} className="flex-1" onClick={() => router.push(`/oficiales/cursos/${params.id}/modulo/${nextModulo.id}`)}>
+              <Button variant={isCompleted ? "default" : "outline"} className="flex-1" onClick={() => router.push(`/oficiales/cursos/${params.id}/modulo/${nextModulo.id}${isPreview ? '?preview=true' : ''}`)}>
                 <span className="truncate">{nextModulo.titulo}</span><ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             ) : nextModulo ? (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
+import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -165,6 +166,9 @@ export default function AdminCursoDetallePage() {
           <h1 className="text-2xl font-bold">{curso.nombre}</h1>
           <p className="text-sm text-muted-foreground">{curso._count.inscripciones} inscriptos</p>
         </div>
+        <Link href={`/oficiales/cursos/${curso.id}?preview=true`}>
+          <Button size="sm" variant="outline" className="mr-2">🔍 Vista previa</Button>
+        </Link>
         <Badge variant={ESTADO_COLOR[curso.estado]}>{curso.estado}</Badge>
       </div>
 

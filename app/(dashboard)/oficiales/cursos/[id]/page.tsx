@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -50,6 +50,8 @@ interface CursoView {
 export default function CursoDetallePage() {
   const params = useParams()
   const { toast } = useToast()
+  const searchParams = useSearchParams()
+  const isPreview = searchParams.get("preview") === "true"
   const [curso, setCurso] = useState<CursoView | null>(null)
   const [loading, setLoading] = useState(true)
   const [inscribiendo, setInscribiendo] = useState(false)
@@ -70,7 +72,7 @@ export default function CursoDetallePage() {
   useEffect(() => { loadCurso() }, [params.id])
 
   const inscripcion = curso?.inscripciones?.[0]
-  const isActive = inscripcion?.estado === "ACTIVO" || inscripcion?.estado === "COMPLETADO"
+  const isActive = isPreview || inscripcion?.estado === "ACTIVO" || inscripcion?.estado === "COMPLETADO"
 
   const handleInscribir = async () => {
     setInscribiendo(true)
@@ -123,8 +125,22 @@ export default function CursoDetallePage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* Preview banner */}
+      {isPreview && (
+        <div className="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3 flex items-center gap-3">
+          <span className="text-purple-600 text-lg">🔍</span>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-purple-800">Modo vista previa</p>
+            <p className="text-xs text-purple-600">Todos los módulos y exámenes están desbloqueados. Los cambios no se guardan.</p>
+          </div>
+          <Link href={`/oficiales/admin/cursos/${params.id}`}>
+            <Button size="sm" variant="outline" className="text-purple-700 border-purple-300">Volver al admin</Button>
+          </Link>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
-        <Link href="/oficiales/cursos">
+        <Link href={isPreview ? `/oficiales/admin/cursos/${params.id}` : "/oficiales/cursos"}>
           <Button variant="ghost" size="icon"><ArrowLeft className="h-5 w-5" /></Button>
         </Link>
         <div className="flex-1">
@@ -157,7 +173,7 @@ export default function CursoDetallePage() {
       </Card>
 
       {/* Inscription button */}
-      {!inscripcion && (
+      {!inscripcion && !isPreview && (
         <Button className="w-full" size="lg" onClick={handleInscribir} disabled={inscribiendo}>
           {inscribiendo && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {curso.esGratuito ? "Inscribirme gratis" : "Inscribirme"}
@@ -202,8 +218,8 @@ export default function CursoDetallePage() {
           {curso.modulos.map((m, idx) => {
             const isCompleted = m.progresos?.[0]?.completado
             const prevCompleted = idx === 0 || curso.modulos[idx - 1]?.progresos?.[0]?.completado
-            const isAccessible = isActive && (idx === 0 || prevCompleted)
-            const isLocked = isActive && !isAccessible
+            const isAccessible = isPreview || (isActive && (idx === 0 || prevCompleted))
+            const isLocked = !isPreview && isActive && !isAccessible
 
             const moduleContent = (
               <div
@@ -238,7 +254,7 @@ export default function CursoDetallePage() {
             )
 
             return isAccessible || isCompleted ? (
-              <Link key={m.id} href={`/oficiales/cursos/${curso.id}/modulo/${m.id}`}>
+              <Link key={m.id} href={`/oficiales/cursos/${curso.id}/modulo/${m.id}${isPreview ? "?preview=true" : ""}`}>
                 {moduleContent}
               </Link>
             ) : (
