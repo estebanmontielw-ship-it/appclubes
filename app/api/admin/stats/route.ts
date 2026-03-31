@@ -3,43 +3,73 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    const { data: { user } } = await supabase.auth.getUser()
 
-    if (!session?.user) {
+    if (!user) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
-    // Check admin role
     const adminRoles = await prisma.usuarioRol.findMany({
-      where: {
-        usuarioId: session.user.id,
-        rol: { in: ["SUPER_ADMIN", "INSTRUCTOR"] },
-      },
+      where: { usuarioId: user.id, rol: { in: ["SUPER_ADMIN", "INSTRUCTOR"] } },
     })
-
     if (adminRoles.length === 0) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
-    const [totalUsuarios, verificados, pendientes, pagosPendientes] =
-      await Promise.all([
-        prisma.usuario.count(),
-        prisma.usuario.count({ where: { estadoVerificacion: "VERIFICADO" } }),
-        prisma.usuario.count({ where: { estadoVerificacion: "PENDIENTE" } }),
-        prisma.pago.count({ where: { estado: "PENDIENTE_REVISION" } }),
-      ])
+    const [
+      usuariosTotales,
+      verificados,
+      pendientesVerificacion,
+      rechazados,
+      pendientesPagos,
+      cursosActivos,
+      inscripcionesActivas,
+      ultimosUsuarios,
+      ultimosPagos,
+    ] = await Promise.all([
+      prisma.usuario.count(),
+      prisma.usuario.count({ where: { estadoVerificacion: "VERIFICADO" } }),
+      prisma.usuario.count({ where: { estadoVerificacion: "PENDIENTE" } }),
+      prisma.usuario.count({ where: { estadoVerificacion: "RECHAZADO" } }),
+      prisma.pago.count({ where: { estado: "PENDIENTE_REVISION" } }),
+      prisma.curso.count({ where: { estado: "ACTIVO" } }),
+      prisma.inscripcion.count({ where: { estado: "ACTIVO" } }),
+      prisma.usuario.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        include: { roles: true },
+      }),
+      prisma.pago.findMany({
+        take: 3,
+        where: { estado: "PENDIENTE_REVISION" },
+        orderBy: { createdAt: "desc" },
+        include: {
+          inscripcion: {
+            include: {
+              usuario: { select: { nombre: true, apellido: true } },
+              curso: { select: { nombre: true } },
+            },
+          },
+        },
+      }),
+    ])
 
     return NextResponse.json({
-      totalUsuarios,
+      usuariosTotales,
       verificados,
-      pendientes,
-      pagosPendientes,
+      pendientesVerificacion,
+      rechazados,
+      pendientesPagos,
+      cursosActivos,
+      inscripcionesActivas,
+      ultimosUsuarios,
+      ultimosPagos,
     })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
