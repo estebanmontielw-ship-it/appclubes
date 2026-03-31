@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle } from "lucide-react"
+import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle, Lock } from "lucide-react"
 import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
@@ -109,17 +109,15 @@ export default function DashboardPage() {
                 : "Pendiente de verificación"
             }
           />
-          <QuickCard
-            href="/oficiales/cursos"
+          <ComingSoonCard
             icon={<BookOpen className="h-6 w-6" />}
             title="Mis cursos"
-            description="Ver cursos disponibles"
+            description="Próximamente"
           />
-          <QuickCard
-            href="/oficiales/recursos"
+          <ComingSoonCard
             icon={<FileText className="h-6 w-6" />}
             title="Recursos"
-            description="Material de estudio"
+            description="Próximamente"
           />
           <QuickCard
             href="/oficiales/notificaciones"
@@ -187,5 +185,28 @@ function QuickCard({
         </CardContent>
       </Card>
     </Link>
+  )
+}
+
+function ComingSoonCard({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode
+  title: string
+  description: string
+}) {
+  return (
+    <Card className="h-full opacity-60">
+      <CardContent className="p-6 flex items-start gap-4">
+        <div className="p-2 rounded-lg bg-gray-100 text-gray-400">{icon}</div>
+        <div className="flex-1">
+          <p className="font-medium text-gray-400">{title}</p>
+          <p className="text-sm text-gray-300">{description}</p>
+        </div>
+        <Lock className="h-4 w-4 text-gray-300 mt-1" />
+      </CardContent>
+    </Card>
   )
 }
