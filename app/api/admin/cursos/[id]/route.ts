@@ -94,18 +94,36 @@ export async function DELETE(
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
-    // Check if there are active inscriptions
-    const inscriptions = await prisma.inscripcion.count({
-      where: { cursoId: params.id, estado: { in: ["ACTIVO", "PENDIENTE_PAGO"] } },
-    })
-    if (inscriptions > 0) {
-      return NextResponse.json(
-        { error: "No se puede eliminar un curso con inscripciones activas" },
-        { status: 400 }
-      )
-    }
+    // SUPER_ADMIN can force delete — clean up related data first
+    const cursoId = params.id
 
-    await prisma.curso.delete({ where: { id: params.id } })
+    // Delete in order: respuestas → examenes preguntas/opciones → progreso → pagos → inscripciones → secciones → modulos → certificados → curso
+    await prisma.respuestaExamen.deleteMany({
+      where: { examen: { modulo: { cursoId } } },
+    })
+    await prisma.opcion.deleteMany({
+      where: { pregunta: { examen: { modulo: { cursoId } } } },
+    })
+    await prisma.pregunta.deleteMany({
+      where: { examen: { modulo: { cursoId } } },
+    })
+    await prisma.examen.deleteMany({
+      where: { modulo: { cursoId } },
+    })
+    await prisma.progresoModulo.deleteMany({
+      where: { modulo: { cursoId } },
+    })
+    await prisma.pago.deleteMany({
+      where: { inscripcion: { cursoId } },
+    })
+    await prisma.inscripcion.deleteMany({
+      where: { cursoId },
+    })
+    await prisma.certificado.deleteMany({
+      where: { cursoId },
+    })
+
+    await prisma.curso.delete({ where: { id: cursoId } })
     return NextResponse.json({ ok: true })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })

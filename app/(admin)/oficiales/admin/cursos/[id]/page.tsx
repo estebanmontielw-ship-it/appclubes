@@ -130,6 +130,8 @@ export default function AdminCursoDetallePage() {
     }
   }
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
   const handleDeleteCurso = async () => {
     try {
       const res = await fetch(`/api/admin/cursos/${params.id}`, { method: "DELETE" })
@@ -190,7 +192,7 @@ export default function AdminCursoDetallePage() {
               ) : (
                 <>
                   <Button size="sm" variant="outline" onClick={() => setEditingCurso(true)}>Cambiar estado</Button>
-                  <Button size="sm" variant="destructive" onClick={handleDeleteCurso}>Eliminar</Button>
+                  <Button size="sm" variant="destructive" onClick={() => setShowDeleteConfirm(true)}>Eliminar</Button>
                 </>
               )}
             </div>
@@ -205,6 +207,26 @@ export default function AdminCursoDetallePage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete confirmation */}
+      {showDeleteConfirm && (
+        <Card className="border-2 border-red-200 bg-red-50">
+          <CardContent className="p-5 space-y-3">
+            <p className="font-semibold text-red-800">¿Estás seguro que querés eliminar este curso?</p>
+            <p className="text-sm text-red-700">
+              Se eliminarán todos los módulos, secciones, exámenes, inscripciones, pagos y certificados asociados. Esta acción no se puede deshacer.
+            </p>
+            <div className="flex gap-3">
+              <Button variant="destructive" onClick={handleDeleteCurso}>
+                Sí, eliminar curso
+              </Button>
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Módulos */}
       <Card>
