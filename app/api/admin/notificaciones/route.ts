@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { createNotificacion } from "@/lib/notifications"
+import { sendEmail } from "@/lib/email"
 
 export async function POST(request: Request) {
   try {
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
-    const { titulo, mensaje, destinatarios } = await request.json()
+    const { titulo, mensaje, destinatarios, enviarEmail, enviarNotificacion } = await request.json()
 
     if (!titulo || !mensaje || !destinatarios) {
       return NextResponse.json(
@@ -33,44 +34,82 @@ export async function POST(request: Request) {
       )
     }
 
+    const shouldNotify = enviarNotificacion !== false
+    const shouldEmail = enviarEmail === true
+
     // Get target users based on selection
-    let userIds: string[] = []
+    let users: { id: string; email: string; nombre: string }[] = []
+
+    const selectFields = { id: true, email: true, nombre: true }
 
     if (destinatarios === "TODOS") {
-      const users = await prisma.usuario.findMany({ select: { id: true } })
-      userIds = users.map((u) => u.id)
-    } else if (
-      ["ARBITRO", "MESA", "ESTADISTICO"].includes(destinatarios)
-    ) {
+      users = await prisma.usuario.findMany({ select: selectFields })
+    } else if (["ARBITRO", "MESA", "ESTADISTICO"].includes(destinatarios)) {
       const roles = await prisma.usuarioRol.findMany({
         where: { rol: destinatarios },
-        select: { usuarioId: true },
+        include: { usuario: { select: selectFields } },
       })
-      userIds = roles.map((r) => r.usuarioId)
+      users = roles.map((r) => r.usuario)
     } else if (destinatarios === "VERIFICADOS") {
-      const users = await prisma.usuario.findMany({
+      users = await prisma.usuario.findMany({
         where: { estadoVerificacion: "VERIFICADO" },
-        select: { id: true },
+        select: selectFields,
       })
-      userIds = users.map((u) => u.id)
+    } else if (destinatarios === "PENDIENTES") {
+      users = await prisma.usuario.findMany({
+        where: { estadoVerificacion: "PENDIENTE" },
+        select: selectFields,
+      })
+    } else if (destinatarios.startsWith("USER_")) {
+      // Single user by ID
+      const userId = destinatarios.replace("USER_", "")
+      const user = await prisma.usuario.findUnique({
+        where: { id: userId },
+        select: selectFields,
+      })
+      if (user) users = [user]
     }
 
-    // Create notifications for all users
-    const results = await Promise.allSettled(
-      userIds.map((userId) =>
-        createNotificacion({
-          usuarioId: userId,
-          tipo: "MENSAJE_ADMIN",
-          titulo,
-          mensaje,
-          enviadoPor: session.user.id,
-        })
+    let notifSent = 0
+    let emailSent = 0
+
+    // Send notifications
+    if (shouldNotify) {
+      const results = await Promise.allSettled(
+        users.map((user) =>
+          createNotificacion({
+            usuarioId: user.id,
+            tipo: "MENSAJE_ADMIN",
+            titulo,
+            mensaje,
+            enviadoPor: session.user.id,
+          })
+        )
       )
-    )
+      notifSent = results.filter((r) => r.status === "fulfilled").length
+    }
 
-    const sent = results.filter((r) => r.status === "fulfilled").length
+    // Send emails
+    if (shouldEmail) {
+      const results = await Promise.allSettled(
+        users.map((user) =>
+          sendEmail({
+            to: user.email,
+            subject: titulo,
+            nombre: user.nombre,
+            body: mensaje.replace(/\n/g, "<br>"),
+            type: "info",
+          })
+        )
+      )
+      emailSent = results.filter((r) => r.status === "fulfilled").length
+    }
 
-    return NextResponse.json({ sent, total: userIds.length })
+    return NextResponse.json({
+      notifSent,
+      emailSent,
+      total: users.length,
+    })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }

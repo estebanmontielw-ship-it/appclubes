@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
@@ -13,14 +14,48 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Send } from "lucide-react"
+import { Loader2, Send, Bell, Mail, FileText } from "lucide-react"
 
 const DESTINATARIOS = [
   { value: "TODOS", label: "Todos los usuarios" },
   { value: "VERIFICADOS", label: "Solo verificados" },
+  { value: "PENDIENTES", label: "Pendientes de verificación" },
   { value: "ARBITRO", label: "Árbitros" },
   { value: "MESA", label: "Oficiales de Mesa" },
   { value: "ESTADISTICO", label: "Estadísticos" },
+]
+
+const PLANTILLAS = [
+  {
+    nombre: "Bienvenida general",
+    titulo: "Bienvenidos al portal CPB Oficiales",
+    mensaje: "Les damos la bienvenida al nuevo portal de la Confederación Paraguaya de Basketball.\n\nDesde acá van a poder gestionar su carnet digital, inscribirse a cursos de capacitación, ver sus designaciones de partidos y mucho más.\n\nCualquier duda pueden contactarnos.\n\nSaludos,\nCPB Paraguay",
+  },
+  {
+    nombre: "Actualizar foto de perfil",
+    titulo: "Actualizá tu foto de perfil",
+    mensaje: "Te pedimos que actualices tu foto tipo carnet desde la sección Mi Perfil del portal.\n\nLa foto debe ser de frente, fondo claro, sin sombras. El sistema la recorta automáticamente a tamaño carnet.\n\nEsto es necesario para que tu carnet digital se vea correctamente.\n\nGracias,\nCPB Paraguay",
+  },
+  {
+    nombre: "Nuevo curso disponible",
+    titulo: "Nuevo curso de capacitación disponible",
+    mensaje: "Informamos que hay un nuevo curso de capacitación disponible en el portal CPB Oficiales.\n\nIngresá a la sección Cursos para ver el contenido, los módulos y los requisitos.\n\nLos cupos son limitados.\n\nSaludos,\nCPB Paraguay",
+  },
+  {
+    nombre: "Recordatorio de pago",
+    titulo: "Recordatorio: pago pendiente de curso",
+    mensaje: "Te recordamos que tenés un pago pendiente para completar tu inscripción al curso.\n\nPor favor realizá la transferencia bancaria y subí el comprobante desde la sección del curso en el portal.\n\nSi ya realizaste el pago, ignorá este mensaje.\n\nGracias,\nCPB Paraguay",
+  },
+  {
+    nombre: "Fotos en formato incorrecto",
+    titulo: "Tus fotos necesitan ser actualizadas",
+    mensaje: "Detectamos que tus fotos se subieron en un formato que no es compatible con el portal (posiblemente HEIC de iPhone).\n\nPor favor ingresá a Mi Perfil y volvé a subir tu foto tipo carnet. El sistema ahora convierte automáticamente cualquier formato a JPEG.\n\nTambién podés actualizar tu foto de cédula si es necesario.\n\nGracias por tu paciencia,\nCPB Paraguay",
+  },
+  {
+    nombre: "Nuevo reglamento FIBA",
+    titulo: "Nuevo reglamento FIBA disponible",
+    mensaje: "Informamos que se actualizó el reglamento oficial FIBA para la temporada vigente.\n\nPodés descargarlo desde la sección Recursos del portal.\n\nEs importante que todos los oficiales estén al día con las reglas actualizadas.\n\nSaludos,\nCPB Paraguay",
+  },
 ]
 
 export default function AdminNotificacionesPage() {
@@ -28,15 +63,23 @@ export default function AdminNotificacionesPage() {
   const [titulo, setTitulo] = useState("")
   const [mensaje, setMensaje] = useState("")
   const [destinatarios, setDestinatarios] = useState("")
+  const [enviarNotificacion, setEnviarNotificacion] = useState(true)
+  const [enviarEmail, setEnviarEmail] = useState(true)
   const [loading, setLoading] = useState(false)
+
+  const handlePlantilla = (plantilla: typeof PLANTILLAS[0]) => {
+    setTitulo(plantilla.titulo)
+    setMensaje(plantilla.mensaje)
+  }
 
   const handleSend = async () => {
     if (!titulo.trim() || !mensaje.trim() || !destinatarios) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Completá todos los campos",
-      })
+      toast({ variant: "destructive", title: "Completá todos los campos" })
+      return
+    }
+
+    if (!enviarNotificacion && !enviarEmail) {
+      toast({ variant: "destructive", title: "Seleccioná al menos un canal (notificación o email)" })
       return
     }
 
@@ -45,25 +88,30 @@ export default function AdminNotificacionesPage() {
       const res = await fetch("/api/admin/notificaciones", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ titulo, mensaje, destinatarios }),
+        body: JSON.stringify({
+          titulo,
+          mensaje,
+          destinatarios,
+          enviarNotificacion,
+          enviarEmail,
+        }),
       })
 
       if (res.ok) {
         const data = await res.json()
+        const parts = []
+        if (data.notifSent > 0) parts.push(`${data.notifSent} notificaciones`)
+        if (data.emailSent > 0) parts.push(`${data.emailSent} emails`)
         toast({
-          title: "Notificación enviada",
-          description: `Se envió a ${data.sent} de ${data.total} usuarios`,
+          title: "Enviado",
+          description: `Se envió ${parts.join(" y ")} a ${data.total} usuarios`,
         })
         setTitulo("")
         setMensaje("")
         setDestinatarios("")
       } else {
         const error = await res.json()
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: error.error,
-        })
+        toast({ variant: "destructive", title: "Error", description: error.error })
       }
     } catch {
       toast({ variant: "destructive", title: "Error de conexión" })
@@ -73,58 +121,110 @@ export default function AdminNotificacionesPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <h1 className="text-2xl font-bold">Enviar Notificación</h1>
+    <div className="max-w-3xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold">Enviar comunicación</h1>
+        <p className="text-sm text-muted-foreground mt-1">Enviá notificaciones y/o emails a los oficiales</p>
+      </div>
 
+      {/* Plantillas */}
       <Card>
         <CardHeader>
-          <CardTitle>Nueva notificación masiva</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Plantillas rápidas
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {PLANTILLAS.map((p, i) => (
+              <button
+                key={i}
+                onClick={() => handlePlantilla(p)}
+                className="text-left p-3 rounded-lg border border-gray-100 hover:border-primary/30 hover:bg-primary/5 transition-all text-sm"
+              >
+                <p className="font-medium text-gray-900">{p.nombre}</p>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Formulario */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Componer mensaje</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="destinatarios">Destinatarios</Label>
+            <Label>Destinatarios *</Label>
             <Select value={destinatarios} onValueChange={setDestinatarios}>
               <SelectTrigger>
-                <SelectValue placeholder="Seleccioná los destinatarios" />
+                <SelectValue placeholder="¿A quién va dirigido?" />
               </SelectTrigger>
               <SelectContent>
                 {DESTINATARIOS.map((d) => (
-                  <SelectItem key={d.value} value={d.value}>
-                    {d.label}
-                  </SelectItem>
+                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="titulo">Título</Label>
+            <Label>Asunto / Título *</Label>
             <Input
-              id="titulo"
-              placeholder="Ej: Nuevo reglamento FIBA disponible"
               value={titulo}
               onChange={(e) => setTitulo(e.target.value)}
+              placeholder="Ej: Nuevo reglamento FIBA disponible"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="mensaje">Mensaje</Label>
+            <Label>Mensaje *</Label>
             <textarea
-              id="mensaje"
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex min-h-[160px] w-full rounded-lg border border-input bg-background px-3.5 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               placeholder="Escribí el mensaje..."
               value={mensaje}
               onChange={(e) => setMensaje(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">El mensaje se envía tal cual lo escribís. Usá saltos de línea para separar párrafos.</p>
           </div>
 
-          <Button onClick={handleSend} disabled={loading} className="w-full">
+          {/* Canales */}
+          <div className="space-y-3 pt-2">
+            <Label>Canales de envío</Label>
+            <div className="flex gap-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="notif"
+                  checked={enviarNotificacion}
+                  onCheckedChange={(c) => setEnviarNotificacion(c === true)}
+                />
+                <label htmlFor="notif" className="text-sm cursor-pointer flex items-center gap-1.5">
+                  <Bell className="h-3.5 w-3.5 text-gray-500" />
+                  Notificación interna
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="email"
+                  checked={enviarEmail}
+                  onCheckedChange={(c) => setEnviarEmail(c === true)}
+                />
+                <label htmlFor="email" className="text-sm cursor-pointer flex items-center gap-1.5">
+                  <Mail className="h-3.5 w-3.5 text-gray-500" />
+                  Email
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <Button onClick={handleSend} disabled={loading} className="w-full" size="lg">
             {loading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               <Send className="mr-2 h-4 w-4" />
             )}
-            Enviar notificación
+            Enviar comunicación
           </Button>
         </CardContent>
       </Card>
