@@ -144,7 +144,7 @@ function getNavSections(
     {
       label: "FORMACIÓN",
       items: [
-        { label: "Mis cursos", href: "/oficiales/cursos", icon: BookOpen },
+        { label: "Mis cursos", href: "/oficiales/cursos", icon: BookOpen, comingSoon: "Acá vas a poder inscribirte a cursos de capacitación oficial de la CPB, con módulos interactivos, exámenes y certificados." },
         { label: "Recursos", href: "/oficiales/recursos", icon: FileText, comingSoon: "Acá vas a encontrar reglamentos FIBA, manuales, videos instructivos y material de estudio gratuito para tu formación como oficial." },
       ],
     },
