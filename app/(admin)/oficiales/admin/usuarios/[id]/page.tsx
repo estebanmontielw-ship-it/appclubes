@@ -46,6 +46,7 @@ export default function AdminUsuarioDetallePage() {
   const [loading, setLoading] = useState(false)
   const [showRechazoForm, setShowRechazoForm] = useState(false)
   const [motivoRechazo, setMotivoRechazo] = useState("")
+  const [viewingImage, setViewingImage] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/admin/usuarios/${params.id}`)
@@ -184,15 +185,16 @@ export default function AdminUsuarioDetallePage() {
                 Foto tipo carnet
               </Label>
               {usuario.fotoCarnetUrl ? (
-                <a href={usuario.fotoCarnetUrl} target="_blank" rel="noopener noreferrer">
-                  <img
-                    src={usuario.fotoCarnetUrl}
-                    alt="Foto carnet"
-                    className="h-32 w-32 rounded-lg object-cover border cursor-pointer hover:opacity-80"
-                  />
-                </a>
+                <img
+                  src={usuario.fotoCarnetUrl}
+                  alt="Foto carnet"
+                  className="h-36 w-36 rounded-xl object-cover border-2 border-gray-200 cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
+                  onClick={() => setViewingImage(usuario.fotoCarnetUrl)}
+                />
               ) : (
-                <p className="text-sm text-muted-foreground">No disponible</p>
+                <div className="h-36 w-36 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                  <p className="text-xs text-muted-foreground text-center">No disponible</p>
+                </div>
               )}
             </div>
             <div>
@@ -200,21 +202,42 @@ export default function AdminUsuarioDetallePage() {
                 Foto de cédula
               </Label>
               {usuario.fotoCedulaUrl ? (
-                <a
-                  href={usuario.fotoCedulaUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-primary hover:underline"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Ver foto de cédula
-                </a>
+                <img
+                  src={usuario.fotoCedulaUrl}
+                  alt="Foto cédula"
+                  className="max-w-full max-h-48 rounded-xl object-contain border-2 border-gray-200 cursor-pointer hover:opacity-80 hover:shadow-md transition-all"
+                  onClick={() => setViewingImage(usuario.fotoCedulaUrl)}
+                />
               ) : (
-                <p className="text-sm text-muted-foreground">No disponible</p>
+                <div className="h-24 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                  <p className="text-xs text-muted-foreground">No disponible</p>
+                </div>
               )}
             </div>
           </CardContent>
         </Card>
+
+        {/* Image viewer overlay */}
+        {viewingImage && (
+          <div
+            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 cursor-pointer"
+            onClick={() => setViewingImage(null)}
+          >
+            <div className="relative max-w-3xl max-h-[90vh]">
+              <img
+                src={viewingImage}
+                alt="Documento"
+                className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              />
+              <button
+                onClick={() => setViewingImage(null)}
+                className="absolute -top-3 -right-3 h-8 w-8 rounded-full bg-white shadow-lg flex items-center justify-center text-gray-600 hover:text-gray-900"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Action buttons */}
