@@ -17,6 +17,7 @@ export default function LoginCTPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showNotFound, setShowNotFound] = useState(false)
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -25,7 +26,11 @@ export default function LoginCTPage() {
       const supabase = createClient()
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {
-        toast({ variant: "destructive", title: "Error", description: "Email o contraseña incorrectos" })
+        if (error.message.includes("Invalid login")) {
+          setShowNotFound(true)
+        } else {
+          toast({ variant: "destructive", title: "Error", description: "Email o contraseña incorrectos" })
+        }
         return
       }
       // Check if user is cuerpo técnico
@@ -71,6 +76,31 @@ export default function LoginCTPage() {
           </CardFooter>
         </form>
       </Card>
+
+      {showNotFound && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowNotFound(false)}>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10" onClick={e => e.stopPropagation()}>
+            <div className="text-center mb-4">
+              <div className="h-14 w-14 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-3">
+                <span className="text-2xl">🤔</span>
+              </div>
+              <h3 className="font-bold text-lg">No encontramos tu cuenta</h3>
+              <p className="text-sm text-muted-foreground mt-2">
+                El email o contraseña no coinciden con ninguna cuenta registrada. ¿Puede ser que todavía no te hayas registrado?
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Link href="/cuerpotecnico/registro" className="block">
+                <Button className="w-full">Crear mi cuenta</Button>
+              </Link>
+              <Button variant="outline" className="w-full" onClick={() => setShowNotFound(false)}>
+                Intentar de nuevo
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
