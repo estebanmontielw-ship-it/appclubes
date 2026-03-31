@@ -1,22 +1,246 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
-  User,
-  CreditCard,
-  BookOpen,
-  FileText,
-  Bell,
-  Users,
-  DollarSign,
-  LayoutDashboard,
-  LogOut,
-  Calendar,
-  Wallet,
+  Home, User, CreditCard, BookOpen, FileText,
+  Calendar, Bell, LogOut, Users, GraduationCap,
+  Trophy, FolderOpen, ChevronDown, Banknote,
+  DollarSign, BarChart3,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
+
+// ─── TIPOS ───────────────────────────────────────────────
+
+interface NavSubItem {
+  label: string
+  href: string
+  badge?: number
+}
+
+interface NavItem {
+  label: string
+  href?: string
+  icon: React.ElementType
+  badge?: number
+  subItems?: NavSubItem[]
+}
+
+interface NavSection {
+  label?: string
+  items: NavItem[]
+}
+
+// ─── CONFIGURACIÓN DE NAVEGACIÓN ─────────────────────────
+
+function getNavSections(
+  roles: TipoRol[],
+  badges: { pendientesUsuarios: number; pendientesPagos: number }
+): NavSection[] {
+  const isSuperAdmin = roles.includes("SUPER_ADMIN")
+  const isInstructor = roles.includes("INSTRUCTOR")
+
+  if (isSuperAdmin) {
+    return [
+      {
+        label: "MI CUENTA",
+        items: [
+          { label: "Dashboard", href: "/oficiales/admin", icon: Home },
+        ],
+      },
+      {
+        label: "USUARIOS",
+        items: [
+          {
+            label: "Usuarios",
+            icon: Users,
+            subItems: [
+              { label: "Todos los usuarios", href: "/oficiales/admin/usuarios" },
+              { label: "Pendientes", href: "/oficiales/admin/usuarios?estado=PENDIENTE", badge: badges.pendientesUsuarios },
+            ],
+          },
+        ],
+      },
+      {
+        label: "CURSOS",
+        items: [
+          {
+            label: "Cursos",
+            icon: GraduationCap,
+            subItems: [
+              { label: "Gestionar cursos", href: "/oficiales/admin/cursos" },
+              { label: "Pagos pendientes", href: "/oficiales/admin/pagos", badge: badges.pendientesPagos },
+              { label: "Finanzas cursos", href: "/oficiales/admin/finanzas-cursos" },
+            ],
+          },
+        ],
+      },
+      {
+        label: "PARTIDOS",
+        items: [
+          {
+            label: "Partidos",
+            icon: Trophy,
+            subItems: [
+              { label: "Programar partido", href: "/oficiales/admin/partidos" },
+              { label: "Finanzas oficiales", href: "/oficiales/admin/finanzas" },
+            ],
+          },
+        ],
+      },
+      {
+        label: "CONTENIDO",
+        items: [
+          {
+            label: "Contenido",
+            icon: FolderOpen,
+            subItems: [
+              { label: "Recursos gratuitos", href: "/oficiales/admin/recursos" },
+              { label: "Enviar notificación", href: "/oficiales/admin/notificaciones" },
+            ],
+          },
+        ],
+      },
+    ]
+  }
+
+  if (isInstructor) {
+    return [
+      {
+        label: "MI CUENTA",
+        items: [
+          { label: "Inicio", href: "/oficiales", icon: Home },
+          { label: "Mi perfil", href: "/oficiales/perfil", icon: User },
+        ],
+      },
+      {
+        label: "MIS CURSOS",
+        items: [
+          {
+            label: "Cursos",
+            icon: GraduationCap,
+            subItems: [
+              { label: "Ver mis cursos", href: "/oficiales/admin/cursos" },
+            ],
+          },
+        ],
+      },
+    ]
+  }
+
+  // Oficial (ARBITRO / MESA / ESTADISTICO)
+  return [
+    {
+      label: "MI CUENTA",
+      items: [
+        { label: "Inicio", href: "/oficiales", icon: Home },
+        { label: "Mi perfil", href: "/oficiales/perfil", icon: User },
+        { label: "Mi carnet", href: "/oficiales/carnet", icon: CreditCard },
+      ],
+    },
+    {
+      label: "FORMACIÓN",
+      items: [
+        { label: "Mis cursos", href: "/oficiales/cursos", icon: BookOpen },
+        { label: "Recursos", href: "/oficiales/recursos", icon: FileText },
+      ],
+    },
+    {
+      label: "ACTIVIDAD",
+      items: [
+        { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar },
+        { label: "Mis honorarios", href: "/oficiales/mis-honorarios", icon: Banknote },
+      ],
+    },
+  ]
+}
+
+// ─── ITEM CON SUBMENÚ ────────────────────────────────────
+
+function NavItemConSub({
+  item,
+  pathname,
+  onNavigate,
+}: {
+  item: NavItem
+  pathname: string
+  onNavigate?: () => void
+}) {
+  const isActiveParent = item.subItems?.some((s) => pathname.startsWith(s.href.split("?")[0]))
+  const [open, setOpen] = useState(isActiveParent ?? false)
+  const totalBadge = item.subItems?.reduce((acc, s) => acc + (s.badge ?? 0), 0) ?? 0
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(!open)}
+        className={cn(
+          "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
+          isActiveParent
+            ? "bg-primary/10 text-primary"
+            : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+        )}
+      >
+        <item.icon className="h-[18px] w-[18px] shrink-0" />
+        <span className="flex-1 text-left">{item.label}</span>
+        {totalBadge > 0 && !open && (
+          <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+            {totalBadge}
+          </span>
+        )}
+        <ChevronDown
+          className={cn(
+            "h-3.5 w-3.5 shrink-0 transition-transform duration-200 text-gray-400",
+            open ? "rotate-180" : ""
+          )}
+        />
+      </button>
+
+      <div
+        className={cn(
+          "overflow-hidden transition-all duration-200",
+          open ? "max-h-64 opacity-100" : "max-h-0 opacity-0"
+        )}
+      >
+        <div className="ml-4 mt-1 border-l-2 border-gray-100 pl-3 space-y-0.5">
+          {item.subItems?.map((sub) => {
+            const subPath = sub.href.split("?")[0]
+            const isActive = pathname === subPath || pathname.startsWith(subPath + "/")
+            return (
+              <Link
+                key={sub.href}
+                href={sub.href}
+                onClick={onNavigate}
+                className={cn(
+                  "flex items-center justify-between px-2.5 py-2 rounded-lg text-sm transition-all duration-150",
+                  isActive
+                    ? "bg-primary text-white font-medium shadow-sm"
+                    : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                )}
+              >
+                <span>{sub.label}</span>
+                {sub.badge && sub.badge > 0 ? (
+                  <span
+                    className={cn(
+                      "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
+                      isActive ? "bg-white text-primary" : "bg-red-500 text-white"
+                    )}
+                  >
+                    {sub.badge > 99 ? "99+" : sub.badge}
+                  </span>
+                ) : null}
+              </Link>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── SIDEBAR PRINCIPAL ───────────────────────────────────
 
 interface SidebarProps {
   roles: TipoRol[]
@@ -24,134 +248,139 @@ interface SidebarProps {
   mobile?: boolean
   onNavigate?: () => void
   pendingUsers?: number
+  pendingPayments?: number
+  unreadNotifications?: number
 }
 
-export default function Sidebar({ roles, onLogout, mobile = false, onNavigate, pendingUsers = 0 }: SidebarProps) {
+export default function Sidebar({
+  roles,
+  onLogout,
+  mobile = false,
+  onNavigate,
+  pendingUsers = 0,
+  pendingPayments = 0,
+  unreadNotifications = 0,
+}: SidebarProps) {
   const pathname = usePathname()
-  const isAdmin = roles.includes("SUPER_ADMIN") || roles.includes("INSTRUCTOR")
 
-  const userLinks = [
-    { href: "/oficiales", label: "Inicio", icon: LayoutDashboard },
-    { href: "/oficiales/perfil", label: "Mi perfil", icon: User },
-    { href: "/oficiales/carnet", label: "Mi carnet", icon: CreditCard },
-    { href: "/oficiales/cursos", label: "Cursos", icon: BookOpen },
-    { href: "/oficiales/recursos", label: "Recursos", icon: FileText },
-    { href: "/oficiales/mis-partidos", label: "Mis partidos", icon: Calendar },
-    { href: "/oficiales/mis-honorarios", label: "Mis honorarios", icon: Wallet },
-    { href: "/oficiales/notificaciones", label: "Notificaciones", icon: Bell },
-  ]
-
-  const adminLinks = [
-    { href: "/oficiales/admin", label: "Dashboard Admin", icon: LayoutDashboard },
-    { href: "/oficiales/admin/usuarios", label: "Usuarios", icon: Users, badge: pendingUsers },
-    { href: "/oficiales/admin/cursos", label: "Cursos", icon: BookOpen },
-    { href: "/oficiales/admin/pagos", label: "Pagos cursos", icon: DollarSign },
-    { href: "/oficiales/admin/finanzas-cursos", label: "Finanzas cursos", icon: DollarSign },
-    { href: "/oficiales/admin/recursos", label: "Recursos", icon: FileText },
-    { href: "/oficiales/admin/partidos", label: "Partidos", icon: Calendar },
-    { href: "/oficiales/admin/finanzas", label: "Finanzas oficiales", icon: Wallet },
-    { href: "/oficiales/admin/notificaciones", label: "Notificaciones", icon: Bell },
-  ]
+  const sections = getNavSections(roles, {
+    pendientesUsuarios: pendingUsers,
+    pendientesPagos: pendingPayments,
+  })
 
   return (
-    <aside className={mobile ? "flex flex-col w-full h-full bg-white" : "hidden md:flex md:flex-col md:w-64 md:min-h-screen bg-white border-r border-gray-100"}>
+    <aside
+      className={
+        mobile
+          ? "flex flex-col w-full h-full bg-white"
+          : "hidden md:flex md:flex-col md:w-60 md:min-h-screen bg-white border-r border-gray-100"
+      }
+    >
       {/* Logo */}
-      <div className="p-5 border-b border-gray-100">
-        <Link href="/oficiales" className="flex items-center gap-3">
+      <div className="px-4 py-5 border-b border-gray-100">
+        <Link href={roles.includes("SUPER_ADMIN") ? "/oficiales/admin" : "/oficiales"} className="flex items-center gap-3">
           <img src="/logo-cpb.jpg" alt="CPB" className="h-9 w-9 object-contain" />
           <div>
-            <span className="font-bold text-base text-gray-900">CPB Oficiales</span>
+            <p className="font-bold text-sm text-gray-900">CPB Oficiales</p>
+            <p className="text-[11px] text-gray-400">Portal oficial</p>
           </div>
         </Link>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 mb-2">
-          Mi cuenta
-        </p>
-        {userLinks.map((link) => (
-          <NavLink
-            key={link.href}
-            href={link.href}
-            icon={link.icon}
-            label={link.label}
-            active={pathname === link.href}
-            onClick={onNavigate}
-          />
-        ))}
+      {/* Navegación */}
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-5">
+        {sections.map((section, i) => (
+          <div key={i}>
+            {section.label && (
+              <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase px-3 mb-1.5">
+                {section.label}
+              </p>
+            )}
+            <div className="space-y-0.5">
+              {section.items.map((item) => {
+                if (item.subItems) {
+                  return (
+                    <NavItemConSub
+                      key={item.label}
+                      item={item}
+                      pathname={pathname}
+                      onNavigate={onNavigate}
+                    />
+                  )
+                }
 
-        {isAdmin && (
-          <>
-            <div className="my-4 mx-3 border-t border-gray-100" />
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 mb-2">
-              Administración
-            </p>
-            {adminLinks.map((link) => (
-              <NavLink
-                key={link.href}
-                href={link.href}
-                icon={link.icon}
-                label={link.label}
-                active={pathname === link.href}
-                onClick={onNavigate}
-                badge={(link as any).badge}
-              />
-            ))}
-          </>
-        )}
+                const isActive =
+                  pathname === item.href ||
+                  (item.href !== "/oficiales" &&
+                    item.href !== "/oficiales/admin" &&
+                    pathname.startsWith(item.href + "/"))
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href!}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
+                      isActive
+                        ? "bg-primary text-white shadow-sm"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    )}
+                  >
+                    <item.icon className={cn("h-[18px] w-[18px] shrink-0", isActive ? "text-white" : "text-gray-400")} />
+                    <span className="flex-1">{item.label}</span>
+                    {item.badge && item.badge > 0 ? (
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
+                          isActive ? "bg-white text-primary" : "bg-red-500 text-white"
+                        )}
+                      >
+                        {item.badge > 99 ? "99+" : item.badge}
+                      </span>
+                    ) : null}
+                  </Link>
+                )
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
-      {/* Logout */}
-      <div className="p-3 border-t border-gray-100">
+      {/* Footer — Notificaciones + Logout */}
+      <div className="px-3 py-3 border-t border-gray-100 space-y-0.5">
+        <Link
+          href="/oficiales/notificaciones"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150",
+            pathname === "/oficiales/notificaciones"
+              ? "bg-primary text-white shadow-sm"
+              : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+          )}
+        >
+          <Bell className={cn("h-[18px] w-[18px] shrink-0", pathname === "/oficiales/notificaciones" ? "text-white" : "text-gray-400")} />
+          <span className="flex-1">Notificaciones</span>
+          {unreadNotifications > 0 && (
+            <span
+              className={cn(
+                "text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center",
+                pathname === "/oficiales/notificaciones" ? "bg-white text-primary" : "bg-red-500 text-white"
+              )}
+            >
+              {unreadNotifications > 99 ? "99+" : unreadNotifications}
+            </span>
+          )}
+        </Link>
+
         <button
           onClick={onLogout}
-          className="flex items-center gap-3 px-3 py-2.5 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg w-full transition-all duration-150"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-all duration-150"
         >
-          <LogOut className="h-4 w-4" />
-          Cerrar sesión
+          <LogOut className="h-[18px] w-[18px] shrink-0" />
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>
-  )
-}
-
-function NavLink({
-  href,
-  icon: Icon,
-  label,
-  active,
-  onClick,
-  badge,
-}: {
-  href: string
-  icon: React.ComponentType<{ className?: string }>
-  label: string
-  active: boolean
-  onClick?: () => void
-  badge?: number
-}) {
-  return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-all duration-150",
-        active
-          ? "bg-primary text-white font-medium shadow-sm"
-          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-      )}
-    >
-      <Icon className={cn("h-[18px] w-[18px]", active ? "text-white" : "text-gray-400")} />
-      <span className="flex-1">{label}</span>
-      {badge && badge > 0 ? (
-        <span className={cn(
-          "h-5 min-w-5 flex items-center justify-center rounded-full text-[10px] font-bold px-1",
-          active ? "bg-white text-primary" : "bg-red-500 text-white"
-        )}>
-          {badge > 99 ? "99+" : badge}
-        </span>
-      ) : null}
-    </Link>
   )
 }

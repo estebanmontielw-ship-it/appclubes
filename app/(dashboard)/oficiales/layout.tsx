@@ -23,6 +23,7 @@ export default function DashboardLayout({
   const [userData, setUserData] = useState<UserData | null>(null)
   const [unreadCount, setUnreadCount] = useState(0)
   const [pendingUsers, setPendingUsers] = useState(0)
+  const [pendingPayments, setPendingPayments] = useState(0)
 
   useEffect(() => {
     async function loadUser() {
@@ -33,10 +34,9 @@ export default function DashboardLayout({
           setUserData(data.usuario)
           setUnreadCount(data.unreadNotifications || 0)
           setPendingUsers(data.pendingUsers || 0)
+          setPendingPayments(data.pendingPayments || 0)
         }
-      } catch {
-        // silently fail
-      }
+      } catch {}
     }
     loadUser()
   }, [])
@@ -52,7 +52,13 @@ export default function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar roles={roles} onLogout={handleLogout} pendingUsers={pendingUsers} />
+      <Sidebar
+        roles={roles}
+        onLogout={handleLogout}
+        pendingUsers={pendingUsers}
+        pendingPayments={pendingPayments}
+        unreadNotifications={unreadCount}
+      />
 
       {/* Mobile sidebar overlay */}
       <div
@@ -69,15 +75,21 @@ export default function DashboardLayout({
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar roles={roles} onLogout={handleLogout} mobile onNavigate={() => setMenuOpen(false)} pendingUsers={pendingUsers} />
+          <Sidebar
+            roles={roles}
+            onLogout={handleLogout}
+            mobile
+            onNavigate={() => setMenuOpen(false)}
+            pendingUsers={pendingUsers}
+            pendingPayments={pendingPayments}
+            unreadNotifications={unreadCount}
+          />
         </div>
       </div>
 
       <div className="flex-1 flex flex-col min-h-screen">
         <Navbar
-          userName={
-            userData ? `${userData.nombre} ${userData.apellido}` : "..."
-          }
+          userName={userData ? `${userData.nombre} ${userData.apellido}` : "..."}
           unreadCount={unreadCount}
           onMenuToggle={() => setMenuOpen(!menuOpen)}
           menuOpen={menuOpen}
