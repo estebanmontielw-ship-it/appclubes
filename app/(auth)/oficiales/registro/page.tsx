@@ -32,10 +32,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { Combobox } from "@/components/ui/combobox"
 import { Loader2, ArrowLeft, ArrowRight, Upload, Gavel, ClipboardList, BarChart3 } from "lucide-react"
 import { getBarrios } from "@/lib/barrios"
 import { useToast } from "@/components/ui/use-toast"
-import { CIUDADES_PY } from "@/lib/constants"
+import { CIUDADES_PARAGUAY } from "@/lib/ciudades-paraguay"
+import { NACIONALIDADES } from "@/lib/nacionalidades"
 import type { TipoRol } from "@prisma/client"
 
 const STEP_TITLES = [
@@ -318,24 +320,34 @@ export default function RegistroPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="ciudad">Ciudad *</Label>
-                <Select
+                <Combobox
+                  options={CIUDADES_PARAGUAY}
+                  value={step1Form.watch("ciudad") || ""}
                   onValueChange={(value) => { step1Form.setValue("ciudad", value); setSelectedCiudad(value); setBarrio(""); setBarrioCustom("") }}
-                  defaultValue={step1Data?.ciudad}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccioná tu ciudad" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CIUDADES_PY.map((ciudad) => (
-                      <SelectItem key={ciudad} value={ciudad}>
-                        {ciudad}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  placeholder="Seleccioná tu ciudad"
+                  searchPlaceholder="Escribí para buscar ciudad..."
+                  emptyMessage="Ciudad no encontrada"
+                />
                 {step1Form.formState.errors.ciudad && (
                   <p className="text-xs text-destructive">
                     {step1Form.formState.errors.ciudad.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Nacionalidad *</Label>
+                <Combobox
+                  options={NACIONALIDADES}
+                  value={step1Form.watch("nacionalidad") || ""}
+                  onValueChange={(value) => step1Form.setValue("nacionalidad", value)}
+                  placeholder="Seleccioná tu nacionalidad"
+                  searchPlaceholder="Escribí para buscar..."
+                  emptyMessage="Nacionalidad no encontrada"
+                />
+                {step1Form.formState.errors.nacionalidad && (
+                  <p className="text-xs text-destructive">
+                    {step1Form.formState.errors.nacionalidad.message}
                   </p>
                 )}
               </div>

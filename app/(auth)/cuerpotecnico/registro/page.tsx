@@ -10,9 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Combobox } from "@/components/ui/combobox"
 import { Loader2, ArrowLeft, ArrowRight, Upload, Camera } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
-import { CIUDADES_PY } from "@/lib/constants"
+import { CIUDADES_PARAGUAY } from "@/lib/ciudades-paraguay"
+import { NACIONALIDADES } from "@/lib/nacionalidades"
 
 const ROLES_CT = [
   { value: "ENTRENADOR_NACIONAL", label: "Entrenador Nacional", precio: "Gs. 300.000" },
@@ -205,16 +207,27 @@ export default function RegistroCTPage() {
               </div>
               <div className="space-y-1">
                 <Label>Nacionalidad *</Label>
-                <Input value={nacionalidad} onChange={e => setNacionalidad(e.target.value)} placeholder="Paraguaya" />
+                <Combobox
+                  options={NACIONALIDADES}
+                  value={nacionalidad}
+                  onValueChange={setNacionalidad}
+                  placeholder="Seleccioná"
+                  searchPlaceholder="Escribí para buscar..."
+                  emptyMessage="Nacionalidad no encontrada"
+                />
               </div>
             </div>
             <div className="space-y-1"><Label>Teléfono *</Label><Input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="0981..." /></div>
             <div className="space-y-1">
               <Label>Ciudad *</Label>
-              <Select value={ciudad} onValueChange={setCiudad}>
-                <SelectTrigger><SelectValue placeholder="Seleccioná" /></SelectTrigger>
-                <SelectContent>{CIUDADES_PY.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
+              <Combobox
+                options={CIUDADES_PARAGUAY}
+                value={ciudad}
+                onValueChange={setCiudad}
+                placeholder="Seleccioná tu ciudad"
+                searchPlaceholder="Escribí para buscar ciudad..."
+                emptyMessage="Ciudad no encontrada"
+              />
             </div>
             <div className="space-y-1"><Label>Email *</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-4">

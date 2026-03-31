@@ -35,6 +35,7 @@ model Usuario {
   fechaNacimiento    DateTime
   telefono           String
   ciudad             String
+  nacionalidad       String             @default("Paraguaya")
   barrio             String?
   fotoCedulaUrl      String?
   fotoCarnetUrl      String?
