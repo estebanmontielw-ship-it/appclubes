@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useCallback } from "react"
+import Cropper, { Area } from "react-easy-crop"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -42,6 +43,17 @@ const STEP_TITLES = [
   "Documentación",
 ]
 
+async function getCroppedImg(imageSrc: string, pixelCrop: Area, size = 500): Promise<Blob> {
+  const image = new Image()
+  image.crossOrigin = "anonymous"
+  await new Promise((resolve, reject) => { image.onload = resolve; image.onerror = reject; image.src = imageSrc })
+  const canvas = document.createElement("canvas")
+  canvas.width = size; canvas.height = size
+  const ctx = canvas.getContext("2d")!
+  ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, size, size)
+  return new Promise((resolve) => { canvas.toBlob((blob) => resolve(blob!), "image/jpeg", 0.9) })
+}
+
 export default function RegistroPage() {
   const router = useRouter()
   const { toast } = useToast()
@@ -56,6 +68,38 @@ export default function RegistroPage() {
   const [fotoCedula, setFotoCedula] = useState<File | null>(null)
   const [fotoCarnet, setFotoCarnet] = useState<File | null>(null)
   const [confirmaDatos, setConfirmaDatos] = useState(false)
+  // Cropper state for foto carnet
+  const [carnetSrc, setCarnetSrc] = useState<string | null>(null)
+  const [carnetCrop, setCarnetCrop] = useState({ x: 0, y: 0 })
+  const [carnetZoom, setCarnetZoom] = useState(1)
+  const [carnetCroppedArea, setCarnetCroppedArea] = useState<Area | null>(null)
+  const [carnetPreview, setCarnetPreview] = useState<string | null>(null)
+
+  const onCarnetCropComplete = useCallback((_: Area, croppedPixels: Area) => {
+    setCarnetCroppedArea(croppedPixels)
+  }, [])
+
+  const handleCarnetFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !file.type.startsWith("image/")) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      setCarnetSrc(reader.result as string)
+      setCarnetCrop({ x: 0, y: 0 })
+      setCarnetZoom(1)
+      setCarnetPreview(null)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleCarnetCropConfirm = async () => {
+    if (!carnetSrc || !carnetCroppedArea) return
+    const blob = await getCroppedImg(carnetSrc, carnetCroppedArea, 500)
+    const file = new File([blob], "foto-carnet.jpg", { type: "image/jpeg" })
+    setFotoCarnet(file)
+    setCarnetPreview(URL.createObjectURL(blob))
+    setCarnetSrc(null)
+  }
 
   // Step 1 form
   const step1Form = useForm<RegistroStep1Data>({
@@ -421,20 +465,49 @@ export default function RegistroPage() {
               <div className="space-y-2">
                 <Label>Foto tipo carnet *</Label>
                 <p className="text-xs text-muted-foreground">
-                  Foto de frente, fondo claro, sin sombras. JPG o PNG, máx 2MB.
+                  Foto de frente, fondo claro, sin sombras. Se recorta a 500x500 automáticamente.
                 </p>
-                <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors">
-                  <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                  <span className="text-sm text-muted-foreground">
-                    {fotoCarnet ? fotoCarnet.name : "Click para seleccionar archivo"}
-                  </span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    accept="image/*"
-                    onChange={(e) => setFotoCarnet(e.target.files?.[0] || null)}
-                  />
-                </label>
+
+                {carnetPreview ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <img src={carnetPreview} alt="Preview" className="h-32 w-32 rounded-xl object-cover border-2 border-green-200" />
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setCarnetPreview(null); setFotoCarnet(null); setCarnetSrc(null) }}>
+                      Cambiar foto
+                    </Button>
+                  </div>
+                ) : carnetSrc ? (
+                  <div className="space-y-3">
+                    <div className="relative w-full aspect-square max-w-[280px] mx-auto rounded-xl overflow-hidden bg-black">
+                      <Cropper
+                        image={carnetSrc}
+                        crop={carnetCrop}
+                        zoom={carnetZoom}
+                        aspect={1}
+                        onCropChange={setCarnetCrop}
+                        onZoomChange={setCarnetZoom}
+                        onCropComplete={onCarnetCropComplete}
+                        cropShape="rect"
+                        showGrid={true}
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 max-w-[280px] mx-auto">
+                      <span className="text-xs text-muted-foreground">Zoom</span>
+                      <input type="range" min={1} max={3} step={0.1} value={carnetZoom}
+                        onChange={(e) => setCarnetZoom(Number(e.target.value))}
+                        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary" />
+                    </div>
+                    <div className="flex gap-2 justify-center">
+                      <Button type="button" size="sm" onClick={handleCarnetCropConfirm}>Confirmar recorte</Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setCarnetSrc(null)}>Cancelar</Button>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 cursor-pointer hover:border-primary/50 transition-colors">
+                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                    <span className="text-sm text-muted-foreground">Click para seleccionar foto</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleCarnetFileSelect} />
+                  </label>
+                )}
               </div>
 
               <div className="flex items-center space-x-2">
