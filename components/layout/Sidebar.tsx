@@ -216,7 +216,11 @@ function NavItemConSub({
         <div className="ml-4 mt-1 border-l-2 border-gray-100 pl-3 space-y-0.5">
           {item.subItems?.map((sub) => {
             const subPath = sub.href.split("?")[0]
-            const isActive = pathname === subPath || pathname.startsWith(subPath + "/")
+            const subQuery = sub.href.includes("?") ? sub.href.split("?")[1] : null
+            const currentUrl = typeof window !== "undefined" ? window.location.search : ""
+            const isActive = subQuery
+              ? pathname === subPath && currentUrl.includes(subQuery)
+              : pathname === subPath && !currentUrl.includes("estado=")
             return (
               <Link
                 key={sub.href}
