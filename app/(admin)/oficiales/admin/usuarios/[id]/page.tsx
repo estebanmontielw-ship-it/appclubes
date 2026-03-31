@@ -48,12 +48,14 @@ export default function AdminUsuarioDetallePage() {
   const [motivoRechazo, setMotivoRechazo] = useState("")
   const [viewingImage, setViewingImage] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadUser = () => {
     fetch(`/api/admin/usuarios/${params.id}`)
       .then((res) => res.json())
       .then((data) => setUsuario(data.usuario))
       .catch(() => {})
-  }, [params.id])
+  }
+
+  useEffect(() => { loadUser() }, [params.id])
 
   const handleAction = async (accion: string) => {
     if (accion === "rechazar" && !motivoRechazo.trim()) {
@@ -330,7 +332,73 @@ export default function AdminUsuarioDetallePage() {
           </CardContent>
         </Card>
       )}
+      {/* Role management */}
+      {usuario.estadoVerificacion === "VERIFICADO" && (
+        <RoleManager usuarioId={usuario.id} currentRoles={usuario.roles.map((r) => r.rol)} onUpdate={loadUser} />
+      )}
     </div>
+  )
+}
+
+function RoleManager({ usuarioId, currentRoles, onUpdate }: { usuarioId: string; currentRoles: string[]; onUpdate: () => void }) {
+  const { toast } = useToast()
+  const [saving, setSaving] = useState(false)
+
+  const adminRoles = [
+    { rol: "INSTRUCTOR", label: "Instructor", desc: "Puede crear y gestionar cursos, revisar exámenes" },
+    { rol: "DESIGNADOR", label: "Designador", desc: "Puede crear partidos y designar oficiales" },
+  ]
+
+  const toggleRole = async (rol: string) => {
+    setSaving(true)
+    try {
+      const hasRole = currentRoles.includes(rol)
+      const res = await fetch(`/api/admin/usuarios/${usuarioId}/roles`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rol, accion: hasRole ? "quitar" : "agregar" }),
+      })
+      if (res.ok) {
+        toast({ title: hasRole ? `Rol ${rol} removido` : `Rol ${rol} asignado` })
+        onUpdate()
+      } else {
+        const err = await res.json()
+        toast({ variant: "destructive", title: "Error", description: err.error })
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Error" })
+    } finally { setSaving(false) }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Roles administrativos</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">Asigná roles especiales a este usuario. Un usuario puede tener múltiples roles.</p>
+        {adminRoles.map((r) => {
+          const hasRole = currentRoles.includes(r.rol)
+          return (
+            <div key={r.rol} className="flex items-center justify-between p-3 rounded-lg border">
+              <div>
+                <p className="font-medium text-sm">{r.label}</p>
+                <p className="text-xs text-muted-foreground">{r.desc}</p>
+              </div>
+              <Button
+                size="sm"
+                variant={hasRole ? "default" : "outline"}
+                onClick={() => toggleRole(r.rol)}
+                disabled={saving}
+              >
+                {saving && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                {hasRole ? "Activo" : "Asignar"}
+              </Button>
+            </div>
+          )
+        })}
+      </CardContent>
+    </Card>
   )
 }
 

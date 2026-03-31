@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3,
+  DollarSign, BarChart3, Lock, X,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -26,6 +26,7 @@ interface NavItem {
   icon: React.ElementType
   badge?: number
   subItems?: NavSubItem[]
+  comingSoon?: string // description for coming soon modal
 }
 
 interface NavSection {
@@ -144,14 +145,14 @@ function getNavSections(
       label: "FORMACIÓN",
       items: [
         { label: "Mis cursos", href: "/oficiales/cursos", icon: BookOpen },
-        { label: "Recursos", href: "/oficiales/recursos", icon: FileText },
+        { label: "Recursos", href: "/oficiales/recursos", icon: FileText, comingSoon: "Acá vas a encontrar reglamentos FIBA, manuales, videos instructivos y material de estudio gratuito para tu formación como oficial." },
       ],
     },
     {
       label: "ACTIVIDAD",
       items: [
-        { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar },
-        { label: "Mis honorarios", href: "/oficiales/mis-honorarios", icon: Banknote },
+        { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar, comingSoon: "Acá vas a ver todos los partidos donde fuiste designado como oficial, con fecha, hora, cancha y tu rol asignado." },
+        { label: "Mis honorarios", href: "/oficiales/mis-honorarios", icon: Banknote, comingSoon: "Acá vas a poder ver tus partidos trabajados, los aranceles correspondientes y el estado de tus cobros." },
       ],
     },
   ]
@@ -262,6 +263,7 @@ export default function Sidebar({
   unreadNotifications = 0,
 }: SidebarProps) {
   const pathname = usePathname()
+  const [comingSoonMsg, setComingSoonMsg] = useState<{ label: string; desc: string } | null>(null)
 
   const sections = getNavSections(roles, {
     pendientesUsuarios: pendingUsers,
@@ -314,6 +316,20 @@ export default function Sidebar({
                   (item.href !== "/oficiales" &&
                     item.href !== "/oficiales/admin" &&
                     pathname.startsWith(item.href + "/"))
+
+                if (item.comingSoon) {
+                  return (
+                    <button
+                      key={item.label}
+                      onClick={() => setComingSoonMsg({ label: item.label, desc: item.comingSoon! })}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-400 hover:bg-gray-50 transition-all duration-150"
+                    >
+                      <item.icon className="h-[18px] w-[18px] shrink-0 text-gray-300" />
+                      <span className="flex-1 text-left">{item.label}</span>
+                      <Lock className="h-3.5 w-3.5 text-gray-300" />
+                    </button>
+                  )
+                }
 
                 return (
                   <Link
@@ -381,6 +397,32 @@ export default function Sidebar({
           <span>Cerrar sesión</span>
         </button>
       </div>
+
+      {/* Coming soon modal */}
+      {comingSoonMsg && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={() => setComingSoonMsg(null)}>
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" />
+          <div className="relative bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl z-10" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setComingSoonMsg(null)} className="absolute top-3 right-3 p-1 rounded-lg hover:bg-gray-100">
+              <X className="h-4 w-4 text-gray-400" />
+            </button>
+            <div className="text-center mb-4">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-3">
+                <Lock className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="font-bold text-lg">{comingSoonMsg.label}</h3>
+              <p className="text-xs text-primary font-semibold uppercase tracking-wide mt-1">Próximamente</p>
+            </div>
+            <p className="text-sm text-gray-600 text-center leading-relaxed">{comingSoonMsg.desc}</p>
+            <button
+              onClick={() => setComingSoonMsg(null)}
+              className="w-full mt-5 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
     </aside>
   )
 }
