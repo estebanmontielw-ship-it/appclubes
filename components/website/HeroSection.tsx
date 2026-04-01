@@ -22,43 +22,24 @@ export default function HeroSection() {
       <div className="absolute top-32 right-20 w-48 h-48 border border-amber-400/10 rounded-full animate-[spin_40s_linear_infinite_reverse]" />
       <div className="absolute bottom-20 right-40 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
 
-      {/* Basketball icon decorative */}
-      <div className="absolute right-[10%] top-1/2 -translate-y-1/2 hidden lg:block">
-        <div className="relative w-64 h-64 xl:w-80 xl:h-80 opacity-15 animate-slide-in-right">
-          <svg viewBox="0 0 200 200" className="w-full h-full text-amber-400">
-            {/* Outer circle */}
-            <circle cx="100" cy="100" r="96" fill="none" stroke="currentColor" strokeWidth="2.5" />
-            {/* Horizontal seam */}
-            <line x1="4" y1="100" x2="196" y2="100" stroke="currentColor" strokeWidth="2" />
-            {/* Vertical seam - curved like a real basketball */}
-            <path d="M100 4 C75 50, 75 150, 100 196" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M100 4 C125 50, 125 150, 100 196" fill="none" stroke="currentColor" strokeWidth="2" />
-            {/* Side curves */}
-            <path d="M4 100 C30 70, 30 30, 60 4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M4 100 C30 130, 30 170, 60 196" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M196 100 C170 70, 170 30, 140 4" fill="none" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M196 100 C170 130, 170 170, 140 196" fill="none" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-        </div>
-      </div>
 
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
         <div className="max-w-3xl">
           {/* Badge */}
           <div className="animate-slide-in-left inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/10 mb-8 backdrop-blur-sm">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-            <span className="text-sm font-medium text-blue-200">Temporada 2025 en curso</span>
+            <span className="text-sm font-medium text-blue-200">Temporada 2026 en curso</span>
             <ChevronRight className="h-3.5 w-3.5 text-blue-300" />
           </div>
 
           <h1 className="font-heading tracking-wide leading-none">
-            <span className="block text-5xl sm:text-6xl lg:text-8xl animate-slide-in-left" style={{ animationDelay: "0.1s" }}>
+            <span className="block text-5xl sm:text-6xl lg:text-8xl text-red-500 animate-slide-in-left" style={{ animationDelay: "0.1s" }}>
               Confederación
             </span>
-            <span className="block text-5xl sm:text-6xl lg:text-8xl animate-slide-in-left" style={{ animationDelay: "0.2s" }}>
+            <span className="block text-5xl sm:text-6xl lg:text-8xl text-white animate-slide-in-left" style={{ animationDelay: "0.2s" }}>
               Paraguaya
             </span>
-            <span className="block text-5xl sm:text-6xl lg:text-8xl text-amber-400 animate-slide-in-left" style={{ animationDelay: "0.3s" }}>
+            <span className="block text-5xl sm:text-6xl lg:text-8xl text-blue-400 animate-slide-in-left" style={{ animationDelay: "0.3s" }}>
               de Básquetbol
             </span>
           </h1>
