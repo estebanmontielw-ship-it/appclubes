@@ -2,7 +2,7 @@ import { createServiceClient } from "@/lib/supabase"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
-import { emailBienvenida } from "@/lib/email"
+import { emailBienvenidaCT } from "@/lib/email"
 
 // Normalize name for matching
 function normalizeName(s: string): string {
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     }
 
     // Send welcome email
-    emailBienvenida(email, nombre).catch(() => {})
+    emailBienvenidaCT(email, nombre).catch(() => {})
 
     return NextResponse.json({
       ct,

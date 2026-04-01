@@ -121,6 +121,18 @@ export async function emailBienvenida(to: string, nombre: string) {
   })
 }
 
+export async function emailBienvenidaCT(to: string, nombre: string) {
+  return sendEmail({
+    to,
+    subject: "Bienvenido — Cuerpo Técnico CPB",
+    nombre,
+    type: "info",
+    body: "Tu solicitud de registro en el portal de Cuerpo Técnico fue recibida correctamente.<br><br>Nuestro equipo está revisando tu perfil y documentación. Te vamos a notificar por email cuando tu cuenta sea verificada.",
+    ctaText: "Ir al portal",
+    ctaUrl: `${BASE_URL}/cuerpotecnico/login`,
+  })
+}
+
 export async function emailCarnetVerificado(to: string, nombre: string) {
   return sendEmail({
     to,
