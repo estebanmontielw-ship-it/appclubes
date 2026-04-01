@@ -5,6 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Menu, X, ChevronDown } from "lucide-react"
+import SmartSearch from "./SmartSearch"
 
 const navLinks = [
   { label: "Inicio", href: "/" },
@@ -102,14 +103,16 @@ export default function PublicNavbar() {
             })}
           </nav>
 
-          {/* Mobile toggle */}
-          <button
-            onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-50"
-          >
-            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
-        </div>
+          {/* Search + Mobile toggle */}
+          <div className="flex items-center gap-1">
+            <SmartSearch />
+            <button
+              onClick={() => setMobileOpen(!mobileOpen)}
+              className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-50"
+            >
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          </div>
       </div>
 
       {/* Mobile menu */}

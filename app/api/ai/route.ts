@@ -198,6 +198,64 @@ El tono debe ser formal e institucional. Incluí fecha, formato de comunicado of
       }
     }
 
+    // ─── IMPORTAR POST DE INSTAGRAM ───────────────────────
+    if (tipo === "importar-instagram") {
+      const text = await callAI(`Tenés un post de Instagram de la Confederación Paraguaya de Básquetbol con este contenido:
+
+"${prompt}"
+
+Convertilo en una noticia profesional para el sitio web. Expandí el texto del post en un artículo más completo y formal.
+
+Respondé SOLO con un JSON válido (sin markdown, sin backticks):
+{
+  "titulo": "Título de la noticia (máximo 80 caracteres)",
+  "slug": "titulo-en-formato-url-sin-acentos",
+  "extracto": "Resumen de 1-2 oraciones (máximo 200 caracteres)",
+  "contenido": "<p>Contenido HTML completo expandido del post. Mínimo 3 párrafos. Usá <p>, <strong>, <em>.</p>",
+  "categoria": "GENERAL"
+}
+
+Categorías válidas: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, CLUBES.
+Eliminá hashtags y emojis del título y extracto. Podés mantenerlos en el contenido si tienen sentido.`)
+
+      try {
+        return NextResponse.json({ result: JSON.parse(text) })
+      } catch {
+        return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
+      }
+    }
+
+    // ─── BUSCADOR INTELIGENTE ───────────────────────────
+    if (tipo === "buscar") {
+      const text = await callNvidia(`Un visitante de cpb.com.py busca: "${prompt}"
+
+Determiná a qué página del sitio debe ir. Las opciones son:
+- /calendario - para partidos, fixture, calendario, fechas de juegos
+- /posiciones - para tabla de posiciones, clasificación, standings
+- /estadisticas - para stats de jugadores, goleadores, rebotes, asistencias
+- /noticias - para noticias, novedades, artículos
+- /clubes - para clubes, equipos afiliados
+- /selecciones - para selecciones nacionales, selección paraguaya
+- /reglamentos - para reglas, reglamentos, normas, documentos oficiales
+- /institucional - para info sobre la CPB, historia, autoridades
+- /contacto - para contacto, teléfono, email, dirección
+- /oficiales/registro - para registrarse como árbitro u oficial
+- /cuerpotecnico/registro - para registrarse como entrenador o cuerpo técnico
+
+Respondé SOLO con un JSON válido (sin markdown, sin backticks):
+{
+  "url": "/la-ruta-mas-relevante",
+  "mensaje": "Texto breve explicando a dónde lo estás dirigiendo (1 oración)"
+}`, 200)
+
+      try {
+        const result = JSON.parse(text)
+        return NextResponse.json({ result })
+      } catch {
+        return NextResponse.json({ result: { url: "/", mensaje: "No pude determinar lo que buscás. Probá navegando desde el inicio." } })
+      }
+    }
+
     // ─── CHATBOT PÚBLICO (Nvidia NIM - gratuito) ─────────
     if (tipo === "chatbot") {
       const chatPrompt = `Un visitante del sitio web cpb.com.py hace esta consulta:
