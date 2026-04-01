@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X,
+  DollarSign, BarChart3, Lock, X, Globe,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -110,6 +110,23 @@ function getNavSections(
             subItems: [
               { label: "Recursos gratuitos", href: "/oficiales/admin/recursos" },
               { label: "Enviar notificación", href: "/oficiales/admin/notificaciones" },
+            ],
+          },
+        ],
+      },
+      {
+        label: "SITIO WEB",
+        items: [
+          {
+            label: "Sitio Web",
+            icon: Globe,
+            subItems: [
+              { label: "Noticias", href: "/oficiales/admin/website/noticias" },
+              { label: "Clubes", href: "/oficiales/admin/website/clubes" },
+              { label: "Selecciones", href: "/oficiales/admin/website/selecciones" },
+              { label: "Reglamentos", href: "/oficiales/admin/website/reglamentos" },
+              { label: "Páginas", href: "/oficiales/admin/website/paginas" },
+              { label: "Mensajes", href: "/oficiales/admin/website/contacto" },
             ],
           },
         ],

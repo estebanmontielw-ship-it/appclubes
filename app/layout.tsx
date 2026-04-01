@@ -3,8 +3,11 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: "CPB Oficiales — Confederación Paraguaya de Basketball",
-  description: "Portal de gestión de árbitros, oficiales de mesa y estadísticos de la CPB",
+  title: {
+    template: "%s | CPB",
+    default: "CPB - Confederación Paraguaya de Básquetbol",
+  },
+  description: "Confederación Paraguaya de Básquetbol - Sitio oficial",
   icons: {
     icon: "/logo-cpb.jpg",
     apple: "/logo-cpb.jpg",

@@ -552,3 +552,122 @@ model CtPreverificado {
 
   @@map("ct_preverificados")
 }
+
+// ─── SITIO WEB PÚBLICO ──────────────────────────────────
+
+enum CategoriaNoticia {
+  GENERAL
+  TORNEOS
+  SELECCIONES
+  ARBITRAJE
+  INSTITUCIONAL
+  CLUBES
+}
+
+model Noticia {
+  id          String            @id @default(uuid())
+  titulo      String
+  slug        String            @unique
+  extracto    String            @db.Text
+  contenido   String            @db.Text
+  imagenUrl   String?
+  galeria     String?           @db.Text
+  videoUrl    String?
+  categoria   CategoriaNoticia
+  destacada   Boolean           @default(false)
+  publicada   Boolean           @default(false)
+  publicadaEn DateTime?
+  autorNombre String?
+  creadoPor   String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@map("noticias")
+}
+
+model Club {
+  id          String   @id @default(uuid())
+  nombre      String
+  slug        String   @unique
+  sigla       String?
+  logoUrl     String?
+  ciudad      String
+  direccion   String?
+  telefono    String?
+  email       String?
+  sitioWeb    String?
+  instagram   String?
+  facebook    String?
+  descripcion String?  @db.Text
+  activo      Boolean  @default(true)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("clubes")
+}
+
+model Seleccion {
+  id          String   @id @default(uuid())
+  nombre      String
+  slug        String   @unique
+  categoria   String
+  genero      String
+  imagenUrl   String?
+  descripcion String?  @db.Text
+  entrenador  String?
+  logros      String?  @db.Text
+  activo      Boolean  @default(true)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("selecciones")
+}
+
+enum CategoriaReglamento {
+  REGLAMENTO_JUEGO
+  REGLAMENTO_COMPETENCIA
+  ESTATUTO
+  CIRCULAR
+  OTRO
+}
+
+model Reglamento {
+  id          String              @id @default(uuid())
+  titulo      String
+  descripcion String?
+  archivoUrl  String
+  categoria   CategoriaReglamento
+  orden       Int                 @default(0)
+  activo      Boolean             @default(true)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@map("reglamentos")
+}
+
+model PaginaContenido {
+  id        String   @id @default(uuid())
+  clave     String   @unique
+  titulo    String
+  contenido String   @db.Text
+  imagenUrl String?
+  activo    Boolean  @default(true)
+  updatedAt DateTime @updatedAt
+
+  @@map("paginas_contenido")
+}
+
+model MensajeContacto {
+  id        String   @id @default(uuid())
+  nombre    String
+  email     String
+  telefono  String?
+  asunto    String
+  mensaje   String   @db.Text
+  leido     Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("mensajes_contacto")
+}
