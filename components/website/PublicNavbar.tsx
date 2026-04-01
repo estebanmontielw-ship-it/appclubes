@@ -31,15 +31,15 @@ export default function PublicNavbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-gray-100 shadow-sm">
+    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 shrink-0">
-            <img src="/logo-cpb.jpg" alt="CPB" className="h-10 w-10 object-contain" />
+            <img src="/favicon-cpb.png" alt="CPB" className="h-10 w-10 object-contain" />
             <div className="hidden sm:block">
-              <p className="font-bold text-sm text-gray-900 leading-tight">Confederación Paraguaya</p>
-              <p className="text-xs text-gray-500 leading-tight">de Básquetbol</p>
+              <p className="font-heading text-lg text-gray-900 leading-tight tracking-wide">CPB</p>
+              <p className="text-[10px] text-gray-400 leading-tight -mt-0.5">Confederación Paraguaya de Básquetbol</p>
             </div>
           </Link>
 

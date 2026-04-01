@@ -2,16 +2,16 @@ import Link from "next/link"
 
 export default function PublicFooter() {
   return (
-    <footer className="bg-gray-900 text-gray-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <footer className="bg-[#0a1628] text-gray-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
           {/* About */}
           <div>
             <div className="flex items-center gap-3 mb-4">
               <img src="/favicon-cpb.png" alt="CPB" className="h-10 w-10 object-contain" />
               <div>
-                <p className="font-bold text-white text-sm">CPB</p>
-                <p className="text-xs text-gray-400">Confederación Paraguaya de Básquetbol</p>
+                <p className="font-heading text-xl text-white tracking-wide">CPB</p>
+                <p className="text-[10px] text-gray-500">Confederación Paraguaya de Básquetbol</p>
               </div>
             </div>
             <p className="text-sm text-gray-400 leading-relaxed">
