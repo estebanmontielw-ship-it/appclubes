@@ -8,44 +8,59 @@ const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null
 
+const SYSTEM_PROMPT = `Sos el asistente oficial de la Confederación Paraguaya de Básquetbol (CPB), el ente rector del básquetbol en Paraguay. Estás afiliada a FIBA y sos miembro de FIBA Américas. Tu sitio web es cpb.com.py. Tu tono es formal pero accesible, típico de una federación deportiva latinoamericana. Respondé siempre en español.`
+
+async function callClaude(userPrompt: string, maxTokens = 2000) {
+  if (!anthropic) throw new Error("API de IA no configurada")
+
+  const message = await anthropic.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: maxTokens,
+    system: SYSTEM_PROMPT,
+    messages: [{ role: "user", content: userPrompt }],
+  })
+
+  return message.content[0].type === "text" ? message.content[0].text : ""
+}
+
+// Admin-only auth check
+async function checkAdmin() {
+  const cookieStore = cookies()
+  const supabase = createClient(cookieStore)
+  const { data: { session } } = await supabase.auth.getSession()
+
+  if (!session?.user) return false
+
+  const adminRoles = await prisma.usuarioRol.findMany({
+    where: { usuarioId: session.user.id, rol: "SUPER_ADMIN" },
+  })
+  return adminRoles.length > 0
+}
+
 export async function POST(request: Request) {
   try {
-    // Auth check
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-    const { data: { session } } = await supabase.auth.getSession()
+    const body = await request.json()
+    const { prompt, tipo, contexto } = body
 
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
-
-    const adminRoles = await prisma.usuarioRol.findMany({
-      where: { usuarioId: session.user.id, rol: "SUPER_ADMIN" },
-    })
-    if (adminRoles.length === 0) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    // Chatbot público no requiere auth, el resto sí
+    if (tipo !== "chatbot") {
+      const isAdmin = await checkAdmin()
+      if (!isAdmin) {
+        return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+      }
     }
 
     if (!anthropic) {
       return NextResponse.json({ error: "API de IA no configurada" }, { status: 500 })
     }
 
-    const body = await request.json()
-    const { prompt, tipo } = body
-
     if (!prompt) {
       return NextResponse.json({ error: "Se requiere un prompt" }, { status: 400 })
     }
 
+    // ─── GENERAR NOTICIA ────────────────────────────────
     if (tipo === "generar-noticia") {
-      const message = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
-        messages: [
-          {
-            role: "user",
-            content: `Sos el redactor oficial de la Confederación Paraguaya de Básquetbol (CPB).
-Generá una noticia profesional en español basada en la siguiente información:
+      const text = await callClaude(`Generá una noticia profesional basada en esta información:
 
 "${prompt}"
 
@@ -54,24 +69,112 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
   "titulo": "Título de la noticia (máximo 80 caracteres)",
   "slug": "titulo-en-formato-url-sin-acentos",
   "extracto": "Resumen de 1-2 oraciones (máximo 200 caracteres)",
-  "contenido": "<p>Contenido HTML completo de la noticia con múltiples párrafos. Usá tags <p>, <strong>, <em> para formatear. Mínimo 3 párrafos.</p>",
+  "contenido": "<p>Contenido HTML completo con múltiples párrafos. Usá <p>, <strong>, <em>. Mínimo 3 párrafos.</p>",
   "categoria": "GENERAL"
 }
 
-La categoría debe ser una de: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, CLUBES.
-El tono debe ser formal pero accesible, típico de una federación deportiva.`,
-          },
-        ],
-      })
-
-      const text = message.content[0].type === "text" ? message.content[0].text : ""
+Categorías válidas: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, CLUBES.`)
 
       try {
-        const result = JSON.parse(text)
-        return NextResponse.json({ result })
+        return NextResponse.json({ result: JSON.parse(text) })
       } catch {
-        return NextResponse.json({ error: "Error al procesar respuesta de IA", raw: text }, { status: 500 })
+        return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
       }
+    }
+
+    // ─── GENERAR CONTENIDO PÁGINA ───────────────────────
+    if (tipo === "generar-pagina") {
+      const text = await callClaude(`Generá contenido HTML para una página institucional de la CPB basado en esta descripción:
+
+"${prompt}"
+
+Respondé SOLO con un JSON válido (sin markdown, sin backticks):
+{
+  "titulo": "Título de la sección",
+  "contenido": "<div>Contenido HTML completo y bien formateado con <h3>, <p>, <ul>, <li>, <strong>. Mínimo 4 párrafos con información detallada.</div>"
+}
+
+El contenido debe ser informativo, profesional y detallado.`, 3000)
+
+      try {
+        return NextResponse.json({ result: JSON.parse(text) })
+      } catch {
+        return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
+      }
+    }
+
+    // ─── RESPUESTA A MENSAJE DE CONTACTO ────────────────
+    if (tipo === "responder-contacto") {
+      const text = await callClaude(`Un visitante del sitio web de la CPB envió este mensaje de contacto:
+
+Nombre: ${contexto?.nombre || ""}
+Asunto: ${contexto?.asunto || ""}
+Mensaje: "${prompt}"
+
+Generá una respuesta profesional y cordial en nombre de la CPB. La respuesta debe:
+- Saludar al remitente por su nombre
+- Abordar específicamente su consulta
+- Ser concisa pero completa
+- Cerrar con un saludo formal
+
+Respondé SOLO con un JSON válido (sin markdown, sin backticks):
+{
+  "asunto": "Re: Asunto original - CPB",
+  "respuesta": "Texto completo de la respuesta en formato plano (no HTML)"
+}`)
+
+      try {
+        return NextResponse.json({ result: JSON.parse(text) })
+      } catch {
+        return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
+      }
+    }
+
+    // ─── GENERAR CIRCULAR/COMUNICADO ────────────────────
+    if (tipo === "generar-circular") {
+      const text = await callClaude(`Generá un comunicado oficial / circular de la Confederación Paraguaya de Básquetbol basado en esta información:
+
+"${prompt}"
+
+Respondé SOLO con un JSON válido (sin markdown, sin backticks):
+{
+  "titulo": "Título del comunicado",
+  "slug": "titulo-en-formato-url-sin-acentos",
+  "extracto": "Resumen de 1-2 oraciones",
+  "contenido": "<div class='comunicado'><p style='text-align:center'><strong>CONFEDERACIÓN PARAGUAYA DE BÁSQUETBOL</strong></p><p style='text-align:center'><strong>COMUNICADO OFICIAL</strong></p><hr/><p>Contenido del comunicado...</p><p>Se emite el presente comunicado para conocimiento de todos los interesados.</p><p style='text-align:right'><strong>Confederación Paraguaya de Básquetbol</strong><br/>Asunción, Paraguay</p></div>",
+  "categoria": "INSTITUCIONAL"
+}
+
+El tono debe ser formal e institucional. Incluí fecha, formato de comunicado oficial con encabezado y cierre.`, 2500)
+
+      try {
+        return NextResponse.json({ result: JSON.parse(text) })
+      } catch {
+        return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
+      }
+    }
+
+    // ─── CHATBOT PÚBLICO ────────────────────────────────
+    if (tipo === "chatbot") {
+      const text = await callClaude(`Un visitante del sitio web cpb.com.py hace esta consulta:
+
+"${prompt}"
+
+Respondé de manera breve, amigable y útil. Si la pregunta es sobre:
+- Calendario/partidos: dirigilo a cpb.com.py/calendario
+- Posiciones/tabla: dirigilo a cpb.com.py/posiciones
+- Estadísticas: dirigilo a cpb.com.py/estadisticas
+- Registrarse como árbitro/oficial: dirigilo a cpb.com.py/oficiales/registro
+- Cuerpo técnico: dirigilo a cpb.com.py/cuerpotecnico/registro
+- Reglamentos: dirigilo a cpb.com.py/reglamentos
+- Contacto: dirigilo a cpb.com.py/contacto o email cpb@cpb.com.py
+- Clubes: dirigilo a cpb.com.py/clubes
+- Selecciones nacionales: dirigilo a cpb.com.py/selecciones
+
+Si no sabés la respuesta, sugerí que contacten a cpb@cpb.com.py.
+Respondé en máximo 3 oraciones cortas. No uses markdown, solo texto plano.`, 300)
+
+      return NextResponse.json({ result: { respuesta: text.trim() } })
     }
 
     return NextResponse.json({ error: "Tipo de generación no válido" }, { status: 400 })

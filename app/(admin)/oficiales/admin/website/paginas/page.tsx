@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Save, Plus } from "lucide-react"
+import { Save, Sparkles, Loader2 } from "lucide-react"
 
 const defaultPages = [
   { clave: "institucional-about", titulo: "Sobre la CPB" },
@@ -16,12 +16,52 @@ export default function AdminPaginasPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState("")
 
+  // AI state per page
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiTarget, setAiTarget] = useState<string | null>(null)
+
   useEffect(() => {
     fetch("/api/website/paginas")
       .then((r) => r.json())
       .then((data) => setPaginas(data.paginas ?? []))
       .finally(() => setLoading(false))
   }, [])
+
+  async function generateWithAI(clave: string) {
+    if (!aiPrompt.trim()) return
+    setAiLoading(true)
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, tipo: "generar-pagina" }),
+      })
+
+      if (!res.ok) throw new Error("Error al generar")
+
+      const { result } = await res.json()
+
+      // Fill the form fields
+      const form = document.querySelector(`form[data-clave="${clave}"]`) as HTMLFormElement
+      if (form) {
+        const tituloInput = form.querySelector('input[name="titulo"]') as HTMLInputElement
+        const contenidoArea = form.querySelector('textarea[name="contenido"]') as HTMLTextAreaElement
+        if (tituloInput && result.titulo) tituloInput.value = result.titulo
+        if (contenidoArea && result.contenido) contenidoArea.value = result.contenido
+      }
+
+      setAiTarget(null)
+      setAiPrompt("")
+      setMessage("Contenido generado. Revisá y guardá.")
+      setTimeout(() => setMessage(""), 5000)
+    } catch {
+      setMessage("Error al generar contenido con IA")
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   async function handleSave(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -99,29 +139,64 @@ export default function AdminPaginasPage() {
             </div>
 
             {editingKey === pagina.clave && (
-              <form onSubmit={handleSave} className="p-5 space-y-4">
-                <input type="hidden" name="clave" value={pagina.clave} />
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
-                  <input name="titulo" defaultValue={pagina.titulo} required
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen</label>
-                  <input name="imagenUrl" type="url" defaultValue={pagina.imagenUrl ?? ""}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contenido (HTML)</label>
-                  <textarea name="contenido" rows={8} defaultValue={pagina.contenido}
-                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono resize-y" />
-                </div>
-                <button type="submit" disabled={saving}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">
-                  <Save className="h-4 w-4" />
-                  {saving ? "Guardando..." : "Guardar"}
-                </button>
-              </form>
+              <div className="p-5">
+                {/* AI Generator */}
+                {aiTarget === pagina.clave ? (
+                  <div className="mb-5 p-4 rounded-xl border-2 border-violet-200 bg-violet-50/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles className="h-4 w-4 text-violet-600" />
+                      <p className="font-semibold text-sm text-gray-900">Generar contenido con IA</p>
+                    </div>
+                    <textarea
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      rows={2}
+                      placeholder={`Ej: Información sobre la CPB, fundada en 1950, historia, logros internacionales...`}
+                      className="w-full px-3 py-2 rounded-lg border border-violet-200 text-sm mb-2 resize-none"
+                    />
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => generateWithAI(pagina.clave)} disabled={aiLoading || !aiPrompt.trim()}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-sm font-semibold disabled:opacity-50">
+                        {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                        {aiLoading ? "Generando..." : "Generar"}
+                      </button>
+                      <button type="button" onClick={() => setAiTarget(null)}
+                        className="px-3 py-1.5 rounded-lg bg-white text-gray-600 text-sm border border-gray-200">
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => { setAiTarget(pagina.clave); setAiPrompt("") }}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold mb-4 hover:from-violet-700 hover:to-indigo-700">
+                    <Sparkles className="h-3.5 w-3.5" /> Generar con IA
+                  </button>
+                )}
+
+                <form onSubmit={handleSave} data-clave={pagina.clave} className="space-y-4">
+                  <input type="hidden" name="clave" value={pagina.clave} />
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Título</label>
+                    <input name="titulo" defaultValue={pagina.titulo} required
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen</label>
+                    <input name="imagenUrl" type="url" defaultValue={pagina.imagenUrl ?? ""}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Contenido (HTML)</label>
+                    <textarea name="contenido" rows={8} defaultValue={pagina.contenido}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm font-mono resize-y" />
+                  </div>
+                  <button type="submit" disabled={saving}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">
+                    <Save className="h-4 w-4" />
+                    {saving ? "Guardando..." : "Guardar"}
+                  </button>
+                </form>
+              </div>
             )}
           </div>
         ))}

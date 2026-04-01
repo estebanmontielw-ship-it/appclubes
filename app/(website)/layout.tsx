@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import PublicNavbar from "@/components/website/PublicNavbar"
 import PublicFooter from "@/components/website/PublicFooter"
+import ChatWidget from "@/components/website/ChatWidget"
 
 export const metadata: Metadata = {
   title: {
@@ -25,6 +26,7 @@ export default function WebsiteLayout({
       <PublicNavbar />
       <main className="flex-1">{children}</main>
       <PublicFooter />
+      <ChatWidget />
     </div>
   )
 }

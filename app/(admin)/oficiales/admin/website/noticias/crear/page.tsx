@@ -37,6 +37,7 @@ export default function CrearNoticiaPage() {
   const [aiPrompt, setAiPrompt] = useState("")
   const [aiLoading, setAiLoading] = useState(false)
   const [showAi, setShowAi] = useState(false)
+  const [aiTipo, setAiTipo] = useState<"generar-noticia" | "generar-circular">("generar-noticia")
 
   async function generateWithAI() {
     if (!aiPrompt.trim()) return
@@ -47,7 +48,7 @@ export default function CrearNoticiaPage() {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: aiPrompt, tipo: "generar-noticia" }),
+        body: JSON.stringify({ prompt: aiPrompt, tipo: aiTipo }),
       })
 
       if (!res.ok) {
@@ -136,8 +137,18 @@ export default function CrearNoticiaPage() {
             <h3 className="font-bold text-gray-900">Generar noticia con IA</h3>
           </div>
           <p className="text-sm text-gray-500 mb-3">
-            Describí brevemente la noticia y la IA va a generar el título, extracto y contenido completo.
+            Describí brevemente la información y la IA va a generar el contenido completo.
           </p>
+          <div className="flex gap-2 mb-3">
+            <button type="button" onClick={() => setAiTipo("generar-noticia")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${aiTipo === "generar-noticia" ? "bg-violet-600 text-white" : "bg-white text-gray-600 border border-gray-200"}`}>
+              Noticia
+            </button>
+            <button type="button" onClick={() => setAiTipo("generar-circular")}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${aiTipo === "generar-circular" ? "bg-violet-600 text-white" : "bg-white text-gray-600 border border-gray-200"}`}>
+              Circular / Comunicado
+            </button>
+          </div>
           <textarea
             value={aiPrompt}
             onChange={(e) => setAiPrompt(e.target.value)}

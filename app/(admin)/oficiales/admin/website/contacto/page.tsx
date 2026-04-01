@@ -1,22 +1,57 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Mail, MailOpen, Trash2 } from "lucide-react"
+import { Mail, MailOpen, Sparkles, Loader2, Copy, Check } from "lucide-react"
 
 export default function AdminContactoPage() {
   const [mensajes, setMensajes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<any>(null)
 
+  // AI response
+  const [aiLoading, setAiLoading] = useState(false)
+  const [aiResponse, setAiResponse] = useState<{ asunto: string; respuesta: string } | null>(null)
+  const [copied, setCopied] = useState(false)
+
   useEffect(() => {
-    // We'll fetch directly from the DB via a simple API
-    // For now, list messages (we'd need a GET endpoint for admin)
     fetch("/api/website/contacto", { credentials: "include" })
       .then((r) => r.json())
       .then((data) => setMensajes(data.mensajes ?? []))
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [])
+
+  async function suggestResponse(msg: any) {
+    setAiLoading(true)
+    setAiResponse(null)
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: msg.mensaje,
+          tipo: "responder-contacto",
+          contexto: { nombre: msg.nombre, asunto: msg.asunto },
+        }),
+      })
+
+      if (!res.ok) throw new Error()
+      const { result } = await res.json()
+      setAiResponse(result)
+    } catch {
+      setAiResponse({ asunto: "Error", respuesta: "No se pudo generar la respuesta. Intentá de nuevo." })
+    } finally {
+      setAiLoading(false)
+    }
+  }
+
+  function copyResponse() {
+    if (!aiResponse) return
+    navigator.clipboard.writeText(aiResponse.respuesta)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div>
@@ -38,7 +73,7 @@ export default function AdminContactoPage() {
             <div
               key={msg.id}
               className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:shadow-sm transition-shadow"
-              onClick={() => setSelected(selected?.id === msg.id ? null : msg)}
+              onClick={() => { setSelected(selected?.id === msg.id ? null : msg); setAiResponse(null) }}
             >
               <div className="flex items-center gap-3">
                 <div className={`shrink-0 ${msg.leido ? "text-gray-300" : "text-primary"}`}>
@@ -51,10 +86,50 @@ export default function AdminContactoPage() {
                   <p className="text-xs text-gray-500">{msg.nombre} &lt;{msg.email}&gt; · {new Date(msg.createdAt).toLocaleDateString("es-PY")}</p>
                 </div>
               </div>
+
               {selected?.id === msg.id && (
-                <div className="mt-3 pt-3 border-t border-gray-100">
+                <div className="mt-3 pt-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{msg.mensaje}</p>
                   {msg.telefono && <p className="text-xs text-gray-400 mt-2">Tel: {msg.telefono}</p>}
+
+                  {/* AI Suggest Response */}
+                  <div className="mt-4">
+                    {!aiResponse && !aiLoading && (
+                      <button
+                        onClick={() => suggestResponse(msg)}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-indigo-700"
+                      >
+                        <Sparkles className="h-3.5 w-3.5" /> Sugerir respuesta con IA
+                      </button>
+                    )}
+
+                    {aiLoading && (
+                      <div className="flex items-center gap-2 text-sm text-violet-600">
+                        <Loader2 className="h-4 w-4 animate-spin" /> Generando respuesta...
+                      </div>
+                    )}
+
+                    {aiResponse && (
+                      <div className="mt-2 p-4 rounded-xl border-2 border-violet-200 bg-violet-50/50">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-violet-600" />
+                            <p className="font-semibold text-sm text-gray-900">Respuesta sugerida</p>
+                          </div>
+                          <button
+                            onClick={copyResponse}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium bg-white border border-gray-200 hover:bg-gray-50"
+                          >
+                            {copied ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                            {copied ? "Copiado" : "Copiar"}
+                          </button>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-1">Asunto: {aiResponse.asunto}</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{aiResponse.respuesta}</p>
+                        <p className="text-xs text-gray-400 mt-3">Copiá la respuesta y enviala desde tu email a {msg.email}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
