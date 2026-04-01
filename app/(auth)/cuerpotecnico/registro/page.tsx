@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import DatePickerSimple from "@/components/ui/DatePickerSimple"
 import { Loader2, ArrowLeft, ArrowRight, Upload, Camera } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { CIUDADES_PY } from "@/lib/constants"
@@ -191,7 +192,7 @@ export default function RegistroCTPage() {
               <div className="space-y-1"><Label>Apellido *</Label><Input value={apellido} onChange={e => setApellido(e.target.value)} /></div>
             </div>
             <div className="space-y-1"><Label>Número de CI *</Label><Input value={cedula} onChange={e => setCedula(e.target.value)} placeholder="1234567" /></div>
-            <div className="space-y-1"><Label>Fecha de nacimiento *</Label><Input type="date" value={fechaNac} onChange={e => setFechaNac(e.target.value)} /></div>
+            <DatePickerSimple value={fechaNac} onChange={setFechaNac} />
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <Label>Género *</Label>

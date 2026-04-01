@@ -14,6 +14,7 @@ import {
   type RegistroStep2Data,
 } from "@/lib/validations"
 import { Button } from "@/components/ui/button"
+import DatePickerSimple from "@/components/ui/DatePickerSimple"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -288,15 +289,13 @@ export default function RegistroPage() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="fechaNacimiento">Fecha de nacimiento *</Label>
-                <Input
-                  id="fechaNacimiento"
-                  type="date"
-                  {...step1Form.register("fechaNacimiento")}
+              <div>
+                <DatePickerSimple
+                  value={step1Form.watch("fechaNacimiento") || ""}
+                  onChange={(val) => step1Form.setValue("fechaNacimiento", val)}
                 />
                 {step1Form.formState.errors.fechaNacimiento && (
-                  <p className="text-xs text-destructive">
+                  <p className="text-xs text-destructive mt-1">
                     {step1Form.formState.errors.fechaNacimiento.message}
                   </p>
                 )}
