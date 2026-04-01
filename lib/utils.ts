@@ -16,3 +16,12 @@ export function formatDate(date: Date | string): string {
 export function formatCurrency(amount: number): string {
   return `Gs. ${amount.toLocaleString("es-PY")}`
 }
+
+export function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}

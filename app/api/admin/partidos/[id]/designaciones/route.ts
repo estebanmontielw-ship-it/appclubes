@@ -78,6 +78,13 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
+    const adminRoles = await prisma.usuarioRol.findMany({
+      where: { usuarioId: session.user.id, rol: { in: ["SUPER_ADMIN", "DESIGNADOR"] } },
+    })
+    if (adminRoles.length === 0) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
     const { designacionId } = await request.json()
     await prisma.designacion.delete({ where: { id: designacionId } })
     return NextResponse.json({ ok: true })

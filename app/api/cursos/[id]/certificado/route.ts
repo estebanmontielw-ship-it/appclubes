@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { notifCertificadoEmitido } from "@/lib/notifications"
+import { escapeHtml } from "@/lib/utils"
 
 // Generate certificate when course is completed
 export async function POST(
@@ -109,13 +110,13 @@ export async function GET(
   <div class="org">Confederación Paraguaya de Basketball</div>
   <h1>Certificado</h1>
   <p style="font-size: 16px; color: #6b7280; margin-bottom: 16px;">Se certifica que</p>
-  <div class="recipient">${certificado.usuario.nombre} ${certificado.usuario.apellido}</div>
-  <div class="ci">CI: ${certificado.usuario.cedula}</div>
+  <div class="recipient">${escapeHtml(certificado.usuario.nombre)} ${escapeHtml(certificado.usuario.apellido)}</div>
+  <div class="ci">CI: ${escapeHtml(certificado.usuario.cedula)}</div>
   <div class="course">ha completado satisfactoriamente el curso</div>
-  <div style="font-size: 22px; font-weight: bold; color: #1f2937; margin: 12px 0 8px;">"${certificado.curso.nombre}"</div>
-  <div class="detail">${certificado.curso.disciplina} — Nivel ${certificado.curso.nivel}</div>
+  <div style="font-size: 22px; font-weight: bold; color: #1f2937; margin: 12px 0 8px;">"${escapeHtml(certificado.curso.nombre)}"</div>
+  <div class="detail">${escapeHtml(certificado.curso.disciplina)} — Nivel ${escapeHtml(certificado.curso.nivel)}</div>
   <div class="date">Emitido el ${fecha}</div>
-  <div class="code">Código: ${certificado.qrToken}</div>
+  <div class="code">Código: ${escapeHtml(certificado.qrToken)}</div>
 </div>
 </body>
 </html>`

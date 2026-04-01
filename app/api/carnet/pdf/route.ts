@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { generateQRDataURL } from "@/lib/qr"
 import { ROL_LABELS } from "@/lib/constants"
+import { escapeHtml } from "@/lib/utils"
 
 export async function GET() {
   try {
@@ -52,7 +53,7 @@ export async function GET() {
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>Carnet CPB — ${usuario.nombre} ${usuario.apellido}</title>
+<title>Carnet CPB — ${escapeHtml(usuario.nombre)} ${escapeHtml(usuario.apellido)}</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f3f4f6; display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
@@ -98,21 +99,21 @@ export async function GET() {
     <div class="info-row">
       ${
         usuario.fotoCarnetUrl
-          ? `<img src="${usuario.fotoCarnetUrl}" alt="Foto" class="photo" />`
+          ? `<img src="${escapeHtml(usuario.fotoCarnetUrl)}" alt="Foto" class="photo" />`
           : '<div class="photo-placeholder"></div>'
       }
       <div class="details">
-        <p class="name">${usuario.nombre} ${usuario.apellido}</p>
-        <p class="ci">CI: ${usuario.cedula}</p>
+        <p class="name">${escapeHtml(usuario.nombre)} ${escapeHtml(usuario.apellido)}</p>
+        <p class="ci">CI: ${escapeHtml(usuario.cedula)}</p>
         <div class="roles">
           ${usuario.roles
             .map(
               (r) =>
-                `<span class="role-badge">${ROL_LABELS[r.rol] || r.rol}</span>`
+                `<span class="role-badge">${escapeHtml(ROL_LABELS[r.rol] || r.rol)}</span>`
             )
             .join("")}
         </div>
-        <p class="city">${usuario.ciudad}, Paraguay</p>
+        <p class="city">${escapeHtml(usuario.ciudad)}, Paraguay</p>
         <div class="verified">
           <span class="verified-dot"></span>
           Verificado${verificadoFecha ? ` — ${verificadoFecha}` : ""}
@@ -138,7 +139,7 @@ export async function GET() {
     return new NextResponse(html, {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Disposition": `inline; filename="carnet-cpb-${usuario.cedula}.html"`,
+        "Content-Disposition": `inline; filename="carnet-cpb-${encodeURIComponent(usuario.cedula)}.html"`,
       },
     })
   } catch {

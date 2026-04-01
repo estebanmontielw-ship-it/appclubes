@@ -15,6 +15,16 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
+    // Verify admin
+    const admin = await prisma.usuario.findUnique({
+      where: { id: user.id },
+      include: { roles: true },
+    })
+    const isAdmin = admin?.roles.some(r => r.rol === "SUPER_ADMIN")
+    if (!isAdmin) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
     const { searchParams } = new URL(request.url)
     const estado = searchParams.get("estado")
     const tipo = searchParams.get("tipo")

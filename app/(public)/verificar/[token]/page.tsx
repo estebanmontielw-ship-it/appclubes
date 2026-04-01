@@ -79,9 +79,6 @@ export default async function VerificarPage({
             <p className="text-center font-semibold text-lg">
               {usuario.nombre} {usuario.apellido}
             </p>
-            <p className="text-center text-muted-foreground text-sm">
-              CI: {usuario.cedula}
-            </p>
 
             {/* Roles */}
             <div className="flex gap-2 justify-center mt-3 flex-wrap">
@@ -95,20 +92,9 @@ export default async function VerificarPage({
               ))}
             </div>
 
-            <p className="text-center text-sm text-muted-foreground mt-3">
-              {usuario.ciudad}, Paraguay
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              Verificado por CPB
             </p>
-
-            {usuario.verificadoEn && (
-              <p className="text-center text-muted-foreground text-xs mt-4">
-                Verificado el{" "}
-                {new Date(usuario.verificadoEn).toLocaleDateString("es-PY", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                })}
-              </p>
-            )}
           </>
         ) : (
           <div className="text-center py-4">

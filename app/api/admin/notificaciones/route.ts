@@ -97,7 +97,13 @@ export async function POST(request: Request) {
             to: user.email,
             subject: titulo,
             nombre: user.nombre,
-            body: mensaje.replace(/\n/g, "<br>"),
+            body: mensaje
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;")
+              .replace(/\n/g, "<br>"),
             type: "info",
           })
         )

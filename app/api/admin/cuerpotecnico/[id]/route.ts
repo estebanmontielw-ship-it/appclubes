@@ -8,6 +8,24 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+    }
+
+    // Verify admin
+    const admin = await prisma.usuario.findUnique({
+      where: { id: user.id },
+      include: { roles: true },
+    })
+    const isAdmin = admin?.roles.some(r => r.rol === "SUPER_ADMIN")
+    if (!isAdmin) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
     const ct = await prisma.cuerpoTecnico.findUnique({
       where: { id: params.id },
     })

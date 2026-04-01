@@ -99,7 +99,7 @@ export async function POST(request: Request) {
     })
 
     // Send welcome email (fire and forget)
-    emailBienvenida(email, nombre).catch(() => {})
+    emailBienvenida(email, nombre).catch((err) => console.error("Error enviando email bienvenida:", err))
 
     return NextResponse.json({ usuario }, { status: 201 })
   } catch (error: unknown) {

@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     }
 
     // Send welcome email
-    emailBienvenida(email, nombre).catch(() => {})
+    emailBienvenida(email, nombre).catch((err) => console.error("Error enviando email bienvenida:", err))
 
     return NextResponse.json({
       ct,

@@ -16,6 +16,22 @@ export async function POST(request: Request) {
       )
     }
 
+    const ALLOWED_BUCKETS = [
+      "fotos-cedula",
+      "fotos-carnet",
+      "certificados",
+      "comprobantes-pago",
+      "recursos",
+      "cursos",
+    ]
+
+    if (!ALLOWED_BUCKETS.includes(bucket)) {
+      return NextResponse.json(
+        { error: "Bucket no permitido" },
+        { status: 400 }
+      )
+    }
+
     // Validate file size (10MB max to allow for HEIC which are larger)
     if (file.size > 10 * 1024 * 1024) {
       return NextResponse.json(
