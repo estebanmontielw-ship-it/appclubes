@@ -316,32 +316,82 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
 
     // ─── CHATBOT PÚBLICO (Nvidia NIM - gratuito) ─────────
     if (tipo === "chatbot") {
-      const chatPrompt = `Un visitante del sitio web cpb.com.py hace esta consulta:
+      // Fetch real data from database
+      let noticiasContext = ""
+      let clubesContext = ""
+      let seleccionesContext = ""
+      let reglamentosContext = ""
+
+      try {
+        const [noticias, clubes, selecciones, reglamentos] = await Promise.all([
+          prisma.noticia.findMany({
+            where: { publicada: true },
+            orderBy: { publicadaEn: "desc" },
+            take: 10,
+            select: { titulo: true, extracto: true, categoria: true, slug: true, publicadaEn: true },
+          }),
+          prisma.club.findMany({
+            where: { activo: true },
+            select: { nombre: true, ciudad: true, sigla: true },
+          }),
+          prisma.seleccion.findMany({
+            where: { activo: true },
+            select: { nombre: true, categoria: true, genero: true, entrenador: true },
+          }),
+          prisma.reglamento.findMany({
+            where: { activo: true },
+            select: { titulo: true, categoria: true },
+          }),
+        ])
+
+        if (noticias.length > 0) {
+          noticiasContext = "\n\nÚLTIMAS NOTICIAS PUBLICADAS:\n" +
+            noticias.map(n => `- "${n.titulo}" (${n.categoria}, ${n.publicadaEn ? new Date(n.publicadaEn).toLocaleDateString("es-PY") : ""}) - cpb.com.py/noticias/${n.slug}`).join("\n")
+        }
+        if (clubes.length > 0) {
+          clubesContext = "\n\nCLUBES AFILIADOS:\n" + clubes.map(c => `- ${c.nombre}${c.sigla ? ` (${c.sigla})` : ""} - ${c.ciudad}`).join("\n")
+        }
+        if (selecciones.length > 0) {
+          seleccionesContext = "\n\nSELECCIONES NACIONALES:\n" + selecciones.map(s => `- ${s.nombre} (${s.categoria}, ${s.genero})${s.entrenador ? ` - DT: ${s.entrenador}` : ""}`).join("\n")
+        }
+        if (reglamentos.length > 0) {
+          reglamentosContext = "\n\nREGLAMENTOS DISPONIBLES:\n" + reglamentos.map(r => `- ${r.titulo} (${r.categoria})`).join("\n")
+        }
+      } catch {}
+
+      const chatPrompt = `Sos el asistente virtual de la Confederación Paraguaya de Básquetbol (CPB). Un visitante del sitio cpb.com.py pregunta:
 
 "${prompt}"
 
-Respondé de manera breve, amigable y útil. Si la pregunta es sobre:
-- Calendario/partidos: dirigilo a cpb.com.py/calendario
-- Posiciones/tabla: dirigilo a cpb.com.py/posiciones
-- Estadísticas: dirigilo a cpb.com.py/estadisticas
-- Registrarse como árbitro/oficial: dirigilo a cpb.com.py/oficiales/registro
-- Cuerpo técnico: dirigilo a cpb.com.py/cuerpotecnico/registro
-- Reglamentos: dirigilo a cpb.com.py/reglamentos
-- Contacto: dirigilo a cpb.com.py/contacto o email cpb@cpb.com.py
-- Clubes: dirigilo a cpb.com.py/clubes
-- Selecciones nacionales: dirigilo a cpb.com.py/selecciones
+INFORMACIÓN DEL SITIO:
+- Calendario de partidos: cpb.com.py/calendario
+- Tabla de posiciones: cpb.com.py/posiciones
+- Estadísticas de jugadores: cpb.com.py/estadisticas
+- Noticias: cpb.com.py/noticias
+- Clubes afiliados: cpb.com.py/clubes
+- Selecciones nacionales: cpb.com.py/selecciones
+- Reglamentos: cpb.com.py/reglamentos
+- Institucional: cpb.com.py/institucional
+- Contacto: cpb.com.py/contacto o cpb@cpb.com.py
+- Registrarse como árbitro/oficial: cpb.com.py/oficiales/registro
+- Registrarse como cuerpo técnico: cpb.com.py/cuerpotecnico/registro
+${noticiasContext}${clubesContext}${seleccionesContext}${reglamentosContext}
 
-Si no sabés la respuesta, sugerí que contacten a cpb@cpb.com.py.
-Respondé en máximo 3 oraciones cortas. No uses markdown, solo texto plano.`
+INSTRUCCIONES:
+- Respondé con información concreta basada en los datos reales de arriba
+- Si preguntan por una noticia específica, mencioná el título y el link
+- Si preguntan por un club, dales la info que tenés
+- Si preguntan por selecciones, mencioná las que existen
+- Sé breve, amigable y útil (máximo 4 oraciones)
+- Si no sabés algo, sugerí que contacten a cpb@cpb.com.py
+- No uses markdown, solo texto plano`
 
       try {
-        // Intentar con Nvidia (gratis)
-        const text = await callNvidia(chatPrompt)
+        const text = await callNvidia(chatPrompt, "chatbot", 400)
         return NextResponse.json({ result: { respuesta: text } })
       } catch {
-        // Fallback a Claude si Nvidia falla
         if (anthropic) {
-          const text = await callClaude(chatPrompt, 300)
+          const text = await callClaude(chatPrompt, 400)
           return NextResponse.json({ result: { respuesta: text.trim() } })
         }
         return NextResponse.json({ result: { respuesta: "Disculpá, no pude procesar tu consulta. Podés escribirnos a cpb@cpb.com.py." } })
