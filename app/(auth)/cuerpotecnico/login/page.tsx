@@ -48,30 +48,49 @@ export default function LoginCTPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-red-50 px-4">
-      <Card className="w-full max-w-md shadow-lg border-0">
-        <CardHeader className="text-center">
-          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain" />
-          <CardTitle className="text-2xl">Cuerpo Técnico CPB</CardTitle>
-          <CardDescription>Portal de gestión para entrenadores y cuerpo técnico</CardDescription>
+      <Card className="w-full max-w-md shadow-lg border-0 shadow-gray-200/50">
+        <CardHeader className="text-center pb-2">
+          <img src="/favicon-cpb.png" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain drop-shadow-sm" />
+          <CardTitle className="text-2xl font-bold text-gray-900">Cuerpo Técnico CPB</CardTitle>
+          <CardDescription className="text-gray-500">
+            Portal de gestión para entrenadores y cuerpo técnico
+          </CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" className="h-11" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" />
+              <Label htmlFor="email" className="text-gray-700">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                className="h-11"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+              />
             </div>
             <div className="space-y-2">
-              <Label>Contraseña</Label>
-              <Input type="password" className="h-11" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+              <Label htmlFor="password" className="text-gray-700">Contraseña</Label>
+              <Input
+                id="password"
+                type="password"
+                className="h-11"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+              />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col gap-4">
+          <CardFooter className="flex flex-col gap-4 pt-2">
             <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Iniciar sesión
             </Button>
             <p className="text-sm text-gray-500 text-center">
-              ¿No tenés cuenta? <Link href="/cuerpotecnico/registro" className="text-primary hover:underline font-semibold">Registrate</Link>
+              ¿No tenés cuenta?{" "}
+              <Link href="/cuerpotecnico/registro" className="text-primary hover:underline font-semibold">
+                Registrate
+              </Link>
             </p>
           </CardFooter>
         </form>

@@ -67,7 +67,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-red-50 px-4">
       <Card className="w-full max-w-md shadow-lg border-0 shadow-gray-200/50">
         <CardHeader className="text-center pb-2">
-          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain drop-shadow-sm" />
+          <img src="/favicon-cpb.png" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain drop-shadow-sm" />
           <CardTitle className="text-2xl font-bold text-gray-900">CPB Oficiales</CardTitle>
           <CardDescription className="text-gray-500">
             Confederación Paraguaya de Básquetbol
