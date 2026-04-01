@@ -4,6 +4,7 @@ import SectionTitle from "@/components/website/SectionTitle"
 import NewsCard from "@/components/website/NewsCard"
 import prisma from "@/lib/prisma"
 import GeniusSportsHomeWidget from "./GeniusSportsHomeWidget"
+import CuratorFeed from "@/components/website/CuratorFeed"
 
 export default async function HomePage() {
   // Fetch latest published news
@@ -61,6 +62,16 @@ export default async function HomePage() {
           >
             Ver calendario completo &rarr;
           </Link>
+        </div>
+      </section>
+
+      {/* Social Media Feed */}
+      <section className="bg-gray-50 border-t border-gray-100">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <SectionTitle title="Seguinos en Redes" subtitle="Las últimas publicaciones de la CPB" />
+          <div className="mt-6">
+            <CuratorFeed />
+          </div>
         </div>
       </section>
 
