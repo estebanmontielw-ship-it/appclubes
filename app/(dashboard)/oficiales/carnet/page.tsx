@@ -118,7 +118,7 @@ export default function CarnetPage() {
               CARNET OFICIAL CPB
             </p>
             <p className="text-white/80 text-xs">
-              Confederación Paraguaya de Basketball
+              Confederación Paraguaya de Básquetbol
             </p>
           </div>
         </div>

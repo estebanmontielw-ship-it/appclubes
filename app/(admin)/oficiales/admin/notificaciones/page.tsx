@@ -29,7 +29,7 @@ const PLANTILLAS = [
   {
     nombre: "Bienvenida general",
     titulo: "Bienvenidos al portal CPB Oficiales",
-    mensaje: "Les damos la bienvenida al nuevo portal de la Confederación Paraguaya de Basketball.\n\nDesde acá van a poder gestionar su carnet digital, inscribirse a cursos de capacitación, ver sus designaciones de partidos y mucho más.\n\nCualquier duda pueden contactarnos.\n\nSaludos,\nCPB Paraguay",
+    mensaje: "Les damos la bienvenida al nuevo portal de la Confederación Paraguaya de Básquetbol.\n\nDesde acá van a poder gestionar su carnet digital, inscribirse a cursos de capacitación, ver sus designaciones de partidos y mucho más.\n\nCualquier duda pueden contactarnos.\n\nSaludos,\nCPB Paraguay",
   },
   {
     nombre: "Actualizar foto de perfil",

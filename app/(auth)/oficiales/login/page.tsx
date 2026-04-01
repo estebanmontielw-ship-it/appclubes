@@ -70,7 +70,7 @@ export default function LoginPage() {
           <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain drop-shadow-sm" />
           <CardTitle className="text-2xl font-bold text-gray-900">CPB Oficiales</CardTitle>
           <CardDescription className="text-gray-500">
-            Confederación Paraguaya de Basketball
+            Confederación Paraguaya de Básquetbol
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>

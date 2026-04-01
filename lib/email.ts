@@ -38,7 +38,7 @@ function buildHtml({ body, nombre, ctaText, ctaUrl, type = "info" }: Omit<SendEm
           <td style="background:linear-gradient(135deg,#1e3a5f,#1e40af);padding:28px 32px;text-align:center;">
             <img src="${LOGO_URL}" alt="CPB" width="56" height="56" style="display:block;margin:0 auto 12px;border-radius:12px;" />
             <h1 style="margin:0;color:#ffffff;font-size:20px;font-weight:700;letter-spacing:0.5px;">CPB Oficiales</h1>
-            <p style="margin:4px 0 0;color:rgba(255,255,255,0.7);font-size:12px;">Confederación Paraguaya de Basketball</p>
+            <p style="margin:4px 0 0;color:rgba(255,255,255,0.7);font-size:12px;">Confederación Paraguaya de Básquetbol</p>
           </td>
         </tr>
 
@@ -67,7 +67,7 @@ function buildHtml({ body, nombre, ctaText, ctaUrl, type = "info" }: Omit<SendEm
         <!-- Footer -->
         <tr>
           <td style="padding:24px 32px;text-align:center;">
-            <p style="margin:0 0 4px;color:#9ca3af;font-size:12px;">CPB Oficiales — Portal de Oficiales de Basketball</p>
+            <p style="margin:0 0 4px;color:#9ca3af;font-size:12px;">CPB Oficiales — Portal de Oficiales de Básquetbol</p>
             <p style="margin:0;color:#d1d5db;font-size:11px;">Este es un email automático. No respondas a este mensaje.</p>
           </td>
         </tr>

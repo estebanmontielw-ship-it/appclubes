@@ -430,7 +430,7 @@ export default function RegistroPage() {
                 <RoleOption
                   icon={<Gavel className="h-6 w-6" />}
                   title="Árbitro"
-                  description="Árbitro de partidos de basketball"
+                  description="Árbitro de partidos de básquetbol"
                   selected={selectedRoles.includes("ARBITRO")}
                   onClick={() => toggleRole("ARBITRO")}
                 />
