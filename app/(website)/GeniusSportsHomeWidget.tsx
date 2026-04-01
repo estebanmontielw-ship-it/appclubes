@@ -126,6 +126,7 @@ export default function GeniusSportsHomeWidget() {
       }
 
       /* Hide PRÓXIMO button on the right (redundant) */
+      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L td:last-child,
       #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="button"],
       #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="btn"],
       #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L input[type="button"],
