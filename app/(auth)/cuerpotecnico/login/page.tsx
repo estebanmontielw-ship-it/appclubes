@@ -52,7 +52,7 @@ export default function LoginCTPage() {
         <CardHeader className="text-center">
           <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain" />
           <CardTitle className="text-2xl">Cuerpo Técnico CPB</CardTitle>
-          <CardDescription>Habilitación anual — Iniciá sesión</CardDescription>
+          <CardDescription>Portal de gestión para entrenadores y cuerpo técnico</CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
           <CardContent className="space-y-4">
