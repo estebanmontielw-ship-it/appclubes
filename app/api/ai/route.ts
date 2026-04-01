@@ -246,7 +246,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
 {
   "url": "/la-ruta-mas-relevante",
   "mensaje": "Texto breve explicando a dónde lo estás dirigiendo (1 oración)"
-}`, 200)
+}`, "chatbot", 200)
 
       try {
         const result = JSON.parse(text)
