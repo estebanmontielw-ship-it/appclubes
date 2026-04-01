@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 
 interface GeniusSportsWidgetProps {
   page: string
@@ -12,6 +12,8 @@ interface GeniusSportsWidgetProps {
   className?: string
 }
 
+let instanceCounter = 0
+
 export default function GeniusSportsWidget({
   page,
   showNavBar = false,
@@ -21,13 +23,20 @@ export default function GeniusSportsWidget({
   showSubMenus = true,
   className,
 }: GeniusSportsWidgetProps) {
+  const [instanceId] = useState(() => `spil_w_${++instanceCounter}`)
   const containerRef = useRef<HTMLDivElement>(null)
-  const scriptRef = useRef<HTMLScriptElement | null>(null)
 
   useEffect(() => {
+    // Clean up any previous instance
+    const existingScripts = document.querySelectorAll('script[src*="geniussports.com/embed"]')
+    existingScripts.forEach((s) => s.remove())
+
+    // Clean window config
+    delete (window as any).spilWHH
+
     // Set config on window
     ;(window as any).spilWHH = {
-      placeHolder: "spil_w_h",
+      placeHolder: instanceId,
       page,
       raw: true,
       showNavBar,
@@ -42,33 +51,31 @@ export default function GeniusSportsWidget({
       language: "es",
     }
 
-    // Create and inject script
-    const script = document.createElement("script")
-    script.async = true
-    script.src = "https://hosted.dcd.shared.geniussports.com/embed/?CPDB|spilWHH"
-    document.body.appendChild(script)
-    scriptRef.current = script
+    // Small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      const script = document.createElement("script")
+      script.async = true
+      script.src = "https://hosted.dcd.shared.geniussports.com/embed/?CPDB|spilWHH"
+      document.body.appendChild(script)
+    }, 100)
 
     return () => {
-      // Cleanup
-      if (scriptRef.current && document.body.contains(scriptRef.current)) {
-        document.body.removeChild(scriptRef.current)
-      }
-      // Clean up container content
-      if (containerRef.current) {
-        containerRef.current.innerHTML = '<div class="hs-loader" style="text-align: center"><p style="padding: 2rem; color: #999;">Cargando...</p></div>'
-      }
-      // Clean up window config
+      clearTimeout(timer)
+      // Cleanup scripts
+      const scripts = document.querySelectorAll('script[src*="geniussports.com/embed"]')
+      scripts.forEach((s) => s.remove())
       delete (window as any).spilWHH
+      // Reset container
+      if (containerRef.current) {
+        containerRef.current.innerHTML = '<p style="padding: 2rem; color: #999; text-align: center;">Cargando datos...</p>'
+      }
     }
-  }, [page, showNavBar, showCompetitionChooser, showMatchFilter, showTitle, showSubMenus])
+  }, [page, instanceId, showNavBar, showCompetitionChooser, showMatchFilter, showTitle, showSubMenus])
 
   return (
     <div className={className}>
-      <div id="spil_w_h" ref={containerRef} className="min-h-[500px]">
-        <div className="hs-loader" style={{ textAlign: "center" }}>
-          <p className="py-8 text-gray-400">Cargando datos...</p>
-        </div>
+      <div id={instanceId} ref={containerRef} className="min-h-[500px]">
+        <p className="py-8 text-gray-400 text-center">Cargando datos...</p>
       </div>
     </div>
   )
