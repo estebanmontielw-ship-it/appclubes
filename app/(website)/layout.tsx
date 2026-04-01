@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import PublicNavbar from "@/components/website/PublicNavbar"
 import PublicFooter from "@/components/website/PublicFooter"
+import MatchTicker from "@/components/website/MatchTicker"
 import ChatWidget from "@/components/website/ChatWidget"
 import InstallPrompt from "@/components/website/InstallPrompt"
 import ServiceWorkerRegister from "@/components/website/ServiceWorkerRegister"
@@ -26,6 +27,7 @@ export default function WebsiteLayout({
   return (
     <div className="flex flex-col min-h-screen">
       <PublicNavbar />
+      <MatchTicker />
       <main className="flex-1">{children}</main>
       <PublicFooter />
       <ChatWidget />
