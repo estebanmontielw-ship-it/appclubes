@@ -63,33 +63,37 @@ export async function POST(
       }
     }
 
-    // Upsert progress
-    const progreso = await prisma.progresoModulo.upsert({
-      where: { usuarioId_moduloId: { usuarioId: session.user.id, moduloId } },
-      create: {
-        usuarioId: session.user.id,
-        moduloId,
-        completado: true,
-        completadoEn: new Date(),
-      },
-      update: {
-        completado: true,
-        completadoEn: new Date(),
-      },
-    })
-
-    // Check if all modules completed → update inscription
-    const totalModulos = await prisma.modulo.count({ where: { cursoId: params.id } })
-    const completedModulos = await prisma.progresoModulo.count({
-      where: { usuarioId: session.user.id, completado: true, modulo: { cursoId: params.id } },
-    })
-
-    if (completedModulos >= totalModulos) {
-      await prisma.inscripcion.update({
-        where: { id: inscripcion.id },
-        data: { estado: "COMPLETADO" },
+    // Upsert progress + check completion atomically to avoid race conditions
+    const { progreso, completedModulos, totalModulos } = await prisma.$transaction(async (tx) => {
+      const progreso = await tx.progresoModulo.upsert({
+        where: { usuarioId_moduloId: { usuarioId: session.user.id, moduloId } },
+        create: {
+          usuarioId: session.user.id,
+          moduloId,
+          completado: true,
+          completadoEn: new Date(),
+        },
+        update: {
+          completado: true,
+          completadoEn: new Date(),
+        },
       })
-    }
+
+      // Check if all modules completed → update inscription
+      const totalModulos = await tx.modulo.count({ where: { cursoId: params.id } })
+      const completedModulos = await tx.progresoModulo.count({
+        where: { usuarioId: session.user.id, completado: true, modulo: { cursoId: params.id } },
+      })
+
+      if (completedModulos >= totalModulos) {
+        await tx.inscripcion.update({
+          where: { id: inscripcion.id },
+          data: { estado: "COMPLETADO" },
+        })
+      }
+
+      return { progreso, completedModulos, totalModulos }
+    })
 
     return NextResponse.json({ progreso, completed: completedModulos, total: totalModulos })
   } catch {

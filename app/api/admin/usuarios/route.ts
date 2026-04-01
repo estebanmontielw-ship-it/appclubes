@@ -31,6 +31,9 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const estado = searchParams.get("estado") as EstadoVerificacion | null
     const buscar = searchParams.get("buscar")
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "50", 10)))
+    const skip = (page - 1) * limit
 
     const where: Record<string, unknown> = {}
 
@@ -46,13 +49,18 @@ export async function GET(request: Request) {
       ]
     }
 
-    const usuarios = await prisma.usuario.findMany({
-      where,
-      include: { roles: true },
-      orderBy: { createdAt: "desc" },
-    })
+    const [usuarios, total] = await Promise.all([
+      prisma.usuario.findMany({
+        where,
+        include: { roles: true },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip,
+      }),
+      prisma.usuario.count({ where }),
+    ])
 
-    return NextResponse.json({ usuarios })
+    return NextResponse.json({ usuarios, total, page, limit })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }

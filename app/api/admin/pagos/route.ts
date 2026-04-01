@@ -24,21 +24,31 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url)
     const estado = searchParams.get("estado")
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10))
+    const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") || "50", 10)))
+    const skip = (page - 1) * limit
 
-    const pagos = await prisma.pago.findMany({
-      where: estado ? { estado: estado as any } : {},
-      include: {
-        inscripcion: {
-          include: {
-            usuario: { select: { id: true, nombre: true, apellido: true, email: true } },
-            curso: { select: { id: true, nombre: true, precio: true } },
+    const where = estado ? { estado: estado as any } : {}
+
+    const [pagos, total] = await Promise.all([
+      prisma.pago.findMany({
+        where,
+        include: {
+          inscripcion: {
+            include: {
+              usuario: { select: { id: true, nombre: true, apellido: true, email: true } },
+              curso: { select: { id: true, nombre: true, precio: true } },
+            },
           },
         },
-      },
-      orderBy: { createdAt: "desc" },
-    })
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip,
+      }),
+      prisma.pago.count({ where }),
+    ])
 
-    return NextResponse.json({ pagos })
+    return NextResponse.json({ pagos, total, page, limit })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
