@@ -81,25 +81,9 @@ export default function GeniusSportsHomeWidget() {
         color: #2563eb !important;
       }
 
-      /* "Próximo" → style as "Ver más" button */
+      /* Hide "Próximo" text in the middle */
       #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="status"] {
-        font-size: 0px !important;
-        background: #2563eb !important;
-        padding: 6px 14px !important;
-        border-radius: 8px !important;
-        display: inline-block !important;
-        cursor: pointer !important;
-        transition: background 0.2s !important;
-      }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="status"]::after {
-        content: "Ver más" !important;
-        font-size: 11px !important;
-        font-weight: 700 !important;
-        color: white !important;
-        letter-spacing: 0.5px !important;
-      }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="status"]:hover {
-        background: #1d4ed8 !important;
+        display: none !important;
       }
 
       /* Date */
@@ -125,13 +109,24 @@ export default function GeniusSportsHomeWidget() {
         color: #0f172a !important;
       }
 
-      /* Hide PRÓXIMO button on the right (redundant) */
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L td:last-child,
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="button"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="btn"],
+      /* Style the PRÓXIMO button */
       #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L input[type="button"],
       #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L button {
-        display: none !important;
+        background: #2563eb !important;
+        color: white !important;
+        border-radius: 10px !important;
+        padding: 8px 20px !important;
+        font-size: 11px !important;
+        font-weight: 700 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 1px !important;
+        border: none !important;
+        cursor: pointer !important;
+        transition: background 0.2s !important;
+      }
+      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L input[type="button"]:hover,
+      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L button:hover {
+        background: #1d4ed8 !important;
       }
 
       /* Make entire row clickeable */
