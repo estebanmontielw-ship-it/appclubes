@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Plus, Edit2, Trash2, Eye, EyeOff, Star, Instagram, Loader2, Sparkles } from "lucide-react"
+import { Plus, Edit2, Trash2, Eye, EyeOff, Star, Camera, Loader2, Sparkles } from "lucide-react"
 
 const categoryLabels: Record<string, string> = {
   GENERAL: "General",
@@ -25,14 +25,14 @@ export default function AdminNoticiasPage() {
   const [noticias, setNoticias] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Instagram importer
+  // Camera importer
   const [showImporter, setShowImporter] = useState(false)
   const [igText, setIgText] = useState("")
   const [igImageUrl, setIgImageUrl] = useState("")
   const [igLoading, setIgLoading] = useState(false)
   const [igMessage, setIgMessage] = useState("")
 
-  async function importFromInstagram() {
+  async function importFromCamera() {
     if (!igText.trim()) return
     setIgLoading(true)
     setIgMessage("")
@@ -116,8 +116,8 @@ export default function AdminNoticiasPage() {
             onClick={() => setShowImporter(!showImporter)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold hover:from-pink-600 hover:to-purple-700 transition-all"
           >
-            <Instagram className="h-4 w-4" />
-            Importar de Instagram
+            <Camera className="h-4 w-4" />
+            Importar de Camera
           </button>
           <Link
             href="/oficiales/admin/website/noticias/crear"
@@ -129,15 +129,15 @@ export default function AdminNoticiasPage() {
         </div>
       </div>
 
-      {/* Instagram Importer */}
+      {/* Camera Importer */}
       {showImporter && (
         <div className="mb-6 p-5 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-pink-50 to-purple-50">
           <div className="flex items-center gap-2 mb-3">
-            <Instagram className="h-5 w-5 text-purple-600" />
-            <h3 className="font-bold text-gray-900">Importar post de Instagram</h3>
+            <Camera className="h-5 w-5 text-purple-600" />
+            <h3 className="font-bold text-gray-900">Importar post de Camera</h3>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Copiá el texto de un post de Instagram y la IA lo convierte en una noticia lista para publicar.
+            Copiá el texto de un post de Camera y la IA lo convierte en una noticia lista para publicar.
           </p>
           <div className="space-y-3">
             <div>
@@ -147,7 +147,7 @@ export default function AdminNoticiasPage() {
                 onChange={(e) => setIgText(e.target.value)}
                 rows={4}
                 className="w-full px-3 py-2.5 rounded-lg border border-purple-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Pegá acá el texto del post de Instagram..."
+                placeholder="Pegá acá el texto del post de Camera..."
               />
             </div>
             <div>
@@ -162,7 +162,7 @@ export default function AdminNoticiasPage() {
             </div>
             <div className="flex gap-2">
               <button
-                onClick={importFromInstagram}
+                onClick={importFromCamera}
                 disabled={igLoading || !igText.trim()}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-50"
               >
