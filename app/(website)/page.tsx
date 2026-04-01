@@ -2,6 +2,7 @@ import Link from "next/link"
 import HeroSection from "@/components/website/HeroSection"
 import SectionTitle from "@/components/website/SectionTitle"
 import NewsCard from "@/components/website/NewsCard"
+import QuickLinks from "@/components/website/QuickLinks"
 import prisma from "@/lib/prisma"
 import GeniusSportsHomeWidget from "./GeniusSportsHomeWidget"
 import CuratorFeed from "@/components/website/CuratorFeed"
@@ -24,30 +25,7 @@ export default async function HomePage() {
       <HeroSection />
 
       {/* Quick Stats / Links */}
-      <section className="bg-gray-50 border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { label: "Calendario", href: "/calendario", icon: "📅", desc: "Próximos partidos" },
-              { label: "Posiciones", href: "/posiciones", icon: "🏆", desc: "Tabla de posiciones" },
-              { label: "Estadísticas", href: "/estadisticas", icon: "📊", desc: "Stats de jugadores" },
-              { label: "Clubes", href: "/clubes", icon: "🏀", desc: "Clubes afiliados" },
-            ].map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 p-4 bg-white rounded-xl border border-gray-100 hover:shadow-md transition-shadow"
-              >
-                <span className="text-2xl">{item.icon}</span>
-                <div>
-                  <p className="font-semibold text-sm text-gray-900">{item.label}</p>
-                  <p className="text-xs text-gray-500">{item.desc}</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      <QuickLinks />
 
       {/* Upcoming matches widget */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
