@@ -25,14 +25,42 @@ export default function AdminNoticiasPage() {
   const [noticias, setNoticias] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Camera importer
+  // Instagram importer
   const [showImporter, setShowImporter] = useState(false)
+  const [igUrl, setIgUrl] = useState("")
   const [igText, setIgText] = useState("")
   const [igImageUrl, setIgImageUrl] = useState("")
   const [igLoading, setIgLoading] = useState(false)
+  const [igExtracting, setIgExtracting] = useState(false)
   const [igMessage, setIgMessage] = useState("")
 
-  async function importFromCamera() {
+  async function extractFromUrl() {
+    if (!igUrl.trim()) return
+    setIgExtracting(true)
+
+    try {
+      const res = await fetch("/api/scrape", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: igUrl }),
+      })
+
+      if (!res.ok) throw new Error("No se pudo extraer")
+      const data = await res.json()
+
+      if (data.text) setIgText(data.text)
+      if (data.imageUrl) setIgImageUrl(data.imageUrl)
+      if (!data.text && !data.imageUrl) {
+        setIgMessage("No se pudo extraer contenido. Pegá el texto manualmente.")
+      }
+    } catch {
+      setIgMessage("No se pudo extraer. Pegá el texto del post manualmente.")
+    } finally {
+      setIgExtracting(false)
+    }
+  }
+
+  async function importFromInstagram() {
     if (!igText.trim()) return
     setIgLoading(true)
     setIgMessage("")
@@ -47,7 +75,6 @@ export default function AdminNoticiasPage() {
       if (!res.ok) throw new Error("Error al generar")
       const { result } = await res.json()
 
-      // Create the noticia directly
       const createRes = await fetch("/api/website/noticias", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -59,7 +86,7 @@ export default function AdminNoticiasPage() {
           imagenUrl: igImageUrl || null,
           categoria: result.categoria || "GENERAL",
           destacada: false,
-          publicada: false, // Borrador para que revises antes
+          publicada: false,
         }),
       })
 
@@ -67,6 +94,7 @@ export default function AdminNoticiasPage() {
 
       const { noticia } = await createRes.json()
       setNoticias((prev) => [noticia, ...prev])
+      setIgUrl("")
       setIgText("")
       setIgImageUrl("")
       setShowImporter(false)
@@ -117,7 +145,7 @@ export default function AdminNoticiasPage() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold hover:from-pink-600 hover:to-purple-700 transition-all"
           >
             <Camera className="h-4 w-4" />
-            Importar de Camera
+            Importar de Instagram
           </button>
           <Link
             href="/oficiales/admin/website/noticias/crear"
@@ -129,17 +157,40 @@ export default function AdminNoticiasPage() {
         </div>
       </div>
 
-      {/* Camera Importer */}
+      {/* Instagram Importer */}
       {showImporter && (
         <div className="mb-6 p-5 rounded-xl border-2 border-purple-200 bg-gradient-to-r from-pink-50 to-purple-50">
           <div className="flex items-center gap-2 mb-3">
             <Camera className="h-5 w-5 text-purple-600" />
-            <h3 className="font-bold text-gray-900">Importar post de Camera</h3>
+            <h3 className="font-bold text-gray-900">Importar post de Instagram</h3>
           </div>
           <p className="text-sm text-gray-500 mb-4">
-            Copiá el texto de un post de Camera y la IA lo convierte en una noticia lista para publicar.
+            Pegá el link del post de Instagram y el sistema extrae el contenido automáticamente. O pegá el texto directamente.
           </p>
           <div className="space-y-3">
+            {/* Step 1: URL */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Link del post de Instagram</label>
+              <div className="flex gap-2">
+                <input
+                  value={igUrl}
+                  onChange={(e) => setIgUrl(e.target.value)}
+                  type="url"
+                  className="flex-1 px-3 py-2.5 rounded-lg border border-purple-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                  placeholder="https://www.instagram.com/p/..."
+                />
+                <button
+                  onClick={extractFromUrl}
+                  disabled={igExtracting || !igUrl.trim()}
+                  className="inline-flex items-center gap-1 px-4 py-2.5 rounded-lg bg-purple-100 text-purple-700 text-sm font-semibold hover:bg-purple-200 disabled:opacity-50 shrink-0"
+                >
+                  {igExtracting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {igExtracting ? "Extrayendo..." : "Extraer"}
+                </button>
+              </div>
+            </div>
+
+            {/* Step 2: Extracted/manual text */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Texto del post *</label>
               <textarea
@@ -147,22 +198,26 @@ export default function AdminNoticiasPage() {
                 onChange={(e) => setIgText(e.target.value)}
                 rows={4}
                 className="w-full px-3 py-2.5 rounded-lg border border-purple-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="Pegá acá el texto del post de Camera..."
+                placeholder="Se llena automáticamente al extraer, o pegá el texto manualmente..."
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">URL de la imagen (opcional)</label>
-              <input
-                value={igImageUrl}
-                onChange={(e) => setIgImageUrl(e.target.value)}
-                type="url"
-                className="w-full px-3 py-2.5 rounded-lg border border-purple-200 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-                placeholder="https://... (pegá la URL de la imagen del post)"
-              />
-            </div>
+
+            {/* Image URL (auto-filled or manual) */}
+            {igImageUrl && (
+              <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-purple-100">
+                <img src={igImageUrl} alt="Preview" className="h-16 w-16 object-cover rounded-lg" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 truncate">{igImageUrl}</p>
+                  <button onClick={() => setIgImageUrl("")} className="text-xs text-red-500 hover:underline mt-1">
+                    Quitar imagen
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="flex gap-2">
               <button
-                onClick={importFromCamera}
+                onClick={importFromInstagram}
                 disabled={igLoading || !igText.trim()}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-purple-600 text-white text-sm font-semibold hover:bg-purple-700 disabled:opacity-50"
               >
@@ -173,7 +228,7 @@ export default function AdminNoticiasPage() {
                 )}
               </button>
               <button
-                onClick={() => setShowImporter(false)}
+                onClick={() => { setShowImporter(false); setIgUrl(""); setIgText(""); setIgImageUrl("") }}
                 className="px-4 py-2 rounded-lg bg-white text-gray-700 text-sm font-semibold border border-gray-200 hover:bg-gray-50"
               >
                 Cancelar
