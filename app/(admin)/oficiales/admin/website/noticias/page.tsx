@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Plus, Edit2, Trash2, Eye, EyeOff, Star, Camera, Loader2, Sparkles } from "lucide-react"
+import { Plus, Edit2, Trash2, Eye, EyeOff, Star, Camera, Loader2, Sparkles, Zap } from "lucide-react"
 
 const categoryLabels: Record<string, string> = {
   GENERAL: "General",
@@ -24,6 +24,53 @@ function slugify(text: string) {
 export default function AdminNoticiasPage() {
   const [noticias, setNoticias] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Quick news
+  const [showQuick, setShowQuick] = useState(false)
+  const [quickText, setQuickText] = useState("")
+  const [quickLoading, setQuickLoading] = useState(false)
+
+  async function createQuickNews() {
+    if (!quickText.trim()) return
+    setQuickLoading(true)
+    setIgMessage("")
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: quickText, tipo: "importar-instagram" }),
+      })
+      if (!res.ok) throw new Error("Error al generar")
+      const { result } = await res.json()
+
+      const createRes = await fetch("/api/website/noticias", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          titulo: result.titulo,
+          slug: slugify(result.titulo),
+          extracto: result.extracto,
+          contenido: result.contenido,
+          categoria: result.categoria || "GENERAL",
+          destacada: false,
+          publicada: false,
+        }),
+      })
+      if (!createRes.ok) throw new Error("Error al crear")
+
+      const { noticia } = await createRes.json()
+      setNoticias((prev) => [noticia, ...prev])
+      setQuickText("")
+      setShowQuick(false)
+      setIgMessage("Noticia creada como borrador. Revisá y publicá.")
+      setTimeout(() => setIgMessage(""), 5000)
+    } catch (err: any) {
+      setIgMessage("Error: " + (err.message || "No se pudo crear"))
+    } finally {
+      setQuickLoading(false)
+    }
+  }
 
   // Instagram importer
   const [showImporter, setShowImporter] = useState(false)
@@ -141,21 +188,74 @@ export default function AdminNoticiasPage() {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowImporter(!showImporter)}
+            onClick={() => { setShowQuick(true); setShowImporter(false) }}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-semibold hover:from-amber-600 hover:to-orange-700 transition-all"
+          >
+            <Zap className="h-4 w-4" />
+            Noticia Rápida
+          </button>
+          <button
+            onClick={() => { setShowImporter(!showImporter); setShowQuick(false) }}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm font-semibold hover:from-pink-600 hover:to-purple-700 transition-all"
           >
             <Camera className="h-4 w-4" />
-            Importar de Instagram
+            Importar de IG
           </button>
           <Link
             href="/oficiales/admin/website/noticias/crear"
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
           >
             <Plus className="h-4 w-4" />
-            Nueva noticia
+            Nueva
           </Link>
         </div>
       </div>
+
+      {/* Quick News */}
+      {showQuick && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setShowQuick(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 flex items-center justify-center">
+                  <Zap className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900">Noticia Rápida</h3>
+                  <p className="text-xs text-gray-500">Pegá cualquier texto y la IA crea la noticia</p>
+                </div>
+              </div>
+            </div>
+            <div className="p-5">
+              <textarea
+                value={quickText}
+                onChange={(e) => setQuickText(e.target.value)}
+                rows={5}
+                autoFocus
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400"
+                placeholder="Pegá el texto de Instagram, un comunicado, una idea, lo que sea... La IA se encarga del resto."
+              />
+            </div>
+            <div className="px-5 pb-5 flex gap-2 justify-end">
+              <button onClick={() => setShowQuick(false)}
+                className="px-4 py-2.5 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
+                Cancelar
+              </button>
+              <button
+                onClick={createQuickNews}
+                disabled={quickLoading || !quickText.trim()}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 text-white text-sm font-bold hover:from-amber-600 hover:to-orange-700 disabled:opacity-50 transition-all"
+              >
+                {quickLoading ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Generando...</>
+                ) : (
+                  <><Sparkles className="h-4 w-4" /> Crear noticia</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Instagram Importer */}
       {showImporter && (
