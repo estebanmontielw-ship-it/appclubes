@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
 import NewsCard from "@/components/website/NewsCard"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import Link from "next/link"
 
 export const metadata: Metadata = {

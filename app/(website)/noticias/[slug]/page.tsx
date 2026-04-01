@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 
 const categoryLabels: Record<string, string> = {
   GENERAL: "General",

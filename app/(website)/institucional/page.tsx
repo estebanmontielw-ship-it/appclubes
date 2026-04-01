@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 
 export const metadata: Metadata = {
   title: "Institucional",

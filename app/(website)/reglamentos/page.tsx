@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import { FileText, Download } from "lucide-react"
 
 export const metadata: Metadata = {

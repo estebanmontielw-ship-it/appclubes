@@ -2,7 +2,7 @@ import Link from "next/link"
 import HeroSection from "@/components/website/HeroSection"
 import SectionTitle from "@/components/website/SectionTitle"
 import NewsCard from "@/components/website/NewsCard"
-import { prisma } from "@/lib/prisma"
+import prisma from "@/lib/prisma"
 import GeniusSportsHomeWidget from "./GeniusSportsHomeWidget"
 
 export default async function HomePage() {
