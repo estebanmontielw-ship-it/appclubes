@@ -7,66 +7,66 @@ export default function MatchTicker() {
 
   useEffect(() => {
     // Set widget config
-    ;(window as any).spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L = {}
+    ;(window as any).spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M = {}
 
     // Load widget script
     const script = document.createElement("script")
     script.async = true
-    script.src = "https://widget.wh.geniussports.com/widget/?LILUXVQFU4GM9DOWMOJH6D75T3Y33L"
+    script.src = "https://widget.wh.geniussports.com/widget/?VMITW7QLE90YMYLHAGF6OKKQ6UJG3M"
     document.body.appendChild(script)
 
     // Add custom styles to override widget appearance
     const style = document.createElement("style")
     style.id = "match-ticker-styles"
     style.textContent = `
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M {
         background: #0a1628 !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L * {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M * {
         border-color: rgba(255,255,255,0.1) !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L .spw-header,
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L .spw-branding,
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L .spw-logo,
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="branding"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="logo-container"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="powered"] {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M .spw-header,
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M .spw-branding,
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M .spw-logo,
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="branding"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="logo-container"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="powered"] {
         display: none !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L .spw-container,
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="container"] {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M .spw-container,
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="container"] {
         background: #0a1628 !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="match"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="card"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="game"] {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="match"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="card"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="game"] {
         background: rgba(255,255,255,0.05) !important;
         border: 1px solid rgba(255,255,255,0.1) !important;
         border-radius: 8px !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="team-name"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="teamname"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L a {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="team-name"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="teamname"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M a {
         color: #ffffff !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="date"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="time"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="status"] {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="date"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="time"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="status"] {
         color: rgba(255,255,255,0.6) !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="competition"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="league"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="title"] {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="competition"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="league"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="title"] {
         color: #60a5fa !important;
         font-size: 10px !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="footer-bar"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="bottom"] {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="footer-bar"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="bottom"] {
         background: #2563eb !important;
         border-radius: 0 0 8px 8px !important;
       }
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="arrow"],
-      #spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L [class*="nav"] button {
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="arrow"],
+      #spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M [class*="nav"] button {
         color: white !important;
         background: rgba(255,255,255,0.1) !important;
       }
@@ -77,7 +77,7 @@ export default function MatchTicker() {
       if (document.body.contains(script)) document.body.removeChild(script)
       const existingStyle = document.getElementById("match-ticker-styles")
       if (existingStyle) existingStyle.remove()
-      delete (window as any).spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L
+      delete (window as any).spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M
     }
   }, [])
 
@@ -85,7 +85,7 @@ export default function MatchTicker() {
     <div className="bg-[#0a1628] overflow-hidden">
       <div className="max-w-7xl mx-auto">
         <div
-          id="spw_LILUXVQFU4GM9DOWMOJH6D75T3Y33L"
+          id="spw_VMITW7QLE90YMYLHAGF6OKKQ6UJG3M"
           ref={containerRef}
         />
       </div>
