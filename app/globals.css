@@ -127,18 +127,23 @@
 /* Better scrollbar */
 @layer base {
   ::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 12px;
+    height: 12px;
   }
   ::-webkit-scrollbar-track {
-    background: transparent;
+    background: hsl(var(--muted) / 0.5);
+    border-radius: 6px;
   }
   ::-webkit-scrollbar-thumb {
     background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 3px;
+    border-radius: 6px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
   }
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(var(--muted-foreground) / 0.5);
+    border: 3px solid transparent;
+    background-clip: padding-box;
   }
 }
 
