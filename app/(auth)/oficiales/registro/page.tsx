@@ -112,7 +112,7 @@ export default function RegistroPage() {
   // Step 1 form
   const step1Form = useForm<RegistroStep1Data>({
     resolver: zodResolver(registroStep1Schema),
-    defaultValues: step1Data || undefined,
+    defaultValues: step1Data || { segundoNombre: "", segundoApellido: "" },
   })
 
   const handleStep1 = (data: RegistroStep1Data) => {
