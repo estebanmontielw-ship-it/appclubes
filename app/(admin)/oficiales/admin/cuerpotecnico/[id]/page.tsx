@@ -54,6 +54,8 @@ export default function CuerpoTecnicoDetailPage() {
   const [motivo, setMotivo] = useState("")
   const [showRechazo, setShowRechazo] = useState(false)
   const [showCarnet, setShowCarnet] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editData, setEditData] = useState<any>({})
 
   useEffect(() => {
     fetch(`/api/admin/cuerpotecnico/${params.id}`)
@@ -61,6 +63,36 @@ export default function CuerpoTecnicoDetailPage() {
       .then(data => setCt(data.ct))
       .finally(() => setLoading(false))
   }, [params.id])
+
+  function startEditing() {
+    setEditData({
+      nombre: ct.nombre,
+      apellido: ct.apellido,
+      cedula: ct.cedula,
+      telefono: ct.telefono,
+      ciudad: ct.ciudad,
+      email: ct.email,
+      razonSocial: ct.razonSocial || "",
+      ruc: ct.ruc || "",
+    })
+    setEditing(true)
+  }
+
+  async function saveEdit() {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/admin/cuerpotecnico/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editar: editData }),
+      })
+      if (res.ok) {
+        const { ct: updated } = await res.json()
+        setCt(updated)
+        setEditing(false)
+      }
+    } catch {} finally { setSaving(false) }
+  }
 
   async function handleAction(accion: string) {
     if (accion === "rechazar" && !motivo.trim()) return
@@ -105,10 +137,56 @@ export default function CuerpoTecnicoDetailPage() {
         </span>
       </div>
 
+      {/* Edit mode */}
+      {editing ? (
+        <div className="bg-white rounded-xl border-2 border-primary/30 p-5 mb-6 space-y-3">
+          <h3 className="font-semibold text-gray-900 mb-2">Editar datos</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { key: "nombre", label: "Nombre" },
+              { key: "apellido", label: "Apellido" },
+              { key: "cedula", label: "Cédula" },
+              { key: "telefono", label: "Teléfono" },
+              { key: "ciudad", label: "Ciudad" },
+              { key: "email", label: "Email" },
+              { key: "razonSocial", label: "Razón social" },
+              { key: "ruc", label: "RUC" },
+            ].map(({ key, label }) => (
+              <div key={key}>
+                <label className="block text-xs text-gray-500 mb-1">{label}</label>
+                <input
+                  value={editData[key] || ""}
+                  onChange={(e) => setEditData({ ...editData, [key]: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  style={{ fontSize: "16px" }}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2 pt-2">
+            <button onClick={saveEdit} disabled={saving}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50">
+              <Check className="h-4 w-4" /> {saving ? "Guardando..." : "Guardar cambios"}
+            </button>
+            <button onClick={() => setEditing(false)}
+              className="px-4 py-2 rounded-lg bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {/* Info cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 p-4 space-y-2">
-          <h3 className="font-semibold text-sm text-gray-900 mb-3">Datos Personales</h3>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm text-gray-900">Datos Personales</h3>
+            {!editing && (
+              <button onClick={startEditing} className="text-xs text-primary font-medium hover:underline">
+                Editar
+              </button>
+            )}
+          </div>
           <p className="text-sm"><span className="text-gray-500">Email:</span> {ct.email}</p>
           <p className="text-sm"><span className="text-gray-500">Teléfono:</span> {ct.telefono}</p>
           <p className="text-sm"><span className="text-gray-500">Ciudad:</span> {ct.ciudad}</p>

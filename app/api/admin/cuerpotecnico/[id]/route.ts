@@ -33,7 +33,22 @@ export async function PATCH(
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
-    const { accion, motivoRechazo } = await request.json()
+    const body = await request.json()
+    const { accion, motivoRechazo, editar } = body
+
+    // Edit mode - update any field
+    if (editar) {
+      const allowedFields = ["nombre", "apellido", "cedula", "telefono", "ciudad", "email", "genero", "nacionalidad", "rol", "razonSocial", "ruc", "tieneTitulo"]
+      const updateData: Record<string, unknown> = {}
+      for (const field of allowedFields) {
+        if (editar[field] !== undefined) updateData[field] = editar[field]
+      }
+      const ct = await prisma.cuerpoTecnico.update({
+        where: { id: params.id },
+        data: updateData,
+      })
+      return NextResponse.json({ ct })
+    }
 
     let updateData: Record<string, unknown> = {}
 
