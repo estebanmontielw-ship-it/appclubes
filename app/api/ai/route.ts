@@ -36,7 +36,7 @@ async function callNvidia(userPrompt: string) {
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "meta/llama-3.1-8b-instruct",
+      model: "meta/llama-4-maverick-17b-128e-instruct",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
