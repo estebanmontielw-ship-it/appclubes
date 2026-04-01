@@ -37,10 +37,10 @@ export default function ContactoPage() {
               <div>
                 <p className="font-medium text-gray-900 text-sm">Email</p>
                 <a
-                  href="mailto:info@cpb.com.py"
+                  href="mailto:cpb@cpb.com.py"
                   className="text-sm text-primary hover:underline"
                 >
-                  info@cpb.com.py
+                  cpb@cpb.com.py
                 </a>
               </div>
             </div>

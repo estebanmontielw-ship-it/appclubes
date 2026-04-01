@@ -64,8 +64,8 @@ export default function PublicFooter() {
             <ul className="space-y-2 text-sm text-gray-400">
               <li>Asunción, Paraguay</li>
               <li>
-                <a href="mailto:info@cpb.com.py" className="hover:text-white transition-colors">
-                  info@cpb.com.py
+                <a href="mailto:cpb@cpb.com.py" className="hover:text-white transition-colors">
+                  cpb@cpb.com.py
                 </a>
               </li>
             </ul>
