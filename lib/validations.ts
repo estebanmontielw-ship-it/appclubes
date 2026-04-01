@@ -8,9 +8,9 @@ export const loginSchema = z.object({
 export const registroStep1Schema = z
   .object({
     primerNombre: z.string().min(2, "Mínimo 2 caracteres"),
-    segundoNombre: z.string().optional().default(""),
+    segundoNombre: z.string().default(""),
     primerApellido: z.string().min(2, "Mínimo 2 caracteres"),
-    segundoApellido: z.string().optional().default(""),
+    segundoApellido: z.string().default(""),
     cedula: z
       .string()
       .min(5, "CI inválido")
