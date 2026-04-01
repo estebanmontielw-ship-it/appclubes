@@ -1,0 +1,178 @@
+import { createClient } from "@/utils/supabase/server"
+import { cookies } from "next/headers"
+import prisma from "@/lib/prisma"
+import { NextResponse } from "next/server"
+
+async function checkAdmin() {
+  const cookieStore = cookies()
+  const supabase = createClient(cookieStore)
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session?.user) return false
+  const adminRoles = await prisma.usuarioRol.findMany({
+    where: { usuarioId: session.user.id, rol: "SUPER_ADMIN" },
+  })
+  return adminRoles.length > 0
+}
+
+async function getSystemContext() {
+  try {
+    const [
+      totalUsuarios,
+      usuariosPendientes,
+      usuariosVerificados,
+      totalCT,
+      ctPendientes,
+      totalPartidos,
+      partidosProgramados,
+      totalCursos,
+      totalInscripciones,
+      pagosPendientes,
+      totalNoticias,
+      noticiasPublicadas,
+      totalClubes,
+      totalSelecciones,
+      totalReglamentos,
+      mensajesSinLeer,
+      ultimasNoticias,
+      ultimosUsuarios,
+    ] = await Promise.all([
+      prisma.usuario.count(),
+      prisma.usuario.count({ where: { estadoVerificacion: "PENDIENTE" } }),
+      prisma.usuario.count({ where: { estadoVerificacion: "VERIFICADO" } }),
+      prisma.cuerpoTecnico.count(),
+      prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "PENDIENTE" } }),
+      prisma.partido.count(),
+      prisma.partido.count({ where: { estado: "PROGRAMADO" } }),
+      prisma.curso.count(),
+      prisma.inscripcion.count(),
+      prisma.pago.count({ where: { estado: "PENDIENTE_REVISION" } }),
+      prisma.noticia.count(),
+      prisma.noticia.count({ where: { publicada: true } }),
+      prisma.club.count({ where: { activo: true } }),
+      prisma.seleccion.count({ where: { activo: true } }),
+      prisma.reglamento.count({ where: { activo: true } }),
+      prisma.mensajeContacto.count({ where: { leido: false } }),
+      prisma.noticia.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { titulo: true, publicada: true, createdAt: true } }),
+      prisma.usuario.findMany({ orderBy: { createdAt: "desc" }, take: 5, select: { nombre: true, apellido: true, estadoVerificacion: true, createdAt: true } }),
+    ])
+
+    return `
+DATOS ACTUALES DEL SISTEMA CPB (en tiempo real):
+
+OFICIALES:
+- Total registrados: ${totalUsuarios}
+- Pendientes de verificación: ${usuariosPendientes}
+- Verificados: ${usuariosVerificados}
+
+CUERPO TÉCNICO:
+- Total registrados: ${totalCT}
+- Pendientes de habilitación: ${ctPendientes}
+
+PARTIDOS:
+- Total partidos: ${totalPartidos}
+- Programados: ${partidosProgramados}
+
+CURSOS:
+- Total cursos: ${totalCursos}
+- Total inscripciones: ${totalInscripciones}
+- Pagos pendientes de revisión: ${pagosPendientes}
+
+SITIO WEB:
+- Noticias total: ${totalNoticias} (${noticiasPublicadas} publicadas)
+- Clubes cargados: ${totalClubes}
+- Selecciones cargadas: ${totalSelecciones}
+- Reglamentos cargados: ${totalReglamentos}
+- Mensajes de contacto sin leer: ${mensajesSinLeer}
+
+ÚLTIMAS NOTICIAS:
+${ultimasNoticias.map(n => `- "${n.titulo}" (${n.publicada ? "publicada" : "borrador"})`).join("\n")}
+
+ÚLTIMOS REGISTROS:
+${ultimosUsuarios.map(u => `- ${u.nombre} ${u.apellido} (${u.estadoVerificacion})`).join("\n")}
+`
+  } catch (err) {
+    console.error("Error getting system context:", err)
+    return "No se pudieron obtener los datos del sistema."
+  }
+}
+
+async function callNvidia(systemPrompt: string, userMessage: string, history: any[]) {
+  const apiKey = process.env.NVIDIA_API_KEY
+  if (!apiKey) throw new Error("NVIDIA API key no configurada")
+
+  const messages = [
+    { role: "system", content: systemPrompt },
+    ...history.slice(-10), // Last 10 messages for context
+    { role: "user", content: userMessage },
+  ]
+
+  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "meta/llama-4-maverick-17b-128e-instruct",
+      messages,
+      max_tokens: 1500,
+      temperature: 0.7,
+    }),
+    signal: AbortSignal.timeout(30000),
+  })
+
+  if (!res.ok) throw new Error("Nvidia API error")
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content?.trim() || ""
+}
+
+export async function POST(request: Request) {
+  try {
+    const isAdmin = await checkAdmin()
+    if (!isAdmin) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
+    const { message, history = [] } = await request.json()
+
+    if (!message) {
+      return NextResponse.json({ error: "Mensaje requerido" }, { status: 400 })
+    }
+
+    // Get real-time system data
+    const systemData = await getSystemContext()
+
+    const systemPrompt = `Sos JARVIS, el asistente de inteligencia artificial del Super Admin de la Confederación Paraguaya de Básquetbol (CPB). Tu nombre es JARVIS.
+
+Tu personalidad:
+- Sos eficiente, inteligente y proactivo
+- Hablás en español rioplatense/paraguayo (vos, usás, tenés)
+- Sos conciso pero completo
+- Cuando detectás problemas o cosas pendientes, los mencionás proactivamente
+- Usás datos reales del sistema para respaldar tus respuestas
+
+Tus capacidades:
+- Accedés a datos en tiempo real del sistema (usuarios, partidos, pagos, noticias, etc.)
+- Podés dar resúmenes del estado de la CPB
+- Podés sugerir acciones y prioridades
+- Podés ayudar a redactar contenido (noticias, comunicados, notificaciones)
+- Podés analizar tendencias y dar recomendaciones
+
+IMPORTANTE: Respondé en texto plano, sin markdown. Usá saltos de línea para separar párrafos. No uses asteriscos, guiones bajos ni hashtags para formatear.
+
+${systemData}
+
+Fecha actual: ${new Date().toLocaleDateString("es-PY", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`
+
+    const response = await callNvidia(systemPrompt, message, history)
+
+    return NextResponse.json({ response })
+  } catch (error: any) {
+    console.error("Assistant error:", error)
+
+    // Fallback response
+    return NextResponse.json({
+      response: "Disculpá, tuve un problema procesando tu consulta. Intentá de nuevo en unos segundos.",
+    })
+  }
+}

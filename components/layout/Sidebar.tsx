@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X, Globe,
+  DollarSign, BarChart3, Lock, X, Globe, Bot,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -49,6 +49,7 @@ function getNavSections(
         label: "MI CUENTA",
         items: [
           { label: "Dashboard", href: "/oficiales/admin", icon: Home },
+          { label: "JARVIS (IA)", href: "/oficiales/admin/asistente", icon: Bot },
         ],
       },
       {
