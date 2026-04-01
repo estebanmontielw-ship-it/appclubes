@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Loader2 } from "lucide-react"
+import { Loader2, ShieldCheck, CalendarDays, CreditCard } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
 export default function LoginCTPage() {
@@ -46,36 +46,65 @@ export default function LoginCTPage() {
     } finally { setLoading(false) }
   }
 
+  const currentYear = new Date().getFullYear()
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-red-50 px-4">
-      <Card className="w-full max-w-md shadow-lg border-0">
-        <CardHeader className="text-center">
-          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain" />
-          <CardTitle className="text-2xl">Cuerpo Técnico CPB</CardTitle>
-          <CardDescription>Habilitación anual — Iniciá sesión</CardDescription>
-        </CardHeader>
-        <form onSubmit={onSubmit}>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input type="email" className="h-11" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" />
-            </div>
-            <div className="space-y-2">
-              <Label>Contraseña</Label>
-              <Input type="password" className="h-11" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
-            </div>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Iniciar sesión
-            </Button>
-            <p className="text-sm text-gray-500 text-center">
-              ¿No tenés cuenta? <Link href="/cuerpotecnico/registro" className="text-primary hover:underline font-semibold">Registrate</Link>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-red-50 px-4 py-8">
+      <div className="w-full max-w-md space-y-5">
+        <Card className="shadow-lg border-0">
+          <CardHeader className="text-center pb-2">
+            <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-24 w-24 object-contain" />
+            <CardTitle className="text-2xl">Cuerpo Técnico CPB</CardTitle>
+            <CardDescription className="mt-1">
+              Sistema de Habilitación Anual {currentYear}
+            </CardDescription>
+            <p className="text-xs text-muted-foreground mt-2">
+              Confederación Paraguaya de Basketball
             </p>
-          </CardFooter>
-        </form>
-      </Card>
+          </CardHeader>
+          <form onSubmit={onSubmit}>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input type="email" className="h-11" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" />
+              </div>
+              <div className="space-y-2">
+                <Label>Contraseña</Label>
+                <Input type="password" className="h-11" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" />
+              </div>
+            </CardContent>
+            <CardFooter className="flex flex-col gap-4">
+              <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Iniciar sesión
+              </Button>
+              <p className="text-sm text-gray-500 text-center">
+                ¿No tenés cuenta? <Link href="/cuerpotecnico/registro" className="text-primary hover:underline font-semibold">Registrate</Link>
+              </p>
+            </CardFooter>
+          </form>
+        </Card>
+
+        {/* Info cards */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white/80 backdrop-blur rounded-xl p-3 text-center shadow-sm border border-gray-100">
+            <ShieldCheck className="h-5 w-5 mx-auto mb-1.5 text-blue-600" />
+            <p className="text-[11px] font-medium text-gray-700 leading-tight">Habilitación oficial CPB</p>
+          </div>
+          <div className="bg-white/80 backdrop-blur rounded-xl p-3 text-center shadow-sm border border-gray-100">
+            <CalendarDays className="h-5 w-5 mx-auto mb-1.5 text-blue-600" />
+            <p className="text-[11px] font-medium text-gray-700 leading-tight">Vigencia anual {currentYear}</p>
+          </div>
+          <div className="bg-white/80 backdrop-blur rounded-xl p-3 text-center shadow-sm border border-gray-100">
+            <CreditCard className="h-5 w-5 mx-auto mb-1.5 text-blue-600" />
+            <p className="text-[11px] font-medium text-gray-700 leading-tight">Pago por transferencia</p>
+          </div>
+        </div>
+
+        <p className="text-[10px] text-center text-gray-400">
+          Entrenadores, asistentes, preparadores físicos, fisioterapeutas y utileros
+        </p>
+      </div>
 
       {showNotFound && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setShowNotFound(false)}>

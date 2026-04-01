@@ -189,12 +189,18 @@ export default function RegistroPage() {
         return
       }
 
+      // Concatenate name fields
+      const nombre = [step1Data.primerNombre, step1Data.segundoNombre].filter(Boolean).join(" ")
+      const apellido = [step1Data.primerApellido, step1Data.segundoApellido].filter(Boolean).join(" ")
+
       // Register user
       const res = await fetch("/api/auth/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...step1Data,
+          nombre,
+          apellido,
           barrio: barrio === "Mi barrio no figura" ? barrioCustom : barrio,
           roles: selectedRoles,
           fotoCedulaUrl,
@@ -257,22 +263,32 @@ export default function RegistroPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre *</Label>
-                  <Input id="nombre" {...step1Form.register("nombre")} />
-                  {step1Form.formState.errors.nombre && (
+                  <Label htmlFor="primerNombre">Primer nombre *</Label>
+                  <Input id="primerNombre" {...step1Form.register("primerNombre")} />
+                  {step1Form.formState.errors.primerNombre && (
                     <p className="text-xs text-destructive">
-                      {step1Form.formState.errors.nombre.message}
+                      {step1Form.formState.errors.primerNombre.message}
                     </p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="apellido">Apellido *</Label>
-                  <Input id="apellido" {...step1Form.register("apellido")} />
-                  {step1Form.formState.errors.apellido && (
+                  <Label htmlFor="segundoNombre">Segundo nombre</Label>
+                  <Input id="segundoNombre" {...step1Form.register("segundoNombre")} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="primerApellido">Primer apellido *</Label>
+                  <Input id="primerApellido" {...step1Form.register("primerApellido")} />
+                  {step1Form.formState.errors.primerApellido && (
                     <p className="text-xs text-destructive">
-                      {step1Form.formState.errors.apellido.message}
+                      {step1Form.formState.errors.primerApellido.message}
                     </p>
                   )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="segundoApellido">Segundo apellido</Label>
+                  <Input id="segundoApellido" {...step1Form.register("segundoApellido")} />
                 </div>
               </div>
 
@@ -392,7 +408,7 @@ export default function RegistroPage() {
                   <Input
                     id="password"
                     type="password"
-                    placeholder="Mínimo 8 caracteres"
+                    placeholder="Mín 8 caracteres"
                     {...step1Form.register("password")}
                   />
                   {step1Form.formState.errors.password && (
@@ -402,7 +418,7 @@ export default function RegistroPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar *</Label>
+                  <Label htmlFor="confirmPassword">Confirmar contraseña *</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
@@ -416,6 +432,25 @@ export default function RegistroPage() {
                   )}
                 </div>
               </div>
+              {(() => {
+                const pwd = step1Form.watch("password") || ""
+                return (
+                  <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
+                    <p className="text-xs font-medium text-gray-600 mb-1">Requisitos de la contraseña:</p>
+                    <ul className="text-xs text-gray-500 space-y-0.5">
+                      <li className={pwd.length >= 8 ? "text-green-600" : ""}>
+                        {pwd.length >= 8 ? "\u2713" : "\u2022"} Mínimo 8 caracteres
+                      </li>
+                      <li className={/[A-Z]/.test(pwd) ? "text-green-600" : ""}>
+                        {/[A-Z]/.test(pwd) ? "\u2713" : "\u2022"} Al menos una letra mayúscula
+                      </li>
+                      <li className={/[0-9]/.test(pwd) ? "text-green-600" : ""}>
+                        {/[0-9]/.test(pwd) ? "\u2713" : "\u2022"} Al menos un número
+                      </li>
+                    </ul>
+                  </div>
+                )
+              })()}
             </CardContent>
             <CardFooter className="flex flex-col gap-4">
               <Button type="submit" className="w-full">

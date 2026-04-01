@@ -7,8 +7,10 @@ export const loginSchema = z.object({
 
 export const registroStep1Schema = z
   .object({
-    nombre: z.string().min(2, "Mínimo 2 caracteres"),
-    apellido: z.string().min(2, "Mínimo 2 caracteres"),
+    primerNombre: z.string().min(2, "Mínimo 2 caracteres"),
+    segundoNombre: z.string().optional().default(""),
+    primerApellido: z.string().min(2, "Mínimo 2 caracteres"),
+    segundoApellido: z.string().optional().default(""),
     cedula: z
       .string()
       .min(5, "CI inválido")
@@ -22,7 +24,11 @@ export const registroStep1Schema = z
     ciudad: z.string().min(1, "Seleccioná una ciudad"),
     nacionalidad: z.string().min(1, "Seleccioná una nacionalidad"),
     email: z.string().email("Email inválido"),
-    password: z.string().min(8, "Mínimo 8 caracteres"),
+    password: z
+      .string()
+      .min(8, "Mínimo 8 caracteres")
+      .regex(/[A-Z]/, "Debe incluir al menos una mayúscula")
+      .regex(/[0-9]/, "Debe incluir al menos un número"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {

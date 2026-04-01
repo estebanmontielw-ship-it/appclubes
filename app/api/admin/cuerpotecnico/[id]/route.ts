@@ -40,6 +40,7 @@ export async function PATCH(
     if (accion === "habilitar") {
       updateData = {
         estadoHabilitacion: "HABILITADO",
+        periodoHabilitacion: new Date().getFullYear(),
         pagoVerificado: true,
         verificadoPor: user.id,
         verificadoEn: new Date(),

@@ -45,8 +45,10 @@ export default function RegistroCTPage() {
   const [loading, setLoading] = useState(false)
 
   // Step 1
-  const [nombre, setNombre] = useState("")
-  const [apellido, setApellido] = useState("")
+  const [primerNombre, setPrimerNombre] = useState("")
+  const [segundoNombre, setSegundoNombre] = useState("")
+  const [primerApellido, setPrimerApellido] = useState("")
+  const [segundoApellido, setSegundoApellido] = useState("")
   const [cedula, setCedula] = useState("")
   const [fechaNac, setFechaNac] = useState("")
   const [telefono, setTelefono] = useState("")
@@ -107,14 +109,20 @@ export default function RegistroCTPage() {
   }
 
   const validateStep1 = () => {
-    if (!nombre || !apellido || !cedula || !fechaNac || !telefono || !ciudad || !genero || !nacionalidad || !email || !password) {
-      toast({ variant: "destructive", title: "Completá todos los campos" }); return false
+    if (!primerNombre || !primerApellido || !cedula || !fechaNac || !telefono || !ciudad || !genero || !nacionalidad || !email || !password) {
+      toast({ variant: "destructive", title: "Completá todos los campos obligatorios" }); return false
     }
     if (password !== confirmPassword) {
       toast({ variant: "destructive", title: "Las contraseñas no coinciden" }); return false
     }
     if (password.length < 8) {
       toast({ variant: "destructive", title: "La contraseña debe tener al menos 8 caracteres" }); return false
+    }
+    if (!/[A-Z]/.test(password)) {
+      toast({ variant: "destructive", title: "La contraseña debe incluir al menos una mayúscula" }); return false
+    }
+    if (!/[0-9]/.test(password)) {
+      toast({ variant: "destructive", title: "La contraseña debe incluir al menos un número" }); return false
     }
     return true
   }
@@ -138,6 +146,9 @@ export default function RegistroCTPage() {
         fotoCarnet ? uploadFile(fotoCarnet, "fotos-carnet") : null,
         tituloFile ? uploadFile(tituloFile, "certificados") : null,
       ])
+
+      const nombre = [primerNombre, segundoNombre].filter(Boolean).join(" ")
+      const apellido = [primerApellido, segundoApellido].filter(Boolean).join(" ")
 
       const res = await fetch("/api/ct/auth/registro", {
         method: "POST",
@@ -189,8 +200,12 @@ export default function RegistroCTPage() {
         {step === 1 && (
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><Label>Nombre *</Label><Input value={nombre} onChange={e => setNombre(e.target.value)} /></div>
-              <div className="space-y-1"><Label>Apellido *</Label><Input value={apellido} onChange={e => setApellido(e.target.value)} /></div>
+              <div className="space-y-1"><Label>Primer nombre *</Label><Input value={primerNombre} onChange={e => setPrimerNombre(e.target.value)} /></div>
+              <div className="space-y-1"><Label>Segundo nombre</Label><Input value={segundoNombre} onChange={e => setSegundoNombre(e.target.value)} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1"><Label>Primer apellido *</Label><Input value={primerApellido} onChange={e => setPrimerApellido(e.target.value)} /></div>
+              <div className="space-y-1"><Label>Segundo apellido</Label><Input value={segundoApellido} onChange={e => setSegundoApellido(e.target.value)} /></div>
             </div>
             <div className="space-y-1"><Label>Número de CI *</Label><Input value={cedula} onChange={e => setCedula(e.target.value)} placeholder="1234567" /></div>
             <div className="space-y-1"><Label>Fecha de nacimiento *</Label><Input type="date" value={fechaNac} onChange={e => setFechaNac(e.target.value)} /></div>
@@ -232,7 +247,21 @@ export default function RegistroCTPage() {
             <div className="space-y-1"><Label>Email *</Label><Input type="email" value={email} onChange={e => setEmail(e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1"><Label>Contraseña *</Label><Input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mín 8 caracteres" /></div>
-              <div className="space-y-1"><Label>Confirmar *</Label><Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} /></div>
+              <div className="space-y-1"><Label>Confirmar contraseña *</Label><Input type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Repetí la contraseña" /></div>
+            </div>
+            <div className="rounded-lg bg-gray-50 border border-gray-200 px-3 py-2">
+              <p className="text-xs font-medium text-gray-600 mb-1">Requisitos de la contraseña:</p>
+              <ul className="text-xs text-gray-500 space-y-0.5">
+                <li className={password.length >= 8 ? "text-green-600" : ""}>
+                  {password.length >= 8 ? "\u2713" : "\u2022"} Mínimo 8 caracteres
+                </li>
+                <li className={/[A-Z]/.test(password) ? "text-green-600" : ""}>
+                  {/[A-Z]/.test(password) ? "\u2713" : "\u2022"} Al menos una letra mayúscula
+                </li>
+                <li className={/[0-9]/.test(password) ? "text-green-600" : ""}>
+                  {/[0-9]/.test(password) ? "\u2713" : "\u2022"} Al menos un número
+                </li>
+              </ul>
             </div>
           </CardContent>
         )}

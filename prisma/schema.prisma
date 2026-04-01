@@ -526,6 +526,7 @@ model CuerpoTecnico {
   razonSocial         String?
   ruc                 String?
   estadoHabilitacion  EstadoHabilitacion @default(PENDIENTE)
+  periodoHabilitacion Int                @default(2026)
   pagoVerificado      Boolean            @default(false)
   pagoAutoVerificado  Boolean            @default(false)
   comprobanteUrl      String?

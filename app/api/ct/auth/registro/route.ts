@@ -125,6 +125,7 @@ export async function POST(request: Request) {
         razonSocial: razonSocial || null,
         ruc: ruc || null,
         montoHabilitacion: precio,
+        periodoHabilitacion: new Date().getFullYear(),
         pagoVerificado: autoVerificado,
         pagoAutoVerificado: autoVerificado,
         estadoHabilitacion: "PENDIENTE",

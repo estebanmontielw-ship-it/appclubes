@@ -23,7 +23,11 @@ export async function GET() {
       return NextResponse.json({ error: "No encontrado" }, { status: 404 })
     }
 
-    return NextResponse.json({ ct })
+    // Check if habilitación is expired (new year started)
+    const currentYear = new Date().getFullYear()
+    const habilitacionVencida = ct.estadoHabilitacion === "HABILITADO" && ct.periodoHabilitacion < currentYear
+
+    return NextResponse.json({ ct, habilitacionVencida, periodoActual: currentYear })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
