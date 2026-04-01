@@ -1,45 +1,43 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, X, Share } from "lucide-react"
+import { X } from "lucide-react"
 
 export default function InstallPrompt() {
   const [show, setShow] = useState(false)
-  const [isIOS, setIsIOS] = useState(false)
+  const [platform, setPlatform] = useState<"android" | "ios" | null>(null)
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
 
   useEffect(() => {
-    // Only show on mobile
-    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+    // Only mobile
+    const ua = navigator.userAgent
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(ua)
     if (!isMobile) return
 
-    // Don't show if already installed (standalone mode)
+    // Already installed
     if (window.matchMedia("(display-mode: standalone)").matches) return
+    if ((navigator as any).standalone === true) return
 
-    // Don't show if user dismissed before
-    const dismissed = localStorage.getItem("cpb-install-dismissed")
-    if (dismissed) {
-      const dismissedAt = parseInt(dismissed)
-      if (Date.now() - dismissedAt < 7 * 24 * 60 * 60 * 1000) return
+    // Dismissed recently
+    const dismissed = localStorage.getItem("cpb-pwa-dismissed")
+    if (dismissed && Date.now() - parseInt(dismissed) < 7 * 24 * 60 * 60 * 1000) return
+
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !(window as any).MSStream
+    const isAndroid = /Android/.test(ua)
+
+    if (isIOS) {
+      setPlatform("ios")
+      setTimeout(() => setShow(true), 6000)
+    } else if (isAndroid) {
+      setPlatform("android")
+      const handler = (e: Event) => {
+        e.preventDefault()
+        setDeferredPrompt(e)
+        setTimeout(() => setShow(true), 4000)
+      }
+      window.addEventListener("beforeinstallprompt", handler)
+      return () => window.removeEventListener("beforeinstallprompt", handler)
     }
-
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    setIsIOS(ios)
-
-    // Android: listen for install prompt
-    const handler = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setTimeout(() => setShow(true), 5000)
-    }
-    window.addEventListener("beforeinstallprompt", handler)
-
-    // iOS: show after delay
-    if (ios) {
-      setTimeout(() => setShow(true), 8000)
-    }
-
-    return () => window.removeEventListener("beforeinstallprompt", handler)
   }, [])
 
   async function handleInstall() {
@@ -53,58 +51,61 @@ export default function InstallPrompt() {
 
   function dismiss() {
     setShow(false)
-    localStorage.setItem("cpb-install-dismissed", Date.now().toString())
+    localStorage.setItem("cpb-pwa-dismissed", Date.now().toString())
   }
 
   if (!show) return null
 
   return (
-    <div className="fixed bottom-20 left-3 right-3 z-40 animate-slide-in-up sm:hidden">
-      <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
-        {isIOS ? (
-          // iOS instructions
-          <div className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mt-0.5">
-                <Download className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-900">Instalá la app de CPB</p>
-                <div className="mt-2 space-y-1.5">
-                  <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">1</span>
-                    Tocá el botón <Share className="h-3.5 w-3.5 text-primary inline" /> de compartir
-                  </p>
-                  <p className="text-xs text-gray-500 flex items-center gap-1.5">
-                    <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center text-[10px] font-bold text-gray-600 shrink-0">2</span>
-                    Seleccioná &quot;Agregar a inicio&quot;
-                  </p>
-                </div>
-              </div>
-              <button onClick={dismiss} className="p-1 rounded-lg text-gray-400 hover:text-gray-600 shrink-0">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
+    <div className="fixed bottom-4 left-3 right-3 z-40 animate-slide-in-up sm:hidden">
+      <div className="bg-[#0a1628] rounded-2xl shadow-2xl border border-white/10 overflow-hidden">
+        {/* Header bar */}
+        <div className="flex items-center gap-3 px-4 pt-4 pb-2">
+          <img src="/favicon-cpb.png" alt="CPB" className="h-11 w-11 rounded-xl" />
+          <div className="flex-1">
+            <p className="text-white font-bold text-sm">CPB Paraguay</p>
+            <p className="text-blue-300 text-[11px]">Básquetbol en tu bolsillo</p>
           </div>
-        ) : (
-          // Android install button
-          <div className="p-4 flex items-center gap-3">
-            <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Download className="h-5 w-5 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900">Instalá la app de CPB</p>
-              <p className="text-xs text-gray-500">Acceso rápido desde tu pantalla</p>
-            </div>
+          <button onClick={dismiss} className="p-1.5 rounded-lg text-white/40 hover:text-white/70 hover:bg-white/10">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {platform === "android" ? (
+          <div className="px-4 pb-4 pt-1">
+            <p className="text-white/60 text-xs mb-3">
+              Accedé al calendario, posiciones y noticias directo desde tu pantalla de inicio.
+            </p>
             <button
               onClick={handleInstall}
-              className="px-3.5 py-2 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90 shrink-0"
+              className="w-full py-2.5 rounded-xl bg-white text-[#0a1628] font-bold text-sm hover:bg-gray-100 transition-colors"
             >
-              Instalar
+              Agregar a pantalla de inicio
             </button>
-            <button onClick={dismiss} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 shrink-0">
-              <X className="h-4 w-4" />
-            </button>
+          </div>
+        ) : (
+          <div className="px-4 pb-4 pt-1">
+            <p className="text-white/60 text-xs mb-3">
+              Agregá la app de la CPB a tu iPhone en 2 pasos:
+            </p>
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
+                <span className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">1</span>
+                <p className="text-white/80 text-xs">
+                  Tocá el botón <span className="inline-block">
+                    <svg className="inline h-4 w-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                  </span> de compartir (abajo)
+                </p>
+              </div>
+              <div className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2.5">
+                <span className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-white text-xs font-bold shrink-0">2</span>
+                <p className="text-white/80 text-xs">
+                  Buscá <span className="font-semibold text-white">&quot;Agregar a Inicio&quot;</span> y confirmá
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>
