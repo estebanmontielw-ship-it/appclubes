@@ -6,6 +6,7 @@ import QuickLinks from "@/components/website/QuickLinks"
 import prisma from "@/lib/prisma"
 import GeniusSportsHomeWidget from "./GeniusSportsHomeWidget"
 import CuratorFeed from "@/components/website/CuratorFeed"
+import MatchTicker from "@/components/website/MatchTicker"
 
 export default async function HomePage() {
   // Fetch latest published news
@@ -22,6 +23,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <MatchTicker />
       <HeroSection />
 
       {/* Quick Stats / Links */}
