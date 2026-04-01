@@ -26,6 +26,7 @@ export default function PublicFooter() {
               {[
                 { label: "Calendario", href: "/calendario" },
                 { label: "Posiciones", href: "/posiciones" },
+                { label: "Líderes", href: "/lideres" },
                 { label: "Estadísticas", href: "/estadisticas" },
                 { label: "Noticias", href: "/noticias" },
                 { label: "Reglamentos", href: "/reglamentos" },

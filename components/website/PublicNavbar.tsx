@@ -15,6 +15,7 @@ const navLinks = [
     children: [
       { label: "Calendario", href: "/calendario" },
       { label: "Posiciones", href: "/posiciones" },
+      { label: "Líderes", href: "/lideres" },
       { label: "Estadísticas", href: "/estadisticas" },
     ],
   },

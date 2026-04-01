@@ -7,7 +7,8 @@ import { Search, Loader2, X, Calendar, Trophy, BarChart3, Newspaper, Shield, Use
 const quickLinks = [
   { label: "Calendario de partidos", href: "/calendario", icon: Calendar, keywords: ["partido", "calendario", "fixture", "fecha", "juego", "juega", "cuando", "horario", "programacion"] },
   { label: "Tabla de posiciones", href: "/posiciones", icon: Trophy, keywords: ["posicion", "tabla", "clasificacion", "standing", "puntaje", "puesto", "primero"] },
-  { label: "Estadísticas de jugadores", href: "/estadisticas", icon: BarChart3, keywords: ["estadistica", "stat", "goleador", "puntos", "rebote", "asistencia", "jugador"] },
+  { label: "Líderes estadísticos", href: "/lideres", icon: Trophy, keywords: ["lider", "lideres", "mejor", "maximo", "goleador", "anotador", "triple", "tapon"] },
+  { label: "Estadísticas de jugadores", href: "/estadisticas", icon: BarChart3, keywords: ["estadistica", "stat", "puntos", "rebote", "asistencia", "jugador"] },
   { label: "Noticias", href: "/noticias", icon: Newspaper, keywords: ["noticia", "novedad", "articulo", "nuevo", "ultima"] },
   { label: "Clubes afiliados", href: "/clubes", icon: Shield, keywords: ["club", "equipo", "afiliado", "olimpia", "cerro", "guarani", "libertad"] },
   { label: "Selecciones nacionales", href: "/selecciones", icon: Users, keywords: ["seleccion", "nacional", "seleccionado", "paraguaya", "paraguay"] },
