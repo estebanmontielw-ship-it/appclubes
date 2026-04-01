@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Check, X, AlertCircle, Ban } from "lucide-react"
+import { ArrowLeft, Check, X, AlertCircle, Ban, CreditCard } from "lucide-react"
 
 const rolLabels: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional",
@@ -29,6 +29,7 @@ export default function CuerpoTecnicoDetailPage() {
   const [saving, setSaving] = useState(false)
   const [motivo, setMotivo] = useState("")
   const [showRechazo, setShowRechazo] = useState(false)
+  const [showCarnet, setShowCarnet] = useState(false)
 
   useEffect(() => {
     fetch(`/api/admin/cuerpotecnico/${params.id}`)
@@ -135,6 +136,61 @@ export default function CuerpoTecnicoDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Carnet button */}
+      {ct.estadoHabilitacion === "HABILITADO" && (
+        <div className="mb-6">
+          <button onClick={() => setShowCarnet(!showCarnet)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors">
+            <CreditCard className="h-4 w-4" /> {showCarnet ? "Ocultar carnet" : "Ver carnet"}
+          </button>
+
+          {showCarnet && (
+            <div className="mt-4 max-w-sm mx-auto">
+              <div className="bg-gradient-to-br from-[#0a1628] to-[#132043] rounded-2xl overflow-hidden shadow-xl">
+                {/* Header */}
+                <div className="bg-gradient-to-r from-red-600 via-white to-blue-600 h-2" />
+                <div className="p-5 text-center">
+                  <img src="/favicon-cpb.png" alt="CPB" className="h-12 w-12 mx-auto mb-2" />
+                  <p className="text-white font-bold text-xs tracking-widest">CONFEDERACIÓN PARAGUAYA DE BÁSQUETBOL</p>
+                  <p className="text-blue-300 text-[10px] tracking-wider mt-0.5">CUERPO TÉCNICO — HABILITACIÓN {new Date().getFullYear()}</p>
+                </div>
+
+                {/* Photo + Info */}
+                <div className="px-5 pb-5 flex gap-4">
+                  {ct.fotoCarnetUrl ? (
+                    <img src={ct.fotoCarnetUrl} alt="" className="w-24 h-28 rounded-xl object-cover border-2 border-white/20 shrink-0" />
+                  ) : (
+                    <div className="w-24 h-28 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-8 w-8 text-white/30" />
+                    </div>
+                  )}
+                  <div className="text-white flex-1 min-w-0">
+                    <p className="font-bold text-lg leading-tight">{ct.nombre}</p>
+                    <p className="font-bold text-lg leading-tight">{ct.apellido}</p>
+                    <p className="text-blue-300 text-xs mt-2">{rolLabels[ct.rol] || ct.rol}</p>
+                    <p className="text-white/60 text-xs mt-1">CI: {ct.cedula}</p>
+                    <p className="text-white/60 text-xs">{ct.ciudad}</p>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="bg-white/5 px-5 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-white/40">ESTADO</p>
+                    <p className="text-green-400 text-xs font-bold">HABILITADO</p>
+                  </div>
+                  {ct.qrToken && (
+                    <div className="bg-white rounded-lg p-1">
+                      <img src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(`https://cpb.com.py/verificar/${ct.qrToken}`)}`} alt="QR" className="w-14 h-14" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Actions */}
       {ct.estadoHabilitacion === "PENDIENTE" && (
