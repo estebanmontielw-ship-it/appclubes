@@ -10,6 +10,7 @@ const anthropic = process.env.ANTHROPIC_API_KEY
 
 const SYSTEM_PROMPT = `Sos el asistente oficial de la Confederación Paraguaya de Básquetbol (CPB), el ente rector del básquetbol en Paraguay. Estás afiliada a FIBA y sos miembro de FIBA Américas. Tu sitio web es cpb.com.py. Tu tono es formal pero accesible, típico de una federación deportiva latinoamericana. Respondé siempre en español.`
 
+// Claude for admin features (high quality)
 async function callClaude(userPrompt: string, maxTokens = 2000) {
   if (!anthropic) throw new Error("API de IA no configurada")
 
@@ -21,6 +22,38 @@ async function callClaude(userPrompt: string, maxTokens = 2000) {
   })
 
   return message.content[0].type === "text" ? message.content[0].text : ""
+}
+
+// Nvidia NIM for chatbot (free)
+async function callNvidia(userPrompt: string) {
+  const apiKey = process.env.NVIDIA_API_KEY
+  if (!apiKey) throw new Error("NVIDIA API key no configurada")
+
+  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: "meta/llama-3.1-8b-instruct",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 300,
+      temperature: 0.7,
+    }),
+  })
+
+  if (!res.ok) {
+    const err = await res.text().catch(() => "")
+    console.error("Nvidia API error:", err)
+    throw new Error("Error en API de Nvidia")
+  }
+
+  const data = await res.json()
+  return data.choices?.[0]?.message?.content?.trim() || ""
 }
 
 // Admin-only auth check
@@ -48,10 +81,6 @@ export async function POST(request: Request) {
       if (!isAdmin) {
         return NextResponse.json({ error: "No autorizado" }, { status: 403 })
       }
-    }
-
-    if (!anthropic) {
-      return NextResponse.json({ error: "API de IA no configurada" }, { status: 500 })
     }
 
     if (!prompt) {
@@ -154,9 +183,9 @@ El tono debe ser formal e institucional. Incluí fecha, formato de comunicado of
       }
     }
 
-    // ─── CHATBOT PÚBLICO ────────────────────────────────
+    // ─── CHATBOT PÚBLICO (Nvidia NIM - gratuito) ─────────
     if (tipo === "chatbot") {
-      const text = await callClaude(`Un visitante del sitio web cpb.com.py hace esta consulta:
+      const chatPrompt = `Un visitante del sitio web cpb.com.py hace esta consulta:
 
 "${prompt}"
 
@@ -172,9 +201,20 @@ Respondé de manera breve, amigable y útil. Si la pregunta es sobre:
 - Selecciones nacionales: dirigilo a cpb.com.py/selecciones
 
 Si no sabés la respuesta, sugerí que contacten a cpb@cpb.com.py.
-Respondé en máximo 3 oraciones cortas. No uses markdown, solo texto plano.`, 300)
+Respondé en máximo 3 oraciones cortas. No uses markdown, solo texto plano.`
 
-      return NextResponse.json({ result: { respuesta: text.trim() } })
+      try {
+        // Intentar con Nvidia (gratis)
+        const text = await callNvidia(chatPrompt)
+        return NextResponse.json({ result: { respuesta: text } })
+      } catch {
+        // Fallback a Claude si Nvidia falla
+        if (anthropic) {
+          const text = await callClaude(chatPrompt, 300)
+          return NextResponse.json({ result: { respuesta: text.trim() } })
+        }
+        return NextResponse.json({ result: { respuesta: "Disculpá, no pude procesar tu consulta. Podés escribirnos a cpb@cpb.com.py." } })
+      }
     }
 
     return NextResponse.json({ error: "Tipo de generación no válido" }, { status: 400 })
