@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   description:
     "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
   icons: {
-    icon: "/logo-cpb.jpg",
-    apple: "/logo-cpb.jpg",
+    icon: "/favicon-cpb.png",
+    apple: "/favicon-cpb.png",
   },
 }
 

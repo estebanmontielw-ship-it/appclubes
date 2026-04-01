@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   },
   description: "Confederación Paraguaya de Básquetbol - Sitio oficial",
   icons: {
-    icon: "/logo-cpb.jpg",
-    apple: "/logo-cpb.jpg",
+    icon: "/favicon-cpb.png",
+    apple: "/favicon-cpb.png",
   },
 }
 
