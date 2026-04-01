@@ -24,13 +24,20 @@ export default function HeroSection() {
 
       {/* Basketball icon decorative */}
       <div className="absolute right-[10%] top-1/2 -translate-y-1/2 hidden lg:block">
-        <div className="relative w-64 h-64 xl:w-80 xl:h-80 opacity-20 animate-slide-in-right">
+        <div className="relative w-64 h-64 xl:w-80 xl:h-80 opacity-15 animate-slide-in-right">
           <svg viewBox="0 0 200 200" className="w-full h-full text-amber-400">
-            <circle cx="100" cy="100" r="95" fill="none" stroke="currentColor" strokeWidth="2.5" />
-            <path d="M5 100 Q100 80 195 100" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M5 100 Q100 120 195 100" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M100 5 Q80 100 100 195" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M100 5 Q120 100 100 195" fill="none" stroke="currentColor" strokeWidth="2" />
+            {/* Outer circle */}
+            <circle cx="100" cy="100" r="96" fill="none" stroke="currentColor" strokeWidth="2.5" />
+            {/* Horizontal seam */}
+            <line x1="4" y1="100" x2="196" y2="100" stroke="currentColor" strokeWidth="2" />
+            {/* Vertical seam - curved like a real basketball */}
+            <path d="M100 4 C75 50, 75 150, 100 196" fill="none" stroke="currentColor" strokeWidth="2" />
+            <path d="M100 4 C125 50, 125 150, 100 196" fill="none" stroke="currentColor" strokeWidth="2" />
+            {/* Side curves */}
+            <path d="M4 100 C30 70, 30 30, 60 4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M4 100 C30 130, 30 170, 60 196" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M196 100 C170 70, 170 30, 140 4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <path d="M196 100 C170 130, 170 170, 140 196" fill="none" stroke="currentColor" strokeWidth="1.5" />
           </svg>
         </div>
       </div>
