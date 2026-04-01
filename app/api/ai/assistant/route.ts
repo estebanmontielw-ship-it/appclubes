@@ -128,15 +128,59 @@ async function callNvidia(systemPrompt: string, userMessage: string, history: an
 
 export async function POST(request: Request) {
   try {
-    const isAdmin = await checkAdmin()
-    if (!isAdmin) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
-    const { message, history = [] } = await request.json()
+    const adminRoles = await prisma.usuarioRol.findMany({
+      where: { usuarioId: session.user.id, rol: "SUPER_ADMIN" },
+    })
+    if (adminRoles.length === 0) return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+
+    const userId = session.user.id
+    const { message, conversacionId, archivos } = await request.json()
 
     if (!message) {
       return NextResponse.json({ error: "Mensaje requerido" }, { status: 400 })
+    }
+
+    // Get or create conversation
+    let convId = conversacionId
+    if (!convId) {
+      const conv = await prisma.conversacionBot.create({
+        data: { usuarioId: userId, titulo: message.slice(0, 60), updatedAt: new Date() },
+      })
+      convId = conv.id
+    }
+
+    // Save user message
+    await prisma.mensajeBot.create({
+      data: {
+        conversacionId: convId,
+        role: "user",
+        contenido: message,
+        archivos: archivos?.length ? JSON.stringify(archivos) : null,
+      },
+    })
+
+    // Get conversation history from DB
+    const dbMessages = await prisma.mensajeBot.findMany({
+      where: { conversacionId: convId },
+      orderBy: { createdAt: "asc" },
+      take: 20,
+      select: { role: true, contenido: true, archivos: true },
+    })
+
+    const history = dbMessages.slice(0, -1).map((m) => ({
+      role: m.role,
+      content: m.contenido + (m.archivos ? `\n[Archivos adjuntos: ${m.archivos}]` : ""),
+    }))
+
+    // Build file context
+    let fileContext = ""
+    if (archivos?.length) {
+      fileContext = `\n\nEl usuario adjuntó ${archivos.length} archivo(s): ${archivos.map((f: any) => f.name || f.url).join(", ")}`
     }
 
     // Get real-time system data
@@ -157,20 +201,37 @@ Tus capacidades:
 - Podés sugerir acciones y prioridades
 - Podés ayudar a redactar contenido (noticias, comunicados, notificaciones)
 - Podés analizar tendencias y dar recomendaciones
+- Podés analizar archivos que el usuario suba (imágenes, PDFs, planillas)
 
 IMPORTANTE: Respondé en texto plano, sin markdown. Usá saltos de línea para separar párrafos. No uses asteriscos, guiones bajos ni hashtags para formatear.
 
-${systemData}
+${systemData}${fileContext}
 
 Fecha actual: ${new Date().toLocaleDateString("es-PY", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`
 
     const response = await callNvidia(systemPrompt, message, history)
 
-    return NextResponse.json({ response })
+    // Save assistant response
+    await prisma.mensajeBot.create({
+      data: { conversacionId: convId, role: "assistant", contenido: response },
+    })
+
+    // Update conversation title if first message
+    if (dbMessages.length <= 1) {
+      await prisma.conversacionBot.update({
+        where: { id: convId },
+        data: { titulo: message.slice(0, 60), updatedAt: new Date() },
+      })
+    } else {
+      await prisma.conversacionBot.update({
+        where: { id: convId },
+        data: { updatedAt: new Date() },
+      })
+    }
+
+    return NextResponse.json({ response, conversacionId: convId })
   } catch (error: any) {
     console.error("Assistant error:", error)
-
-    // Fallback response
     return NextResponse.json({
       response: "Disculpá, tuve un problema procesando tu consulta. Intentá de nuevo en unos segundos.",
     })

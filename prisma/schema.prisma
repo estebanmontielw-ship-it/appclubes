@@ -671,3 +671,31 @@ model MensajeContacto {
 
   @@map("mensajes_contacto")
 }
+
+// ─── CPB BOT (Asistente IA) ─────────────────────────────
+
+model ConversacionBot {
+  id        String   @id @default(uuid())
+  usuarioId String
+  titulo    String   @default("Nueva conversación")
+  activa    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mensajes MensajeBot[]
+
+  @@map("conversaciones_bot")
+}
+
+model MensajeBot {
+  id              String   @id @default(uuid())
+  conversacionId  String
+  role            String   // "user" | "assistant"
+  contenido       String   @db.Text
+  archivos        String?  @db.Text // JSON array of file URLs
+  createdAt       DateTime @default(now())
+
+  conversacion ConversacionBot @relation(fields: [conversacionId], references: [id], onDelete: Cascade)
+
+  @@map("mensajes_bot")
+}
