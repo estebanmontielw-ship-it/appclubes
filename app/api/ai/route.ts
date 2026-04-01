@@ -24,10 +24,14 @@ async function callClaude(userPrompt: string, maxTokens = 2000) {
   return message.content[0].type === "text" ? message.content[0].text : ""
 }
 
-// Nvidia NIM for chatbot (free)
-async function callNvidia(userPrompt: string) {
+// Nvidia NIM (free) - two models
+async function callNvidia(userPrompt: string, model: "chatbot" | "admin" = "chatbot", maxTokens = 300) {
   const apiKey = process.env.NVIDIA_API_KEY
   if (!apiKey) throw new Error("NVIDIA API key no configurada")
+
+  const modelId = model === "admin"
+    ? "nvidia/nemotron-3-super-120b-a12b"
+    : "meta/llama-4-maverick-17b-128e-instruct"
 
   const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
     method: "POST",
@@ -36,12 +40,12 @@ async function callNvidia(userPrompt: string) {
       "Authorization": `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "meta/llama-4-maverick-17b-128e-instruct",
+      model: modelId,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userPrompt },
       ],
-      max_tokens: 300,
+      max_tokens: maxTokens,
       temperature: 0.7,
     }),
   })
@@ -54,6 +58,17 @@ async function callNvidia(userPrompt: string) {
 
   const data = await res.json()
   return data.choices?.[0]?.message?.content?.trim() || ""
+}
+
+// Helper: try Nvidia first, fallback to Claude
+async function callAI(userPrompt: string, maxTokens = 2000) {
+  try {
+    return await callNvidia(userPrompt, "admin", maxTokens)
+  } catch {
+    // Fallback to Claude
+    if (anthropic) return await callClaude(userPrompt, maxTokens)
+    throw new Error("Ninguna API de IA disponible")
+  }
 }
 
 // Admin-only auth check
@@ -89,7 +104,7 @@ export async function POST(request: Request) {
 
     // ─── GENERAR NOTICIA ────────────────────────────────
     if (tipo === "generar-noticia") {
-      const text = await callClaude(`Generá una noticia profesional basada en esta información:
+      const text = await callAI(`Generá una noticia profesional basada en esta información:
 
 "${prompt}"
 
@@ -113,7 +128,7 @@ Categorías válidas: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, C
 
     // ─── GENERAR CONTENIDO PÁGINA ───────────────────────
     if (tipo === "generar-pagina") {
-      const text = await callClaude(`Generá contenido HTML para una página institucional de la CPB basado en esta descripción:
+      const text = await callAI(`Generá contenido HTML para una página institucional de la CPB basado en esta descripción:
 
 "${prompt}"
 
@@ -134,7 +149,7 @@ El contenido debe ser informativo, profesional y detallado.`, 3000)
 
     // ─── RESPUESTA A MENSAJE DE CONTACTO ────────────────
     if (tipo === "responder-contacto") {
-      const text = await callClaude(`Un visitante del sitio web de la CPB envió este mensaje de contacto:
+      const text = await callAI(`Un visitante del sitio web de la CPB envió este mensaje de contacto:
 
 Nombre: ${contexto?.nombre || ""}
 Asunto: ${contexto?.asunto || ""}
@@ -161,7 +176,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
 
     // ─── GENERAR CIRCULAR/COMUNICADO ────────────────────
     if (tipo === "generar-circular") {
-      const text = await callClaude(`Generá un comunicado oficial / circular de la Confederación Paraguaya de Básquetbol basado en esta información:
+      const text = await callAI(`Generá un comunicado oficial / circular de la Confederación Paraguaya de Básquetbol basado en esta información:
 
 "${prompt}"
 
