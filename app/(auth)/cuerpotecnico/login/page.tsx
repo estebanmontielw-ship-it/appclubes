@@ -36,7 +36,7 @@ export default function LoginCTPage() {
       // Check if user is cuerpo técnico
       const res = await fetch("/api/ct/me")
       if (res.ok) {
-        router.push("/oficiales/perfil")
+        router.push("/cuerpotecnico")
         router.refresh()
       } else {
         toast({ variant: "destructive", title: "Error", description: "Esta cuenta no pertenece a Cuerpo Técnico" })
