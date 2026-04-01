@@ -40,6 +40,7 @@ export async function POST(request: Request) {
     if (isImage && !isPdf) {
       try {
         buffer = await sharp(buffer)
+          .rotate() // Auto-correct EXIF orientation
           .jpeg({ quality: 85 })
           .toBuffer() as Buffer
         fileExt = "jpg"
