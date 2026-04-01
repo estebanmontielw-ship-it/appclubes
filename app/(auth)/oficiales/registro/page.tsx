@@ -469,7 +469,7 @@ export default function RegistroPage() {
           <>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label>Foto de cédula (frente y dorso) *</Label>
+                <Label>Foto de cédula (frente) *</Label>
                 <p className="text-xs text-muted-foreground">
                   Subí una foto clara donde se lean todos los datos. JPG, PNG o PDF, máx 5MB.
                 </p>

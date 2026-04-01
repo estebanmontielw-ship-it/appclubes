@@ -266,7 +266,7 @@ export default function RegistroCTPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Foto de cédula (frente y dorso) *</Label>
+              <Label>Foto de cédula (frente) *</Label>
               <label className="flex flex-col items-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:border-primary/50">
                 <Upload className="h-6 w-6 text-muted-foreground mb-1" />
                 <span className="text-sm text-muted-foreground">{fotoCedula ? fotoCedula.name : "Seleccionar archivo"}</span>
