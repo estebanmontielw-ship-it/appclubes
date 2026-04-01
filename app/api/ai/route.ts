@@ -30,41 +30,55 @@ async function callNvidia(userPrompt: string, model: "chatbot" | "admin" = "chat
   if (!apiKey) throw new Error("NVIDIA API key no configurada")
 
   const modelId = model === "admin"
-    ? "nvidia/nemotron-3-super-120b-a12b"
+    ? "meta/llama-4-maverick-17b-128e-instruct"
     : "meta/llama-4-maverick-17b-128e-instruct"
 
-  const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: modelId,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: userPrompt },
-      ],
-      max_tokens: maxTokens,
-      temperature: 0.7,
-    }),
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000) // 30s timeout
 
-  if (!res.ok) {
-    const err = await res.text().catch(() => "")
-    console.error("Nvidia API error:", err)
-    throw new Error("Error en API de Nvidia")
+  try {
+    const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: modelId,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: maxTokens,
+        temperature: 0.7,
+      }),
+      signal: controller.signal,
+    })
+
+    clearTimeout(timeout)
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => "")
+      console.error("Nvidia API error:", res.status, err)
+      throw new Error(`Nvidia API error: ${res.status}`)
+    }
+
+    const data = await res.json()
+    const content = data.choices?.[0]?.message?.content?.trim() || ""
+    if (!content) throw new Error("Respuesta vacía de Nvidia")
+    return content
+  } catch (err) {
+    clearTimeout(timeout)
+    throw err
   }
-
-  const data = await res.json()
-  return data.choices?.[0]?.message?.content?.trim() || ""
 }
 
 // Helper: try Nvidia first, fallback to Claude
 async function callAI(userPrompt: string, maxTokens = 2000) {
   try {
     return await callNvidia(userPrompt, "admin", maxTokens)
-  } catch {
+  } catch (err) {
+    console.error("Nvidia failed, trying Claude fallback:", err)
     // Fallback to Claude
     if (anthropic) return await callClaude(userPrompt, maxTokens)
     throw new Error("Ninguna API de IA disponible")
