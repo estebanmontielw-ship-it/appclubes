@@ -75,7 +75,7 @@ export default function SmartSearch() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+        className="p-2 rounded-lg text-white/80 hover:bg-white/10 lg:text-gray-500 lg:hover:bg-gray-100 lg:hover:text-gray-700 transition-colors"
         aria-label="Buscar"
       >
         <Search className="h-5 w-5" />

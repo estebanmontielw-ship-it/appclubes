@@ -31,15 +31,15 @@ export default function PublicNavbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100/80 shadow-sm">
+    <header className="sticky top-0 z-50 bg-gradient-to-r from-[#0a1628] to-[#132043] lg:bg-none lg:bg-white/95 backdrop-blur-md border-b border-white/10 lg:border-gray-100/80 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 shrink-0">
             <img src="/favicon-cpb.png" alt="CPB" className="h-10 w-10 object-contain" />
             <div className="hidden sm:block">
-              <p className="font-heading text-lg text-gray-900 leading-tight tracking-wide">CPB</p>
-              <p className="text-[10px] text-gray-400 leading-tight -mt-0.5">Confederación Paraguaya de Básquetbol</p>
+              <p className="font-heading text-lg text-white lg:text-gray-900 leading-tight tracking-wide">CPB</p>
+              <p className="text-[10px] text-blue-300 lg:text-gray-400 leading-tight -mt-0.5">Confederación Paraguaya de Básquetbol</p>
             </div>
           </Link>
 
@@ -108,7 +108,7 @@ export default function PublicNavbar() {
             <SmartSearch />
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-50"
+              className="lg:hidden p-2 rounded-lg text-white/80 hover:bg-white/10"
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
