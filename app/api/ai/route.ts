@@ -212,6 +212,50 @@ El tono debe ser formal e institucional. Incluí fecha, formato de comunicado of
       }
     }
 
+    // ─── ANALIZAR IMAGEN CON IA (Kimi k2.5 - gratis) ──────
+    if (tipo === "analizar-imagen") {
+      const apiKey = process.env.NVIDIA_API_KEY
+      if (!apiKey) return NextResponse.json({ error: "NVIDIA API key no configurada" }, { status: 500 })
+
+      try {
+        const res = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: "moonshotai/kimi-k2.5",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "image_url",
+                    image_url: { url: prompt },
+                  },
+                  {
+                    type: "text",
+                    text: "Analizá esta imagen de la Confederación Paraguaya de Básquetbol. Describí detalladamente qué se ve: personas, equipos, logos, texto visible, evento, lugar, acción deportiva. Respondé en español, máximo 4 oraciones. Solo texto plano, sin markdown.",
+                  },
+                ],
+              },
+            ],
+            max_tokens: 500,
+            temperature: 0.5,
+          }),
+        })
+
+        if (!res.ok) throw new Error("Kimi API error")
+        const data = await res.json()
+        const analisis = data.choices?.[0]?.message?.content?.trim() || "No se pudo analizar la imagen."
+        return NextResponse.json({ result: { analisis } })
+      } catch (err) {
+        console.error("Kimi vision error:", err)
+        return NextResponse.json({ result: { analisis: "No se pudo analizar la imagen. Podés describir el contenido manualmente." } })
+      }
+    }
+
     // ─── IMPORTAR POST DE INSTAGRAM ───────────────────────
     if (tipo === "importar-instagram") {
       const text = await callAI(`Tenés un post de Instagram de la Confederación Paraguaya de Básquetbol con este contenido:

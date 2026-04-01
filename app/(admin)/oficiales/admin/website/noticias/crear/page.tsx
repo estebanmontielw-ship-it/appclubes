@@ -4,6 +4,7 @@ import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Sparkles, Loader2 } from "lucide-react"
+import ImageUploader from "@/components/website/ImageUploader"
 
 const categorias = [
   { value: "GENERAL", label: "General" },
@@ -32,6 +33,8 @@ export default function CrearNoticiaPage() {
   const [extracto, setExtracto] = useState("")
   const [contenido, setContenido] = useState("")
   const [categoria, setCategoria] = useState("GENERAL")
+  const [imagenUrl, setImagenUrl] = useState("")
+  const [aiImageMessage, setAiImageMessage] = useState("")
 
   // AI generator
   const [aiPrompt, setAiPrompt] = useState("")
@@ -266,25 +269,30 @@ export default function CrearNoticiaPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen de portada</label>
-            <input
-              name="imagenUrl"
-              type="url"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              placeholder="https://..."
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL de video (YouTube)</label>
-            <input
-              name="videoUrl"
-              type="url"
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              placeholder="https://youtube.com/watch?v=..."
-            />
-          </div>
+        {/* Image uploader with AI vision */}
+        <ImageUploader
+          value={imagenUrl}
+          onChange={setImagenUrl}
+          onAiAnalysis={(analysis) => {
+            setContenido((prev) => prev + `\n<p><strong>Sobre la imagen:</strong> ${analysis}</p>`)
+            setAiImageMessage("Análisis de imagen agregado al contenido.")
+            setTimeout(() => setAiImageMessage(""), 5000)
+          }}
+        />
+        <input type="hidden" name="imagenUrl" value={imagenUrl} />
+
+        {aiImageMessage && (
+          <div className="px-4 py-2 rounded-lg text-sm bg-violet-50 text-violet-700">{aiImageMessage}</div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">URL de video (YouTube)</label>
+          <input
+            name="videoUrl"
+            type="url"
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            placeholder="https://youtube.com/watch?v=..."
+          />
         </div>
 
         <div className="flex items-center gap-6">

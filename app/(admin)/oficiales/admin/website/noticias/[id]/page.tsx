@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
+import ImageUploader from "@/components/website/ImageUploader"
 
 const categorias = [
   { value: "GENERAL", label: "General" },
@@ -21,13 +22,28 @@ export default function EditarNoticiaPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState("")
+  const [imagenUrl, setImagenUrl] = useState("")
+  const [contenido, setContenido] = useState("")
+  const [aiMessage, setAiMessage] = useState("")
 
   useEffect(() => {
     fetch(`/api/website/noticias/${params.id}`)
       .then((r) => r.json())
-      .then((data) => setNoticia(data.noticia))
+      .then((data) => {
+        setNoticia(data.noticia)
+        setImagenUrl(data.noticia?.imagenUrl || "")
+        setContenido(data.noticia?.contenido || "")
+      })
       .finally(() => setLoading(false))
   }, [params.id])
+
+  function handleAiAnalysis(analysis: string) {
+    // Append the AI analysis to the content
+    const newContent = contenido + `\n<p><strong>Sobre la imagen:</strong> ${analysis}</p>`
+    setContenido(newContent)
+    setAiMessage("Análisis de imagen agregado al contenido. Revisá y editá si querés.")
+    setTimeout(() => setAiMessage(""), 5000)
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -45,8 +61,8 @@ export default function EditarNoticiaPage() {
           titulo: data.get("titulo"),
           slug: data.get("slug"),
           extracto: data.get("extracto"),
-          contenido: data.get("contenido"),
-          imagenUrl: data.get("imagenUrl") || null,
+          contenido,
+          imagenUrl: imagenUrl || null,
           videoUrl: data.get("videoUrl") || null,
           categoria: data.get("categoria"),
           destacada: data.get("destacada") === "on",
@@ -79,6 +95,10 @@ export default function EditarNoticiaPage() {
 
       <h1 className="text-2xl font-bold mb-6">Editar Noticia</h1>
 
+      {aiMessage && (
+        <div className="mb-4 px-4 py-2 rounded-lg text-sm bg-violet-50 text-violet-700">{aiMessage}</div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Título *</label>
@@ -100,7 +120,8 @@ export default function EditarNoticiaPage() {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Contenido * (HTML)</label>
-          <textarea name="contenido" rows={10} required defaultValue={noticia.contenido}
+          <textarea name="contenido" rows={10} required value={contenido}
+            onChange={(e) => setContenido(e.target.value)}
             className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y" />
         </div>
 
@@ -121,17 +142,17 @@ export default function EditarNoticiaPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL de imagen de portada</label>
-            <input name="imagenUrl" type="url" defaultValue={noticia.imagenUrl ?? ""}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL de video</label>
-            <input name="videoUrl" type="url" defaultValue={noticia.videoUrl ?? ""}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-          </div>
+        {/* Image uploader with AI vision */}
+        <ImageUploader
+          value={imagenUrl}
+          onChange={setImagenUrl}
+          onAiAnalysis={handleAiAnalysis}
+        />
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">URL de video (YouTube)</label>
+          <input name="videoUrl" type="url" defaultValue={noticia.videoUrl ?? ""}
+            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
         </div>
 
         <div className="flex items-center gap-6">
