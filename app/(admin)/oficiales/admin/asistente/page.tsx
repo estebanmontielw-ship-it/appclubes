@@ -78,7 +78,7 @@ export default function AsistentePage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                JARVIS
+                CPB Bot
                 <span className="text-xs font-normal bg-gradient-to-r from-violet-600 to-indigo-600 text-white px-2 py-0.5 rounded-full">IA</span>
               </h1>
               <p className="text-xs text-gray-500">Asistente inteligente de la CPB — Datos en tiempo real</p>
@@ -184,7 +184,7 @@ export default function AsistentePage() {
           </button>
         </div>
         <p className="text-[10px] text-gray-400 mt-1.5 text-center">
-          JARVIS tiene acceso a datos en tiempo real del sistema CPB
+          CPB Bot tiene acceso a datos en tiempo real del sistema CPB
         </p>
       </div>
     </div>

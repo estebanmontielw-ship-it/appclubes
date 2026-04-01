@@ -49,7 +49,6 @@ function getNavSections(
         label: "MI CUENTA",
         items: [
           { label: "Dashboard", href: "/oficiales/admin", icon: Home },
-          { label: "JARVIS (IA)", href: "/oficiales/admin/asistente", icon: Bot },
         ],
       },
       {
@@ -130,6 +129,12 @@ function getNavSections(
               { label: "Mensajes", href: "/oficiales/admin/website/contacto" },
             ],
           },
+        ],
+      },
+      {
+        label: "ASISTENTE IA",
+        items: [
+          { label: "CPB Bot", href: "/oficiales/admin/asistente", icon: Bot },
         ],
       },
     ]

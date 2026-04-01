@@ -6,6 +6,7 @@ import Sidebar from "@/components/layout/Sidebar"
 import Navbar from "@/components/layout/Navbar"
 import { createClient } from "@/utils/supabase/client"
 import type { TipoRol } from "@prisma/client"
+import AdminChatWidget from "@/components/layout/AdminChatWidget"
 
 interface UserData {
   nombre: string
@@ -115,6 +116,7 @@ export default function AdminLayout({
         />
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
+      <AdminChatWidget />
     </div>
   )
 }

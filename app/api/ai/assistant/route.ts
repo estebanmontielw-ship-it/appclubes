@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     // Get real-time system data
     const systemData = await getSystemContext()
 
-    const systemPrompt = `Sos JARVIS, el asistente de inteligencia artificial del Super Admin de la Confederación Paraguaya de Básquetbol (CPB). Tu nombre es JARVIS.
+    const systemPrompt = `Sos CPB Bot, el asistente de inteligencia artificial del Super Admin de la Confederación Paraguaya de Básquetbol (CPB). Tu nombre es CPB Bot.
 
 Tu personalidad:
 - Sos eficiente, inteligente y proactivo
