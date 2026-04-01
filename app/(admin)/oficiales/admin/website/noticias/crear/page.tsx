@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { ArrowLeft, Sparkles, Loader2 } from "lucide-react"
 
 const categorias = [
   { value: "GENERAL", label: "General" },
@@ -29,6 +29,47 @@ export default function CrearNoticiaPage() {
   const [titulo, setTitulo] = useState("")
   const [slug, setSlug] = useState("")
   const [autoSlug, setAutoSlug] = useState(true)
+  const [extracto, setExtracto] = useState("")
+  const [contenido, setContenido] = useState("")
+  const [categoria, setCategoria] = useState("GENERAL")
+
+  // AI generator
+  const [aiPrompt, setAiPrompt] = useState("")
+  const [aiLoading, setAiLoading] = useState(false)
+  const [showAi, setShowAi] = useState(false)
+
+  async function generateWithAI() {
+    if (!aiPrompt.trim()) return
+    setAiLoading(true)
+    setError("")
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, tipo: "generar-noticia" }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error(body?.error || "Error al generar con IA")
+      }
+
+      const { result } = await res.json()
+
+      setTitulo(result.titulo)
+      setSlug(slugify(result.titulo))
+      setExtracto(result.extracto)
+      setContenido(result.contenido)
+      if (result.categoria) setCategoria(result.categoria)
+      setShowAi(false)
+      setAiPrompt("")
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setAiLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -75,7 +116,64 @@ export default function CrearNoticiaPage() {
         <ArrowLeft className="h-4 w-4" /> Volver a noticias
       </Link>
 
-      <h1 className="text-2xl font-bold mb-6">Nueva Noticia</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold">Nueva Noticia</h1>
+        <button
+          type="button"
+          onClick={() => setShowAi(!showAi)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md"
+        >
+          <Sparkles className="h-4 w-4" />
+          Generar con IA
+        </button>
+      </div>
+
+      {/* AI Generator Panel */}
+      {showAi && (
+        <div className="mb-6 p-5 rounded-xl border-2 border-violet-200 bg-violet-50/50">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-violet-600" />
+            <h3 className="font-bold text-gray-900">Generar noticia con IA</h3>
+          </div>
+          <p className="text-sm text-gray-500 mb-3">
+            Describí brevemente la noticia y la IA va a generar el título, extracto y contenido completo.
+          </p>
+          <textarea
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            rows={3}
+            className="w-full px-3 py-2.5 rounded-lg border border-violet-200 text-sm focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-violet-400 resize-none mb-3"
+            placeholder="Ej: La selección paraguaya de básquetbol masculino sub-18 clasificó al mundial FIBA U18 2025 después de ganar a Argentina 78-65 en la final del sudamericano en Lima, Perú. Máximo anotador fue Juan Pérez con 23 puntos."
+          />
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={generateWithAI}
+              disabled={aiLoading || !aiPrompt.trim()}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 text-white font-semibold text-sm hover:bg-violet-700 transition-colors disabled:opacity-50"
+            >
+              {aiLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generando...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Generar
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAi(false)}
+              className="px-4 py-2 rounded-lg bg-white text-gray-700 font-semibold text-sm hover:bg-gray-100 transition-colors border border-gray-200"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
@@ -112,6 +210,8 @@ export default function CrearNoticiaPage() {
             name="extracto"
             rows={2}
             required
+            value={extracto}
+            onChange={(e) => setExtracto(e.target.value)}
             className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
             placeholder="Resumen corto para las tarjetas de preview"
           />
@@ -123,10 +223,11 @@ export default function CrearNoticiaPage() {
             name="contenido"
             rows={10}
             required
+            value={contenido}
+            onChange={(e) => setContenido(e.target.value)}
             className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y"
             placeholder="<p>Contenido de la noticia...</p>"
           />
-          <p className="text-xs text-gray-400 mt-1">Puede usar HTML. En una futura versión se agregará un editor visual.</p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -135,6 +236,8 @@ export default function CrearNoticiaPage() {
             <select
               name="categoria"
               required
+              value={categoria}
+              onChange={(e) => setCategoria(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               {categorias.map((c) => (
