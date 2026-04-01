@@ -177,10 +177,51 @@ export async function POST(request: Request) {
       content: m.contenido + (m.archivos ? `\n[Archivos adjuntos: ${m.archivos}]` : ""),
     }))
 
-    // Build file context
+    // Analyze images with Kimi k2.5 vision (free)
     let fileContext = ""
     if (archivos?.length) {
-      fileContext = `\n\nEl usuario adjuntó ${archivos.length} archivo(s): ${archivos.map((f: any) => f.name || f.url).join(", ")}`
+      const imageFiles = archivos.filter((f: any) => f.type?.startsWith("image/") || f.name?.match(/\.(png|jpg|jpeg|webp|gif)$/i))
+      const otherFiles = archivos.filter((f: any) => !f.type?.startsWith("image/") && !f.name?.match(/\.(png|jpg|jpeg|webp|gif)$/i))
+
+      // Analyze each image with Kimi vision
+      const imageDescriptions: string[] = []
+      const apiKey = process.env.NVIDIA_API_KEY
+      if (apiKey && imageFiles.length > 0) {
+        for (const img of imageFiles) {
+          try {
+            const visionRes = await fetch("https://integrate.api.nvidia.com/v1/chat/completions", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+              body: JSON.stringify({
+                model: "moonshotai/kimi-k2.5",
+                messages: [{
+                  role: "user",
+                  content: [
+                    { type: "image_url", image_url: { url: img.url } },
+                    { type: "text", text: "Describí detalladamente qué se ve en esta imagen. Si hay texto, leelo. Si hay personas, describí qué hacen. Si hay logos o equipos, mencioná cuáles. Respondé en español, máximo 3 oraciones." },
+                  ],
+                }],
+                max_tokens: 300,
+                temperature: 0.5,
+              }),
+              signal: AbortSignal.timeout(15000),
+            })
+            if (visionRes.ok) {
+              const visionData = await visionRes.json()
+              const desc = visionData.choices?.[0]?.message?.content?.trim()
+              if (desc) imageDescriptions.push(`${img.name}: ${desc}`)
+            }
+          } catch {}
+        }
+      }
+
+      fileContext = `\n\nEl usuario adjuntó ${archivos.length} archivo(s).`
+      if (imageDescriptions.length > 0) {
+        fileContext += `\n\nANÁLISIS DE IMÁGENES (visión por IA):\n${imageDescriptions.join("\n")}`
+      }
+      if (otherFiles.length > 0) {
+        fileContext += `\nOtros archivos: ${otherFiles.map((f: any) => f.name).join(", ")}`
+      }
     }
 
     // Get real-time system data
