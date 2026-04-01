@@ -48,7 +48,6 @@ export default function PublicFooter() {
                 { label: "Clubes Afiliados", href: "/clubes" },
                 { label: "Selecciones", href: "/selecciones" },
                 { label: "Contacto", href: "/contacto" },
-                { label: "Portal Oficiales", href: "/oficiales/login" },
               ].map((link) => (
                 <li key={link.href}>
                   <Link href={link.href} className="text-sm text-gray-400 hover:text-white transition-colors">

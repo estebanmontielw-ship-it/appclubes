@@ -102,21 +102,13 @@ export default function PublicNavbar() {
             })}
           </nav>
 
-          {/* Portal link + Mobile toggle */}
-          <div className="flex items-center gap-2">
-            <Link
-              href="/oficiales/login"
-              className="hidden sm:inline-flex items-center px-4 py-2 rounded-lg text-sm font-semibold bg-primary text-white hover:bg-primary/90 transition-colors"
-            >
-              Portal Oficiales
-            </Link>
-            <button
-              onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-50"
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
-          </div>
+          {/* Mobile toggle */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className="lg:hidden p-2 rounded-lg text-gray-600 hover:bg-gray-50"
+          >
+            {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
         </div>
       </div>
 
@@ -166,15 +158,6 @@ export default function PublicNavbar() {
                 </Link>
               )
             })}
-            <div className="pt-2 border-t border-gray-100">
-              <Link
-                href="/oficiales/login"
-                onClick={() => setMobileOpen(false)}
-                className="block px-3 py-2.5 rounded-lg text-sm font-semibold text-primary hover:bg-primary/5"
-              >
-                Portal Oficiales
-              </Link>
-            </div>
           </nav>
         </div>
       )}
