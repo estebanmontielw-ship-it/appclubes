@@ -3,7 +3,31 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Check, X, AlertCircle, Ban, CreditCard } from "lucide-react"
+import { ArrowLeft, Check, X, AlertCircle, Ban, CreditCard, FileText, ExternalLink } from "lucide-react"
+
+function DocPreview({ label, url }: { label: string; url: string }) {
+  const isPdf = url.toLowerCase().includes(".pdf")
+  return (
+    <div>
+      <p className="text-xs text-gray-500 mb-1">{label}</p>
+      {isPdf ? (
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          className="flex items-center gap-2 p-4 bg-red-50 rounded-lg border border-red-100 hover:bg-red-100 transition-colors">
+          <FileText className="h-8 w-8 text-red-500 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900">Documento PDF</p>
+            <p className="text-xs text-gray-500">Click para abrir</p>
+          </div>
+          <ExternalLink className="h-4 w-4 text-gray-400 shrink-0" />
+        </a>
+      ) : (
+        <a href={url} target="_blank" rel="noopener noreferrer">
+          <img src={url} alt={label} className="w-full h-32 object-cover rounded-lg border hover:opacity-90 transition-opacity cursor-pointer" />
+        </a>
+      )}
+    </div>
+  )
+}
 
 const rolLabels: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional",
@@ -111,28 +135,16 @@ export default function CuerpoTecnicoDetailPage() {
         <h3 className="font-semibold text-sm text-gray-900 mb-3">Documentos</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {ct.fotoCarnetUrl && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Foto carnet</p>
-              <img src={ct.fotoCarnetUrl} alt="Carnet" className="w-full h-32 object-cover rounded-lg border" />
-            </div>
+            <DocPreview label="Foto carnet" url={ct.fotoCarnetUrl} />
           )}
           {ct.fotoCedulaUrl && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Cédula</p>
-              <img src={ct.fotoCedulaUrl} alt="Cédula" className="w-full h-32 object-cover rounded-lg border" />
-            </div>
+            <DocPreview label="Cédula" url={ct.fotoCedulaUrl} />
           )}
           {ct.tituloEntrenadorUrl && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Título de entrenador</p>
-              <img src={ct.tituloEntrenadorUrl} alt="Título" className="w-full h-32 object-cover rounded-lg border" />
-            </div>
+            <DocPreview label="Título de entrenador" url={ct.tituloEntrenadorUrl} />
           )}
           {ct.comprobanteUrl && (
-            <div>
-              <p className="text-xs text-gray-500 mb-1">Comprobante de pago</p>
-              <img src={ct.comprobanteUrl} alt="Comprobante" className="w-full h-32 object-cover rounded-lg border" />
-            </div>
+            <DocPreview label="Comprobante de pago" url={ct.comprobanteUrl} />
           )}
         </div>
       </div>
