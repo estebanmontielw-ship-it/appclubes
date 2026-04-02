@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { emailCTHabilitado, emailCTRechazado } from "@/lib/email"
 
 export async function GET(
   _request: Request,
@@ -84,6 +85,13 @@ export async function PATCH(
       where: { id: params.id },
       data: updateData,
     })
+
+    // Send email notifications
+    if (accion === "habilitar") {
+      emailCTHabilitado(ct.email, ct.nombre).catch(() => {})
+    } else if (accion === "rechazar" && motivoRechazo) {
+      emailCTRechazado(ct.email, ct.nombre, motivoRechazo).catch(() => {})
+    }
 
     return NextResponse.json({ ct })
   } catch {

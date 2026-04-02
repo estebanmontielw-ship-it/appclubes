@@ -133,6 +133,42 @@ export async function emailBienvenidaCT(to: string, nombre: string) {
   })
 }
 
+export async function emailCTHabilitado(to: string, nombre: string) {
+  return sendEmail({
+    to,
+    subject: "Habilitación aprobada — Cuerpo Técnico CPB",
+    nombre,
+    type: "success",
+    body: "Tu habilitación como miembro del Cuerpo Técnico de la CPB fue aprobada.<br><br>Ya podés acceder al portal con tu cuenta y ver tu carnet digital.",
+    ctaText: "Ir al portal",
+    ctaUrl: `${BASE_URL}/cuerpotecnico`,
+  })
+}
+
+export async function emailCTRechazado(to: string, nombre: string, motivo: string) {
+  return sendEmail({
+    to,
+    subject: "Habilitación rechazada — Cuerpo Técnico CPB",
+    nombre,
+    type: "error",
+    body: `Tu solicitud de habilitación como Cuerpo Técnico fue revisada y necesita correcciones.<br><br><strong>Motivo:</strong> ${motivo}<br><br>Podés contactarnos a cpb@cpb.com.py para más información.`,
+    ctaText: "Contactar",
+    ctaUrl: `${BASE_URL}/contacto`,
+  })
+}
+
+export async function emailCTAutoHabilitado(to: string, nombre: string) {
+  return sendEmail({
+    to,
+    subject: "¡Bienvenido! Tu cuenta está activa — Cuerpo Técnico CPB",
+    nombre,
+    type: "success",
+    body: "Tu registro fue procesado exitosamente. Como tu pago ya fue verificado previamente, tu cuenta está <strong>habilitada automáticamente</strong>.<br><br>Ya podés acceder al portal y ver tu carnet digital.",
+    ctaText: "Ir al portal",
+    ctaUrl: `${BASE_URL}/cuerpotecnico`,
+  })
+}
+
 export async function emailCarnetVerificado(to: string, nombre: string) {
   return sendEmail({
     to,

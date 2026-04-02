@@ -2,7 +2,7 @@ import { createServiceClient } from "@/lib/supabase"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
-import { emailBienvenidaCT } from "@/lib/email"
+import { emailBienvenidaCT, emailCTAutoHabilitado } from "@/lib/email"
 
 // Normalize name for matching
 function normalizeName(s: string): string {
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
         montoHabilitacion: precio,
         pagoVerificado: autoVerificado,
         pagoAutoVerificado: autoVerificado,
-        estadoHabilitacion: "PENDIENTE",
+        estadoHabilitacion: autoVerificado ? "HABILITADO" : "PENDIENTE",
         qrToken,
       },
     })
@@ -140,8 +140,12 @@ export async function POST(request: Request) {
       })
     }
 
-    // Send welcome email
-    emailBienvenidaCT(email, nombre).catch(() => {})
+    // Send email
+    if (autoVerificado) {
+      emailCTAutoHabilitado(email, nombre).catch(() => {})
+    } else {
+      emailBienvenidaCT(email, nombre).catch(() => {})
+    }
 
     return NextResponse.json({
       ct,
