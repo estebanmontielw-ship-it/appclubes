@@ -25,6 +25,7 @@ export default function AdminLayout({
   const [unreadCount, setUnreadCount] = useState(0)
   const [pendingUsers, setPendingUsers] = useState(0)
   const [pendingPayments, setPendingPayments] = useState(0)
+  const [pendingCT, setPendingCT] = useState(0)
   const [authorized, setAuthorized] = useState<boolean | null>(null)
 
   useEffect(() => {
@@ -37,6 +38,7 @@ export default function AdminLayout({
           setUnreadCount(data.unreadNotifications || 0)
           setPendingUsers(data.pendingUsers || 0)
           setPendingPayments(data.pendingPayments || 0)
+          setPendingCT(data.pendingCT || 0)
 
           const roles = data.usuario.roles.map((r: { rol: TipoRol }) => r.rol)
           if (roles.includes("SUPER_ADMIN") || roles.includes("INSTRUCTOR")) {
@@ -81,6 +83,7 @@ export default function AdminLayout({
         onLogout={handleLogout}
         pendingUsers={pendingUsers}
         pendingPayments={pendingPayments}
+        pendingCT={pendingCT}
         unreadNotifications={unreadCount}
       />
 
@@ -102,6 +105,7 @@ export default function AdminLayout({
             onNavigate={() => setMenuOpen(false)}
             pendingUsers={pendingUsers}
             pendingPayments={pendingPayments}
+            pendingCT={pendingCT}
             unreadNotifications={unreadCount}
           />
         </div>

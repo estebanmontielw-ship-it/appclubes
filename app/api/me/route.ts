@@ -35,14 +35,16 @@ export async function GET() {
     const isAdmin = usuario.roles.some((r) => r.rol === "SUPER_ADMIN" || r.rol === "INSTRUCTOR")
     let pendingUsers = 0
     let pendingPayments = 0
+    let pendingCT = 0
     if (isAdmin) {
-      ;[pendingUsers, pendingPayments] = await Promise.all([
+      ;[pendingUsers, pendingPayments, pendingCT] = await Promise.all([
         prisma.usuario.count({ where: { estadoVerificacion: "PENDIENTE" } }),
         prisma.pago.count({ where: { estado: "PENDIENTE_REVISION" } }),
+        prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "PENDIENTE" } }),
       ])
     }
 
-    return NextResponse.json({ usuario, unreadNotifications, pendingUsers, pendingPayments })
+    return NextResponse.json({ usuario, unreadNotifications, pendingUsers, pendingPayments, pendingCT })
   } catch (error) {
     console.error("Error in /api/me:", error)
     return NextResponse.json({ error: "Error interno" }, { status: 500 })

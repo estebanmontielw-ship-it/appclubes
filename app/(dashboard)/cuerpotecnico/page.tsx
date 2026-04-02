@@ -15,7 +15,7 @@ const rolLabels: Record<string, string> = {
 }
 
 const estadoConfig: Record<string, { color: string; bg: string; icon: any; label: string }> = {
-  PENDIENTE: { color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200", icon: Clock, label: "Tu solicitud está siendo revisada" },
+  PENDIENTE: { color: "text-yellow-700", bg: "bg-yellow-50 border-yellow-200", icon: Clock, label: "Tu solicitud está pendiente de aprobación" },
   HABILITADO: { color: "text-green-700", bg: "bg-green-50 border-green-200", icon: CheckCircle, label: "Estás habilitado para la temporada" },
   RECHAZADO: { color: "text-red-700", bg: "bg-red-50 border-red-200", icon: XCircle, label: "Tu solicitud fue rechazada" },
   SUSPENDIDO: { color: "text-gray-700", bg: "bg-gray-50 border-gray-200", icon: AlertCircle, label: "Tu habilitación fue suspendida" },
@@ -128,8 +128,8 @@ export default function CTDashboardPage() {
               <p className="text-sm text-gray-500">Monto</p>
               <p className="text-lg font-bold text-gray-900">{Number(ct.montoHabilitacion).toLocaleString("es-PY")} Gs.</p>
             </div>
-            <div className={`px-3 py-1.5 rounded-full text-xs font-semibold ${ct.pagoVerificado ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}>
-              {ct.pagoVerificado ? "Pago verificado" : "Pago pendiente"}
+            <div className={`px-3 py-1.5 rounded-full text-xs font-semibold ${ct.pagoVerificado ? "bg-green-100 text-green-700" : ct.comprobanteUrl ? "bg-blue-100 text-blue-700" : "bg-yellow-100 text-yellow-700"}`}>
+              {ct.pagoVerificado ? "Pago verificado" : ct.comprobanteUrl ? "Pago pendiente de aprobación" : "Pago pendiente"}
             </div>
           </div>
         </div>

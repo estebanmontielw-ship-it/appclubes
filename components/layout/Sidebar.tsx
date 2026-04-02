@@ -38,7 +38,7 @@ interface NavSection {
 
 function getNavSections(
   roles: TipoRol[],
-  badges: { pendientesUsuarios: number; pendientesPagos: number }
+  badges: { pendientesUsuarios: number; pendientesPagos: number; pendientesCT: number }
 ): NavSection[] {
   const isSuperAdmin = roles.includes("SUPER_ADMIN")
   const isInstructor = roles.includes("INSTRUCTOR")
@@ -69,7 +69,7 @@ function getNavSections(
             subItems: [
               { label: "Dashboard", href: "/oficiales/admin/cuerpotecnico/dashboard" },
               { label: "Todos", href: "/oficiales/admin/cuerpotecnico" },
-              { label: "Pendientes", href: "/oficiales/admin/cuerpotecnico?estado=PENDIENTE" },
+              { label: "Pendientes", href: "/oficiales/admin/cuerpotecnico?estado=PENDIENTE", badge: badges.pendientesCT },
             ],
           },
         ],
@@ -287,6 +287,7 @@ interface SidebarProps {
   onNavigate?: () => void
   pendingUsers?: number
   pendingPayments?: number
+  pendingCT?: number
   unreadNotifications?: number
 }
 
@@ -297,6 +298,7 @@ export default function Sidebar({
   onNavigate,
   pendingUsers = 0,
   pendingPayments = 0,
+  pendingCT = 0,
   unreadNotifications = 0,
 }: SidebarProps) {
   const pathname = usePathname()
@@ -305,6 +307,7 @@ export default function Sidebar({
   const sections = getNavSections(roles, {
     pendientesUsuarios: pendingUsers,
     pendientesPagos: pendingPayments,
+    pendientesCT: pendingCT,
   })
 
   return (

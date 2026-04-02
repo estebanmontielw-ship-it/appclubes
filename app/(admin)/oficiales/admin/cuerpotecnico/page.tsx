@@ -130,8 +130,10 @@ export default function AdminCTPage() {
                           <Badge variant="success" className="text-xs">Auto-verificado</Badge>
                         ) : m.pagoVerificado ? (
                           <Badge variant="success" className="text-xs">Verificado</Badge>
+                        ) : m.comprobanteUrl ? (
+                          <Badge variant="info" className="text-xs">Pendiente de aprobación</Badge>
                         ) : (
-                          <Badge variant="warning" className="text-xs">Pendiente</Badge>
+                          <Badge variant="warning" className="text-xs">Sin pago</Badge>
                         )}
                       </td>
                       <td className="p-3"><Badge variant={estadoColor[m.estadoHabilitacion]} className="text-xs">{m.estadoHabilitacion}</Badge></td>
