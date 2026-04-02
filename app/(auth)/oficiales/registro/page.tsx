@@ -15,6 +15,7 @@ import {
 } from "@/lib/validations"
 import { Button } from "@/components/ui/button"
 import DatePickerSimple from "@/components/ui/DatePickerSimple"
+import PhoneInput from "@/components/ui/PhoneInput"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -303,10 +304,10 @@ export default function RegistroPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="telefono">Teléfono *</Label>
-                <Input
+                <PhoneInput
                   id="telefono"
-                  placeholder="0981123456"
-                  {...step1Form.register("telefono")}
+                  value={step1Form.watch("telefono") || ""}
+                  onChange={(val) => step1Form.setValue("telefono", val)}
                 />
                 {step1Form.formState.errors.telefono && (
                   <p className="text-xs text-destructive">

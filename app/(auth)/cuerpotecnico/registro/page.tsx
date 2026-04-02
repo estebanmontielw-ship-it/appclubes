@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import DatePickerSimple from "@/components/ui/DatePickerSimple"
+import PhoneInput from "@/components/ui/PhoneInput"
 import { Loader2, ArrowLeft, ArrowRight, Upload, Camera, CheckCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { CIUDADES_PY } from "@/lib/constants"
@@ -290,7 +291,7 @@ export default function RegistroCTPage() {
                 </select>
               </div>
             </div>
-            <div className="space-y-1"><Label>Teléfono *</Label><Input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="0981..." /></div>
+            <div className="space-y-1"><Label>Teléfono *</Label><PhoneInput value={telefono} onChange={setTelefono} /></div>
             <div className="space-y-1">
               <Label>Ciudad *</Label>
               <Select value={ciudad} onValueChange={setCiudad}>
