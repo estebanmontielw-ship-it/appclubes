@@ -25,7 +25,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
 
-    const { titulo, mensaje, destinatarios, enviarEmail, enviarNotificacion } = await request.json()
+    const { titulo, mensaje, destinatarios, enviarEmail, enviarNotificacion, emailEspecifico } = await request.json()
 
     if (!titulo || !mensaje || !destinatarios) {
       return NextResponse.json(
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
 
     // Get target users based on selection
     let users: { id: string; email: string; nombre: string }[] = []
+    let ctUsers: { email: string; nombre: string }[] = [] // CT don't have notificaciones table yet
 
     const selectFields = { id: true, email: true, nombre: true }
 
@@ -60,13 +61,27 @@ export async function POST(request: Request) {
         where: { estadoVerificacion: "PENDIENTE" },
         select: selectFields,
       })
+    } else if (destinatarios === "CT_TODOS") {
+      const cts = await prisma.cuerpoTecnico.findMany({ select: { email: true, nombre: true } })
+      ctUsers = cts
+    } else if (destinatarios === "CT_HABILITADOS") {
+      const cts = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "HABILITADO" }, select: { email: true, nombre: true } })
+      ctUsers = cts
+    } else if (destinatarios === "CT_PENDIENTES") {
+      const cts = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "PENDIENTE" }, select: { email: true, nombre: true } })
+      ctUsers = cts
+    } else if (destinatarios === "USUARIO_ESPECIFICO" && emailEspecifico) {
+      // Search in both tables
+      const oficial = await prisma.usuario.findFirst({ where: { email: emailEspecifico }, select: selectFields })
+      if (oficial) {
+        users = [oficial]
+      } else {
+        const ct = await prisma.cuerpoTecnico.findFirst({ where: { email: emailEspecifico }, select: { email: true, nombre: true } })
+        if (ct) ctUsers = [ct]
+      }
     } else if (destinatarios.startsWith("USER_")) {
-      // Single user by ID
       const userId = destinatarios.replace("USER_", "")
-      const user = await prisma.usuario.findUnique({
-        where: { id: userId },
-        select: selectFields,
-      })
+      const user = await prisma.usuario.findUnique({ where: { id: userId }, select: selectFields })
       if (user) users = [user]
     }
 
@@ -105,10 +120,28 @@ export async function POST(request: Request) {
       emailSent = results.filter((r) => r.status === "fulfilled").length
     }
 
+    // Send emails to CT users (they don't have internal notifications yet)
+    if (shouldEmail && ctUsers.length > 0) {
+      const ctResults = await Promise.allSettled(
+        ctUsers.map((ct) =>
+          sendEmail({
+            to: ct.email,
+            subject: titulo,
+            nombre: ct.nombre,
+            body: mensaje.replace(/\n/g, "<br>"),
+            type: "info",
+          })
+        )
+      )
+      emailSent += ctResults.filter((r) => r.status === "fulfilled").length
+    }
+
+    const total = users.length + ctUsers.length
+
     return NextResponse.json({
       notifSent,
       emailSent,
-      total: users.length,
+      total,
     })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })

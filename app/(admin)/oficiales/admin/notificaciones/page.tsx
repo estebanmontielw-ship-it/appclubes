@@ -14,15 +14,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Send, Bell, Mail, FileText } from "lucide-react"
+import { Loader2, Send, Bell, Mail, FileText, Search } from "lucide-react"
 
 const DESTINATARIOS = [
-  { value: "TODOS", label: "Todos los usuarios" },
+  { value: "TODOS", label: "Todos los oficiales" },
   { value: "VERIFICADOS", label: "Solo verificados" },
   { value: "PENDIENTES", label: "Pendientes de verificación" },
   { value: "ARBITRO", label: "Árbitros" },
   { value: "MESA", label: "Oficiales de Mesa" },
   { value: "ESTADISTICO", label: "Estadísticos" },
+  { value: "CT_TODOS", label: "Cuerpo Técnico — Todos" },
+  { value: "CT_HABILITADOS", label: "Cuerpo Técnico — Habilitados" },
+  { value: "CT_PENDIENTES", label: "Cuerpo Técnico — Pendientes" },
+  { value: "USUARIO_ESPECIFICO", label: "Persona específica (buscar)" },
 ]
 
 const PLANTILLAS = [
@@ -66,6 +70,29 @@ export default function AdminNotificacionesPage() {
   const [enviarNotificacion, setEnviarNotificacion] = useState(true)
   const [enviarEmail, setEnviarEmail] = useState(true)
   const [loading, setLoading] = useState(false)
+  const [emailEspecifico, setEmailEspecifico] = useState("")
+  const [busqueda, setBusqueda] = useState("")
+  const [resultados, setResultados] = useState<any[]>([])
+  const [buscando, setBuscando] = useState(false)
+
+  const buscarUsuario = async (q: string) => {
+    setBusqueda(q)
+    if (q.length < 2) { setResultados([]); return }
+    setBuscando(true)
+    try {
+      // Search oficiales
+      const res1 = await fetch(`/api/admin/usuarios?buscar=${encodeURIComponent(q)}&limite=5`)
+      const data1 = await res1.json()
+      const oficiales = (data1.usuarios || []).map((u: any) => ({ nombre: `${u.nombre} ${u.apellido}`, email: u.email, tipo: "Oficial" }))
+
+      // Search CT
+      const res2 = await fetch(`/api/admin/cuerpotecnico?buscar=${encodeURIComponent(q)}&limite=5`)
+      const data2 = await res2.json()
+      const cts = (data2.miembros || []).map((c: any) => ({ nombre: `${c.nombre} ${c.apellido}`, email: c.email, tipo: "Cuerpo Técnico" }))
+
+      setResultados([...oficiales, ...cts])
+    } catch {} finally { setBuscando(false) }
+  }
 
   const handlePlantilla = (plantilla: typeof PLANTILLAS[0]) => {
     setTitulo(plantilla.titulo)
@@ -94,6 +121,7 @@ export default function AdminNotificacionesPage() {
           destinatarios,
           enviarNotificacion,
           enviarEmail,
+          emailEspecifico: destinatarios === "USUARIO_ESPECIFICO" ? emailEspecifico : undefined,
         }),
       })
 
@@ -168,6 +196,39 @@ export default function AdminNotificacionesPage() {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Buscar persona específica */}
+          {destinatarios === "USUARIO_ESPECIFICO" && (
+            <div className="space-y-2">
+              <Label>Buscar persona</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <Input
+                  value={busqueda}
+                  onChange={(e) => buscarUsuario(e.target.value)}
+                  placeholder="Nombre o email..."
+                  className="pl-9"
+                />
+              </div>
+              {resultados.length > 0 && (
+                <div className="border border-gray-200 rounded-lg overflow-hidden">
+                  {resultados.map((r, i) => (
+                    <button key={i} onClick={() => { setEmailEspecifico(r.email); setBusqueda(r.nombre); setResultados([]) }}
+                      className={`w-full text-left px-3 py-2.5 text-sm hover:bg-primary/5 flex items-center justify-between border-b border-gray-50 last:border-0 ${emailEspecifico === r.email ? "bg-primary/5" : ""}`}>
+                      <div>
+                        <p className="font-medium text-gray-900">{r.nombre}</p>
+                        <p className="text-xs text-gray-500">{r.email}</p>
+                      </div>
+                      <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{r.tipo}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {emailEspecifico && (
+                <p className="text-xs text-green-600">Enviar a: {emailEspecifico}</p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Asunto / Título *</Label>

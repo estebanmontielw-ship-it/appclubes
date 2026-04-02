@@ -29,12 +29,23 @@ export async function GET(request: Request) {
       return NextResponse.json({ total, habilitados, pendientes, pendientesPago })
     }
 
+    const buscar = searchParams.get("buscar")
+    const limite = parseInt(searchParams.get("limite") || "100")
+
     const where: Record<string, unknown> = {}
     if (estado) where.estadoHabilitacion = estado
+    if (buscar) {
+      where.OR = [
+        { nombre: { contains: buscar, mode: "insensitive" } },
+        { apellido: { contains: buscar, mode: "insensitive" } },
+        { email: { contains: buscar, mode: "insensitive" } },
+      ]
+    }
 
     const miembros = await prisma.cuerpoTecnico.findMany({
       where,
       orderBy: { createdAt: "desc" },
+      take: limite,
     })
 
     return NextResponse.json({ miembros })
