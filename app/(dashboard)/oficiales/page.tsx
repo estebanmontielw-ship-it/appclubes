@@ -32,8 +32,18 @@ export default function DashboardPage() {
       })
       .then((d) => {
         if (d.usuario) setData(d)
+        else throw new Error("No user data")
       })
-      .catch(() => {})
+      .catch(() => {
+        // Check if user is cuerpo técnico instead
+        fetch("/api/ct/me")
+          .then((res) => {
+            if (res.ok) {
+              window.location.href = "/cuerpotecnico"
+            }
+          })
+          .catch(() => {})
+      })
   }, [])
 
   if (!data || !data.usuario) {
