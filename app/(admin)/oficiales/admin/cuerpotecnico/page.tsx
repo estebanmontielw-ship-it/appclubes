@@ -20,6 +20,7 @@ interface CTMember {
   estadoHabilitacion: string
   pagoVerificado: boolean
   pagoAutoVerificado: boolean
+  comprobanteUrl: string | null
   montoHabilitacion: number
   createdAt: string
 }
