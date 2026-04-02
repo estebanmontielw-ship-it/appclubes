@@ -113,11 +113,13 @@ export default function CTDashboardPage() {
         {/* Info */}
         <div className="bg-white rounded-2xl border border-gray-100 p-5 space-y-3">
           <h2 className="font-semibold text-gray-900">Mis datos</h2>
-          <div className="grid grid-cols-2 gap-3 text-sm">
-            <div><span className="text-gray-500">Email:</span> <p className="font-medium">{ct.email}</p></div>
-            <div><span className="text-gray-500">Teléfono:</span> <p className="font-medium">{ct.telefono}</p></div>
-            <div><span className="text-gray-500">Ciudad:</span> <p className="font-medium">{ct.ciudad}</p></div>
-            <div><span className="text-gray-500">Nacionalidad:</span> <p className="font-medium">{ct.nacionalidad}</p></div>
+          <div className="space-y-3 text-sm">
+            <div><span className="text-gray-500">Email:</span> <p className="font-medium break-all">{ct.email}</p></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><span className="text-gray-500">Teléfono:</span> <p className="font-medium">{ct.telefono}</p></div>
+              <div><span className="text-gray-500">Ciudad:</span> <p className="font-medium">{ct.ciudad}</p></div>
+            </div>
+            <div><span className="text-gray-500">Nacionalidad:</span> <span className="font-medium">{ct.nacionalidad}</span></div>
           </div>
         </div>
 
