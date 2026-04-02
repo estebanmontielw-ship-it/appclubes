@@ -204,8 +204,8 @@ export default function RegistroCTPage() {
         {step === 1 && (
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><Label>Nombre *</Label><Input value={nombre} onChange={e => setNombre(e.target.value)} /></div>
-              <div className="space-y-1"><Label>Apellido *</Label><Input value={apellido} onChange={e => setApellido(e.target.value)} /></div>
+              <div className="space-y-1"><Label>Nombre(s) *</Label><Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Juan Carlos" /></div>
+              <div className="space-y-1"><Label>Apellido(s) *</Label><Input value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Ej: Pérez González" /></div>
             </div>
             <div className="space-y-1"><Label>Número de CI *</Label><Input value={cedula} onChange={e => setCedula(e.target.value)} placeholder="1234567" /></div>
             <DatePickerSimple value={fechaNac} onChange={setFechaNac} />

@@ -256,8 +256,8 @@ export default function RegistroPage() {
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nombre">Nombre *</Label>
-                  <Input id="nombre" {...step1Form.register("nombre")} />
+                  <Label htmlFor="nombre">Nombre(s) *</Label>
+                  <Input id="nombre" placeholder="Ej: Juan Carlos" {...step1Form.register("nombre")} />
                   {step1Form.formState.errors.nombre && (
                     <p className="text-xs text-destructive">
                       {step1Form.formState.errors.nombre.message}
@@ -265,7 +265,7 @@ export default function RegistroPage() {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="apellido">Apellido *</Label>
+                  <Label htmlFor="apellido">Apellido(s) *</Label>
                   <Input id="apellido" {...step1Form.register("apellido")} />
                   {step1Form.formState.errors.apellido && (
                     <p className="text-xs text-destructive">
