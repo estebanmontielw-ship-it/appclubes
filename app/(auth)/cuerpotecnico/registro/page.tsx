@@ -11,7 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import DatePickerSimple from "@/components/ui/DatePickerSimple"
-import { Loader2, ArrowLeft, ArrowRight, Upload, Camera } from "lucide-react"
+import { Loader2, ArrowLeft, ArrowRight, Upload, Camera, CheckCircle } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { CIUDADES_PY } from "@/lib/constants"
 
@@ -24,7 +24,16 @@ const ROLES_CT = [
   { value: "UTILERO", label: "Utilero", precio: "Gs. 100.000" },
 ]
 
-const STEP_TITLES = ["Datos personales", "Rol y documentos", "Facturación"]
+const ROL_MAP: Record<string, string> = {
+  "ENTRENADOR_NACIONAL": "ENTRENADOR_NACIONAL",
+  "ENTRENADOR_EXTRANJERO": "ENTRENADOR_EXTRANJERO",
+  "ASISTENTE": "ASISTENTE",
+  "PREPARADOR_FISICO": "PREPARADOR_FISICO",
+  "PREPARADOR FISICO": "PREPARADOR_FISICO",
+  "FISIO": "FISIO",
+  "FISIOTERAPEUTA": "FISIO",
+  "UTILERO": "UTILERO",
+}
 
 async function getCroppedImg(imageSrc: string, pixelCrop: Area, size = 500): Promise<Blob> {
   const image = new Image()
@@ -42,6 +51,12 @@ export default function RegistroCTPage() {
   const { toast } = useToast()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+
+  // Pre-verificado detection
+  const [isPreverificado, setIsPreverificado] = useState(false)
+  const [preNombre, setPreNombre] = useState("")
+  const [preRol, setPreRol] = useState("")
+  const [checking, setChecking] = useState(false)
 
   // Step 1
   const [nombre, setNombre] = useState("")
@@ -62,6 +77,7 @@ export default function RegistroCTPage() {
   const [fotoCedula, setFotoCedula] = useState<File | null>(null)
   const [fotoCarnet, setFotoCarnet] = useState<File | null>(null)
   const [tituloFile, setTituloFile] = useState<File | null>(null)
+  const [comprobanteFile, setComprobanteFile] = useState<File | null>(null)
 
   // Cropper
   const [carnetSrc, setCarnetSrc] = useState<string | null>(null)
@@ -70,10 +86,12 @@ export default function RegistroCTPage() {
   const [carnetCroppedArea, setCarnetCroppedArea] = useState<Area | null>(null)
   const [carnetPreview, setCarnetPreview] = useState<string | null>(null)
 
-  // Step 3
+  // Step 3 (solo nuevos)
   const [razonSocial, setRazonSocial] = useState("")
   const [ruc, setRuc] = useState("")
   const [confirmaDatos, setConfirmaDatos] = useState(false)
+
+  const totalSteps = isPreverificado ? 2 : 3
 
   const onCarnetCropComplete = useCallback((_: Area, croppedPixels: Area) => {
     setCarnetCroppedArea(croppedPixels)
@@ -108,6 +126,31 @@ export default function RegistroCTPage() {
     return data.url
   }
 
+  // Check if pre-registered when moving to step 2
+  async function checkPreverificado() {
+    setChecking(true)
+    try {
+      const res = await fetch("/api/ct/check-preverificado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre, apellido }),
+      })
+      const data = await res.json()
+      if (data.found) {
+        setIsPreverificado(true)
+        setPreNombre(data.nombre)
+        const mappedRol = ROL_MAP[data.rol?.toUpperCase()] || ""
+        if (mappedRol) {
+          setRol(mappedRol)
+          setPreRol(mappedRol)
+        }
+      } else {
+        setIsPreverificado(false)
+        setPreRol("")
+      }
+    } catch {} finally { setChecking(false) }
+  }
+
   const validateStep1 = () => {
     if (!nombre || !apellido || !cedula || !fechaNac || !telefono || !ciudad || !genero || !nacionalidad || !email || !password) {
       toast({ variant: "destructive", title: "Completá todos los campos" }); return false
@@ -122,7 +165,7 @@ export default function RegistroCTPage() {
   }
 
   const validateStep2 = () => {
-    if (!rol) { toast({ variant: "destructive", title: "Seleccioná tu rol" }); return false }
+    if (!isPreverificado && !rol) { toast({ variant: "destructive", title: "Seleccioná tu rol" }); return false }
     if (!fotoCedula) { toast({ variant: "destructive", title: "Subí la foto de tu cédula" }); return false }
     if (!fotoCarnet) { toast({ variant: "destructive", title: "Subí tu foto tipo carnet" }); return false }
     return true
@@ -135,33 +178,31 @@ export default function RegistroCTPage() {
 
     setLoading(true)
     try {
-      let fotoCedulaUrl = null
-      let fotoCarnetUrl = null
-      let tituloUrl = null
+      let fotoCedulaUrl = null, fotoCarnetUrl = null, tituloUrl = null, comprobanteUrl = null
 
       try {
-        const results = await Promise.all([
+        const uploads = await Promise.all([
           fotoCedula ? uploadFile(fotoCedula, "fotos-cedula") : null,
           fotoCarnet ? uploadFile(fotoCarnet, "fotos-carnet") : null,
           tituloFile ? uploadFile(tituloFile, "certificados") : null,
+          comprobanteFile ? uploadFile(comprobanteFile, "comprobantes") : null,
         ])
-        fotoCedulaUrl = results[0]
-        fotoCarnetUrl = results[1]
-        tituloUrl = results[2]
+        fotoCedulaUrl = uploads[0]; fotoCarnetUrl = uploads[1]; tituloUrl = uploads[2]; comprobanteUrl = uploads[3]
       } catch (uploadErr: any) {
-        toast({ variant: "destructive", title: "Error al subir archivos", description: uploadErr?.message || "Verificá que los archivos no superen 10MB" })
-        setLoading(false)
-        return
+        toast({ variant: "destructive", title: "Error al subir archivos", description: uploadErr?.message || "Verificá que no superen 10MB" })
+        setLoading(false); return
       }
+
+      const finalRol = isPreverificado && preRol ? preRol : rol
 
       const res = await fetch("/api/ct/auth/registro", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           nombre, apellido, cedula, fechaNacimiento: fechaNac, telefono, ciudad,
-          genero, nacionalidad, email, password, rol,
+          genero, nacionalidad, email, password, rol: finalRol,
           fotoCarnetUrl, fotoCedulaUrl, tituloEntrenadorUrl: tituloUrl,
-          tieneTitulo, razonSocial, ruc,
+          tieneTitulo, razonSocial, ruc, comprobanteUrl,
         }),
       })
 
@@ -172,8 +213,8 @@ export default function RegistroCTPage() {
 
       const data = await res.json()
 
-      if (data.autoVerificado) {
-        toast({ title: "Registro exitoso", description: "Tu pago fue verificado automáticamente. Tu solicitud será revisada pronto." })
+      if (data.autoVerificado || isPreverificado) {
+        toast({ title: "Registro exitoso", description: "Tu cuenta fue creada. Tu solicitud será revisada pronto." })
       } else {
         toast({ title: "Registro exitoso", description: "Tu solicitud fue enviada. Recordá realizar la transferencia bancaria." })
       }
@@ -185,22 +226,25 @@ export default function RegistroCTPage() {
   }
 
   const selectedRol = ROLES_CT.find(r => r.value === rol)
+  const stepTitles = isPreverificado
+    ? ["Datos personales", "Documentos"]
+    : ["Datos personales", "Rol y documentos", "Pago y facturación"]
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-red-50 px-4 py-8">
       <Card className="w-full max-w-lg shadow-lg border-0">
         <CardHeader className="text-center">
-          <img src="/logo-cpb.jpg" alt="CPB" className="mx-auto mb-3 h-20 w-20 object-contain" />
+          <img src="/favicon-cpb.png" alt="CPB" className="mx-auto mb-3 h-20 w-20 object-contain" />
           <CardTitle className="text-xl">Registro — Cuerpo Técnico CPB</CardTitle>
-          <CardDescription>Paso {step} de 3 — {STEP_TITLES[step - 1]}</CardDescription>
+          <CardDescription>Paso {step} de {totalSteps} — {stepTitles[step - 1]}</CardDescription>
           <div className="flex items-center justify-center gap-2 mt-3">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className={`h-2 w-16 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-gray-200"}`} />
+            {Array.from({ length: totalSteps }, (_, i) => i + 1).map((s) => (
+              <div key={s} className={`h-2 flex-1 max-w-16 rounded-full transition-colors ${s <= step ? "bg-primary" : "bg-gray-200"}`} />
             ))}
           </div>
         </CardHeader>
 
-        {/* STEP 1 */}
+        {/* STEP 1 - Datos personales (igual para todos) */}
         {step === 1 && (
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -225,7 +269,7 @@ export default function RegistroCTPage() {
                 <select value={nacionalidad} onChange={e => setNacionalidad(e.target.value)}
                   className="w-full h-11 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                   style={{ fontSize: "16px" }}>
-                  <option value="">Seleccionar nacionalidad</option>
+                  <option value="">Seleccionar</option>
                   <optgroup label="Sudamérica">
                     <option value="Paraguaya">Paraguaya</option>
                     <option value="Argentina">Argentina</option>
@@ -235,34 +279,12 @@ export default function RegistroCTPage() {
                     <option value="Chilena">Chilena</option>
                     <option value="Peruana">Peruana</option>
                     <option value="Colombiana">Colombiana</option>
-                    <option value="Ecuatoriana">Ecuatoriana</option>
                     <option value="Venezolana">Venezolana</option>
                   </optgroup>
-                  <optgroup label="Norteamérica y Centroamérica">
+                  <optgroup label="Otras">
                     <option value="Estadounidense">Estadounidense</option>
-                    <option value="Mexicana">Mexicana</option>
-                    <option value="Canadiense">Canadiense</option>
-                    <option value="Puertorriqueña">Puertorriqueña</option>
-                    <option value="Dominicana">Dominicana</option>
-                    <option value="Cubana">Cubana</option>
-                    <option value="Panameña">Panameña</option>
-                  </optgroup>
-                  <optgroup label="Europa">
                     <option value="Española">Española</option>
                     <option value="Italiana">Italiana</option>
-                    <option value="Alemana">Alemana</option>
-                    <option value="Francesa">Francesa</option>
-                    <option value="Portuguesa">Portuguesa</option>
-                    <option value="Británica">Británica</option>
-                    <option value="Croata">Croata</option>
-                    <option value="Serbia">Serbia</option>
-                    <option value="Lituana">Lituana</option>
-                  </optgroup>
-                  <optgroup label="Otras">
-                    <option value="Japonesa">Japonesa</option>
-                    <option value="Coreana">Coreana</option>
-                    <option value="China">China</option>
-                    <option value="Australiana">Australiana</option>
                     <option value="Otra">Otra</option>
                   </optgroup>
                 </select>
@@ -284,18 +306,39 @@ export default function RegistroCTPage() {
           </CardContent>
         )}
 
-        {/* STEP 2 */}
+        {/* STEP 2 - Documentos */}
         {step === 2 && (
           <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label>Tu rol *</Label>
-              <Select value={rol} onValueChange={setRol}>
-                <SelectTrigger><SelectValue placeholder="Seleccioná tu rol" /></SelectTrigger>
-                <SelectContent>
-                  {ROLES_CT.map(r => <SelectItem key={r.value} value={r.value}>{r.label} — {r.precio}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Pre-verificado badge */}
+            {isPreverificado && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                <CheckCircle className="h-6 w-6 text-green-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-800">Encontramos tu registro previo</p>
+                  <p className="text-xs text-green-600">Tu pago ya fue verificado. Solo necesitamos tus documentos.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Rol selector - solo para nuevos */}
+            {!isPreverificado && (
+              <div className="space-y-2">
+                <Label>Tu rol *</Label>
+                <Select value={rol} onValueChange={setRol}>
+                  <SelectTrigger><SelectValue placeholder="Seleccioná tu rol" /></SelectTrigger>
+                  <SelectContent>
+                    {ROLES_CT.map(r => <SelectItem key={r.value} value={r.value}>{r.label} — {r.precio}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Pre-verificado: show detected rol */}
+            {isPreverificado && preRol && (
+              <div className="text-sm text-gray-600">
+                Rol detectado: <strong>{ROLES_CT.find(r => r.value === preRol)?.label || preRol}</strong>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Foto tipo carnet *</Label>
@@ -334,7 +377,7 @@ export default function RegistroCTPage() {
             </div>
 
             <div className="space-y-1">
-              <Label>¿Tenés título de entrenador? *</Label>
+              <Label>¿Tenés título de entrenador?</Label>
               <select value={tieneTitulo ? "si" : "no"} onChange={e => setTieneTitulo(e.target.value === "si")}
                 className="w-full h-11 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
                 style={{ fontSize: "16px" }}>
@@ -352,11 +395,19 @@ export default function RegistroCTPage() {
                 </label>
               </div>
             )}
+
+            {/* Pre-verificado: confirmación directa */}
+            {isPreverificado && (
+              <div className="flex items-center space-x-2 pt-2">
+                <Checkbox id="confirma" checked={confirmaDatos} onCheckedChange={c => setConfirmaDatos(c === true)} />
+                <label htmlFor="confirma" className="text-sm cursor-pointer">Confirmo que los datos son verídicos</label>
+              </div>
+            )}
           </CardContent>
         )}
 
-        {/* STEP 3 */}
-        {step === 3 && (
+        {/* STEP 3 - Solo para NUEVOS (no pre-registrados) */}
+        {step === 3 && !isPreverificado && (
           <CardContent className="space-y-5">
             {selectedRol && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
@@ -374,6 +425,15 @@ export default function RegistroCTPage() {
                 <p><strong>Titular:</strong> Confederación Paraguaya de Basquetbol</p>
                 <p><strong>RUC:</strong> 80028130-6</p>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Comprobante de transferencia *</Label>
+              <label className="flex flex-col items-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:border-primary/50">
+                <Upload className="h-6 w-6 text-muted-foreground mb-1" />
+                <span className="text-sm text-muted-foreground">{comprobanteFile ? comprobanteFile.name : "Subir comprobante"}</span>
+                <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => setComprobanteFile(e.target.files?.[0] || null)} />
+              </label>
             </div>
 
             <div className="space-y-2">
@@ -398,12 +458,16 @@ export default function RegistroCTPage() {
               <ArrowLeft className="mr-1 h-4 w-4" /> Atrás
             </Button>
           )}
-          {step < 3 ? (
-            <Button className="flex-1" onClick={() => {
-              if (step === 1 && !validateStep1()) return
+          {step < totalSteps ? (
+            <Button className="flex-1" disabled={checking} onClick={async () => {
+              if (step === 1) {
+                if (!validateStep1()) return
+                await checkPreverificado()
+              }
               if (step === 2 && !validateStep2()) return
               setStep(s => s + 1)
             }}>
+              {checking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Siguiente <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
