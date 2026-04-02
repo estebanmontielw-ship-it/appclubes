@@ -100,7 +100,10 @@ export default function RegistroCTPage() {
     formData.append("file", file)
     formData.append("bucket", bucket)
     const res = await fetch("/api/upload", { method: "POST", body: formData })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const err = await res.json().catch(() => null)
+      throw new Error(err?.error || `Error al subir ${file.name}`)
+    }
     const data = await res.json()
     return data.url
   }
@@ -132,11 +135,24 @@ export default function RegistroCTPage() {
 
     setLoading(true)
     try {
-      const [fotoCedulaUrl, fotoCarnetUrl, tituloUrl] = await Promise.all([
-        fotoCedula ? uploadFile(fotoCedula, "fotos-cedula") : null,
-        fotoCarnet ? uploadFile(fotoCarnet, "fotos-carnet") : null,
-        tituloFile ? uploadFile(tituloFile, "certificados") : null,
-      ])
+      let fotoCedulaUrl = null
+      let fotoCarnetUrl = null
+      let tituloUrl = null
+
+      try {
+        const results = await Promise.all([
+          fotoCedula ? uploadFile(fotoCedula, "fotos-cedula") : null,
+          fotoCarnet ? uploadFile(fotoCarnet, "fotos-carnet") : null,
+          tituloFile ? uploadFile(tituloFile, "certificados") : null,
+        ])
+        fotoCedulaUrl = results[0]
+        fotoCarnetUrl = results[1]
+        tituloUrl = results[2]
+      } catch (uploadErr: any) {
+        toast({ variant: "destructive", title: "Error al subir archivos", description: uploadErr?.message || "Verificá que los archivos no superen 10MB" })
+        setLoading(false)
+        return
+      }
 
       const res = await fetch("/api/ct/auth/registro", {
         method: "POST",
@@ -163,8 +179,8 @@ export default function RegistroCTPage() {
       }
 
       router.push("/cuerpotecnico/login")
-    } catch {
-      toast({ variant: "destructive", title: "Error al registrarse" })
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error al registrarse", description: err?.message || "Intentá de nuevo" })
     } finally { setLoading(false) }
   }
 
