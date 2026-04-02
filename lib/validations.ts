@@ -17,8 +17,8 @@ export const registroStep1Schema = z
     fechaNacimiento: z.string().min(1, "Requerido"),
     telefono: z
       .string()
-      .min(10, "Teléfono inválido")
-      .regex(/^09\d{8}$/, "Formato: 09X XXXXXXXX"),
+      .min(8, "Teléfono inválido")
+      .regex(/^\+?\d{8,15}$/, "Número de teléfono inválido"),
     ciudad: z.string().min(1, "Seleccioná una ciudad"),
     email: z.string().email("Email inválido"),
     password: z.string().min(8, "Mínimo 8 caracteres"),
