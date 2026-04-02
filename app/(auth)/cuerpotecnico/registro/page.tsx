@@ -377,24 +377,29 @@ export default function RegistroCTPage() {
               </label>
             </div>
 
-            <div className="space-y-1">
-              <Label>¿Tenés título de entrenador?</Label>
-              <select value={tieneTitulo ? "si" : "no"} onChange={e => setTieneTitulo(e.target.value === "si")}
-                className="w-full h-11 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                style={{ fontSize: "16px" }}>
-                <option value="no">No</option>
-                <option value="si">Sí</option>
-              </select>
-            </div>
-            {tieneTitulo && (
-              <div className="space-y-2">
-                <Label>Adjuntar título</Label>
-                <label className="flex flex-col items-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50">
-                  <Upload className="h-5 w-5 text-muted-foreground mb-1" />
-                  <span className="text-xs text-muted-foreground">{tituloFile ? tituloFile.name : "Seleccionar archivo"}</span>
-                  <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => setTituloFile(e.target.files?.[0] || null)} />
-                </label>
-              </div>
+            {/* Título - solo para nuevos */}
+            {!isPreverificado && (
+              <>
+                <div className="space-y-1">
+                  <Label>¿Tenés título de entrenador?</Label>
+                  <select value={tieneTitulo ? "si" : "no"} onChange={e => setTieneTitulo(e.target.value === "si")}
+                    className="w-full h-11 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    style={{ fontSize: "16px" }}>
+                    <option value="no">No</option>
+                    <option value="si">Sí</option>
+                  </select>
+                </div>
+                {tieneTitulo && (
+                  <div className="space-y-2">
+                    <Label>Adjuntar título</Label>
+                    <label className="flex flex-col items-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50">
+                      <Upload className="h-5 w-5 text-muted-foreground mb-1" />
+                      <span className="text-xs text-muted-foreground">{tituloFile ? tituloFile.name : "Seleccionar archivo"}</span>
+                      <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => setTituloFile(e.target.files?.[0] || null)} />
+                    </label>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Pre-verificado: confirmación directa */}
