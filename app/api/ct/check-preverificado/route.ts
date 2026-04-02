@@ -18,8 +18,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ found: false })
     }
 
+    const nombreNorm = normalizeName(nombre)
+    const apellidoNorm = normalizeName(apellido)
     const fullNameNorm = normalizeName(`${nombre} ${apellido}`)
-    const nameParts = fullNameNorm.split(" ").filter(p => p.length > 2)
+    const allParts = fullNameNorm.split(" ").filter(p => p.length > 1)
 
     const allPre = await prisma.ctPreverificado.findMany({
       where: { usado: false },
@@ -29,11 +31,32 @@ export async function POST(request: Request) {
     let bestScore = 0
 
     for (const pre of allPre) {
-      const preParts = pre.nombreNormalizado.split(" ").filter(p => p.length > 2)
+      const preNorm = pre.nombreNormalizado
+      const preParts = preNorm.split(" ").filter(p => p.length > 1)
 
-      const score1 = nameParts.filter(p => preParts.some(pp => pp === p || pp.startsWith(p) || p.startsWith(pp))).length
-      const score2 = preParts.filter(pp => nameParts.some(p => p === pp || p.startsWith(pp) || pp.startsWith(p))).length
-      const finalScore = Math.max(score1, score2)
+      // Method 1: count matching parts (original)
+      const score1 = allParts.filter(p => preParts.some(pp => pp === p || pp.startsWith(p) || p.startsWith(pp))).length
+      const score2 = preParts.filter(pp => allParts.some(p => p === pp || p.startsWith(pp) || pp.startsWith(p))).length
+
+      // Method 2: check if apellido is contained in pre name
+      const apellidoParts = apellidoNorm.split(" ").filter(p => p.length > 2)
+      const apellidoMatch = apellidoParts.some(ap => preNorm.includes(ap))
+
+      // Method 3: check if first nombre part matches
+      const nombreParts = nombreNorm.split(" ").filter(p => p.length > 2)
+      const nombreMatch = nombreParts.some(np => preNorm.includes(np))
+
+      // Score: use best method
+      let finalScore = Math.max(score1, score2)
+
+      // Boost if both nombre and apellido found in pre name
+      if (apellidoMatch && nombreMatch) {
+        finalScore = Math.max(finalScore, 3)
+      }
+      // Accept if apellido matches exactly and at least one nombre part
+      if (apellidoMatch && finalScore >= 1) {
+        finalScore = Math.max(finalScore, 2)
+      }
 
       if (finalScore >= 2 && finalScore > bestScore) {
         bestScore = finalScore

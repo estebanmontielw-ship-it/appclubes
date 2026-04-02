@@ -67,8 +67,10 @@ export async function POST(request: Request) {
     }
 
     // Check auto-verification: smart name matching against pre-verified list
+    const nombreNorm = normalizeName(nombre)
+    const apellidoNorm = normalizeName(apellido)
     const fullNameNorm = normalizeName(`${nombre} ${apellido}`)
-    const nameParts = fullNameNorm.split(" ").filter(p => p.length > 2) // ignore short particles
+    const nameParts = fullNameNorm.split(" ").filter(p => p.length > 1)
 
     // Get all unused pre-verified entries
     const allPreVerificados = await prisma.ctPreverificado.findMany({
@@ -81,20 +83,23 @@ export async function POST(request: Request) {
     let bestScore = 0
 
     for (const pre of allPreVerificados) {
-      const preParts = pre.nombreNormalizado.split(" ").filter(p => p.length > 2)
+      const preNorm = pre.nombreNormalizado
+      const preParts = preNorm.split(" ").filter(p => p.length > 1)
 
-      // Count how many name parts match
-      const matchingParts = nameParts.filter(p => preParts.some(pp => pp === p || pp.startsWith(p) || p.startsWith(pp)))
-      const score = matchingParts.length
+      // Method 1: count matching parts
+      const score1 = nameParts.filter(p => preParts.some(pp => pp === p || pp.startsWith(p) || p.startsWith(pp))).length
+      const score2 = preParts.filter(pp => nameParts.some(p => p === pp || p.startsWith(pp) || pp.startsWith(p))).length
 
-      // Also check reverse: parts from pre that match in registration
-      const reverseMatching = preParts.filter(pp => nameParts.some(p => p === pp || p.startsWith(pp) || pp.startsWith(p)))
-      const reverseScore = reverseMatching.length
+      // Method 2: check apellido and nombre in pre name
+      const apellidoParts = apellidoNorm.split(" ").filter(p => p.length > 2)
+      const apellidoMatch = apellidoParts.some(ap => preNorm.includes(ap))
+      const nombreParts = nombreNorm.split(" ").filter(p => p.length > 2)
+      const nombreMatch = nombreParts.some(np => preNorm.includes(np))
 
-      // Use the higher score
-      const finalScore = Math.max(score, reverseScore)
+      let finalScore = Math.max(score1, score2)
+      if (apellidoMatch && nombreMatch) finalScore = Math.max(finalScore, 3)
+      if (apellidoMatch && finalScore >= 1) finalScore = Math.max(finalScore, 2)
 
-      // Need at least 2 matching parts (first name + last name minimum)
       if (finalScore >= 2 && finalScore > bestScore) {
         bestScore = finalScore
         matchedPre = pre
