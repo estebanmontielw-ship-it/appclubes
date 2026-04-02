@@ -227,26 +227,49 @@ export default function RegistroCTPage() {
         ])
         fotoCedulaUrl = uploads[0]; fotoCarnetUrl = uploads[1]; tituloUrl = uploads[2]; comprobanteUrl = uploads[3]
       } catch (uploadErr: any) {
-        toast({ variant: "destructive", title: "Error al subir archivos", description: uploadErr?.message || "Verificá que no superen 10MB" })
+        const msg = uploadErr?.message || ""
+        let userMsg = "No se pudieron subir las fotos. "
+        if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("fetch")) {
+          userMsg += "Problema de conexión a internet. Intentá conectarte a WiFi o esperá unos segundos y probá de nuevo. (Error: CONN-01)"
+        } else if (msg.includes("10MB") || msg.includes("tamaño")) {
+          userMsg += "El archivo es muy grande. Intentá con una foto más chica. (Error: SIZE-01)"
+        } else {
+          userMsg += `Detalle: ${msg} (Error: UPLOAD-01)`
+        }
+        toast({ variant: "destructive", title: "Error al subir archivos", description: userMsg, duration: 10000 })
         setLoading(false); return
       }
 
       const finalRol = isPreverificado && preRol ? preRol : rol
 
-      const res = await fetch("/api/ct/auth/registro", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre, apellido, cedula, fechaNacimiento: fechaNac, telefono, ciudad,
-          genero, nacionalidad, email, password, rol: finalRol,
-          fotoCarnetUrl, fotoCedulaUrl, tituloEntrenadorUrl: tituloUrl,
-          tieneTitulo, razonSocial, ruc, comprobanteUrl,
-        }),
-      })
+      let res
+      try {
+        res = await fetch("/api/ct/auth/registro", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre, apellido, cedula, fechaNacimiento: fechaNac, telefono, ciudad,
+            genero, nacionalidad, email, password, rol: finalRol,
+            fotoCarnetUrl, fotoCedulaUrl, tituloEntrenadorUrl: tituloUrl,
+            tieneTitulo, razonSocial, ruc, comprobanteUrl,
+          }),
+        })
+      } catch {
+        toast({ variant: "destructive", title: "Error de conexión", description: "No se pudo conectar con el servidor. Verificá tu conexión a internet y probá de nuevo. (Error: CONN-02)", duration: 10000 })
+        setLoading(false); return
+      }
 
       if (!res.ok) {
-        const err = await res.json()
-        toast({ variant: "destructive", title: "Error", description: err.error }); return
+        const err = await res.json().catch(() => ({ error: "Error desconocido" }))
+        let userMsg = err.error || "Error al registrar"
+        if (userMsg.includes("already been registered") || userMsg.includes("email")) {
+          userMsg = "Ya existe una cuenta con ese email. Si ya te registraste, intentá iniciar sesión. (Error: REG-01)"
+        } else if (userMsg.includes("cédula") || userMsg.includes("cedula")) {
+          userMsg = "Ya existe un registro con esa cédula. Contactá a cpb@cpb.com.py si necesitás ayuda. (Error: REG-02)"
+        } else {
+          userMsg += " (Error: REG-03)"
+        }
+        toast({ variant: "destructive", title: "Error en el registro", description: userMsg, duration: 10000 }); return
       }
 
       const data = await res.json()
@@ -259,7 +282,7 @@ export default function RegistroCTPage() {
 
       router.push("/cuerpotecnico/login")
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Error al registrarse", description: err?.message || "Intentá de nuevo" })
+      toast({ variant: "destructive", title: "Error inesperado", description: "Ocurrió un problema. Intentá de nuevo o contactá a cpb@cpb.com.py. (Error: GEN-01)", duration: 10000 })
     } finally { setLoading(false) }
   }
 
