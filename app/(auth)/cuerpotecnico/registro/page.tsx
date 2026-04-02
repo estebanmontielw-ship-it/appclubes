@@ -333,9 +333,14 @@ export default function RegistroCTPage() {
               </label>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox id="titulo" checked={tieneTitulo} onCheckedChange={c => setTieneTitulo(c === true)} />
-              <label htmlFor="titulo" className="text-sm cursor-pointer">Tengo título de entrenador de básquetbol</label>
+            <div className="space-y-1">
+              <Label>¿Tenés título de entrenador? *</Label>
+              <select value={tieneTitulo ? "si" : "no"} onChange={e => setTieneTitulo(e.target.value === "si")}
+                className="w-full h-11 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                style={{ fontSize: "16px" }}>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
             </div>
             {tieneTitulo && (
               <div className="space-y-2">
