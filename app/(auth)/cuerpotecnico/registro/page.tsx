@@ -98,9 +98,18 @@ export default function RegistroCTPage() {
     setCarnetCroppedArea(croppedPixels)
   }, [])
 
+  const checkFileSize = (file: File, maxMB = 10): boolean => {
+    if (file.size > maxMB * 1024 * 1024) {
+      toast({ variant: "destructive", title: `El archivo "${file.name}" es muy grande`, description: `Máximo ${maxMB}MB. Tu archivo pesa ${(file.size / 1024 / 1024).toFixed(1)}MB. (Error: SIZE-01)` })
+      return false
+    }
+    return true
+  }
+
   const handleCarnetFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file || !file.type.startsWith("image/")) return
+    if (!checkFileSize(file)) return
     const reader = new FileReader()
     reader.onload = () => { setCarnetSrc(reader.result as string); setCarnetPreview(null) }
     reader.readAsDataURL(file)
@@ -190,28 +199,55 @@ export default function RegistroCTPage() {
   }
 
   const validateStep1 = () => {
-    if (!nombre || !apellido || !cedula || !fechaNac || !telefono || !ciudad || !genero || !nacionalidad || !email || !password) {
-      toast({ variant: "destructive", title: "Completá todos los campos" }); return false
+    if (!nombre.trim() || !apellido.trim()) {
+      toast({ variant: "destructive", title: "Ingresá tu nombre y apellido" }); return false
+    }
+    if (!cedula.trim() || !/^\d{5,10}$/.test(cedula.trim())) {
+      toast({ variant: "destructive", title: "Número de cédula inválido (5-10 dígitos)" }); return false
+    }
+    if (!fechaNac) {
+      toast({ variant: "destructive", title: "Seleccioná tu fecha de nacimiento" }); return false
+    }
+    if (!genero) {
+      toast({ variant: "destructive", title: "Seleccioná tu género" }); return false
+    }
+    if (!nacionalidad) {
+      toast({ variant: "destructive", title: "Seleccioná tu nacionalidad" }); return false
+    }
+    if (!telefono || telefono.replace(/\D/g, "").length < 8) {
+      toast({ variant: "destructive", title: "Ingresá un número de teléfono válido" }); return false
+    }
+    if (!ciudad) {
+      toast({ variant: "destructive", title: "Seleccioná tu ciudad" }); return false
+    }
+    if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      toast({ variant: "destructive", title: "Ingresá un email válido" }); return false
+    }
+    if (!password || password.length < 8) {
+      toast({ variant: "destructive", title: "La contraseña debe tener al menos 8 caracteres" }); return false
     }
     if (password !== confirmPassword) {
       toast({ variant: "destructive", title: "Las contraseñas no coinciden" }); return false
-    }
-    if (password.length < 8) {
-      toast({ variant: "destructive", title: "La contraseña debe tener al menos 8 caracteres" }); return false
     }
     return true
   }
 
   const validateStep2 = () => {
     if (!isPreverificado && !rol) { toast({ variant: "destructive", title: "Seleccioná tu rol" }); return false }
-    if (!fotoCedula) { toast({ variant: "destructive", title: "Subí la foto de tu cédula" }); return false }
     if (!fotoCarnet) { toast({ variant: "destructive", title: "Subí tu foto tipo carnet" }); return false }
+    if (!fotoCedula) { toast({ variant: "destructive", title: "Subí la foto de tu cédula" }); return false }
+    if (!isPreverificado && tieneTitulo && !tituloFile) {
+      toast({ variant: "destructive", title: "Adjuntá tu título de entrenador o seleccioná 'No'" }); return false
+    }
     return true
   }
 
   const handleSubmit = async () => {
     if (!confirmaDatos) {
       toast({ variant: "destructive", title: "Confirmá que los datos son verídicos" }); return
+    }
+    if (!isPreverificado && !comprobanteFile) {
+      toast({ variant: "destructive", title: "Subí el comprobante de transferencia" }); return
     }
 
     setLoading(true)
@@ -433,7 +469,7 @@ export default function RegistroCTPage() {
               <label className="flex flex-col items-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:border-primary/50">
                 <Upload className="h-6 w-6 text-muted-foreground mb-1" />
                 <span className="text-sm text-muted-foreground">{fotoCedula ? fotoCedula.name : "Seleccionar archivo"}</span>
-                <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => setFotoCedula(e.target.files?.[0] || null)} />
+                <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => { const f = e.target.files?.[0]; if (f && checkFileSize(f)) setFotoCedula(f) }} />
               </label>
             </div>
 
@@ -455,7 +491,7 @@ export default function RegistroCTPage() {
                     <label className="flex flex-col items-center border-2 border-dashed rounded-lg p-4 cursor-pointer hover:border-primary/50">
                       <Upload className="h-5 w-5 text-muted-foreground mb-1" />
                       <span className="text-xs text-muted-foreground">{tituloFile ? tituloFile.name : "Seleccionar archivo"}</span>
-                      <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => setTituloFile(e.target.files?.[0] || null)} />
+                      <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => { const f = e.target.files?.[0]; if (f && checkFileSize(f)) setTituloFile(f) }} />
                     </label>
                   </div>
                 )}
@@ -498,7 +534,7 @@ export default function RegistroCTPage() {
               <label className="flex flex-col items-center border-2 border-dashed rounded-lg p-5 cursor-pointer hover:border-primary/50">
                 <Upload className="h-6 w-6 text-muted-foreground mb-1" />
                 <span className="text-sm text-muted-foreground">{comprobanteFile ? comprobanteFile.name : "Subir comprobante"}</span>
-                <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => setComprobanteFile(e.target.files?.[0] || null)} />
+                <input type="file" className="hidden" accept="image/*,.pdf" onChange={e => { const f = e.target.files?.[0]; if (f && checkFileSize(f)) setComprobanteFile(f) }} />
               </label>
             </div>
 
