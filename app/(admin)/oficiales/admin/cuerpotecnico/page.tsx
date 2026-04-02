@@ -132,7 +132,7 @@ export default function AdminCTPage() {
                         ) : m.pagoVerificado ? (
                           <Badge variant="success" className="text-xs">Verificado</Badge>
                         ) : m.comprobanteUrl ? (
-                          <Badge variant="info" className="text-xs">Pendiente de aprobación</Badge>
+                          <Badge variant="secondary" className="text-xs">Pendiente de aprobación</Badge>
                         ) : (
                           <Badge variant="warning" className="text-xs">Sin pago</Badge>
                         )}
