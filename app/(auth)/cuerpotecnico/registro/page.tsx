@@ -114,17 +114,54 @@ export default function RegistroCTPage() {
     setCarnetSrc(null)
   }
 
-  const uploadFile = async (file: File, bucket: string): Promise<string | null> => {
+  // Compress image before upload
+  const compressImage = async (file: File): Promise<File> => {
+    if (!file.type.startsWith("image/") || file.type === "application/pdf") return file
+    if (file.size < 500000) return file // Skip if already under 500KB
+
+    return new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        const canvas = document.createElement("canvas")
+        const maxSize = 1200
+        let w = img.width, h = img.height
+        if (w > maxSize || h > maxSize) {
+          if (w > h) { h = (h / w) * maxSize; w = maxSize }
+          else { w = (w / h) * maxSize; h = maxSize }
+        }
+        canvas.width = w; canvas.height = h
+        canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
+        canvas.toBlob((blob) => {
+          resolve(blob ? new File([blob], file.name, { type: "image/jpeg" }) : file)
+        }, "image/jpeg", 0.7)
+      }
+      img.onerror = () => resolve(file)
+      img.src = URL.createObjectURL(file)
+    })
+  }
+
+  const uploadFile = async (file: File, bucket: string, retries = 2): Promise<string | null> => {
+    const compressed = await compressImage(file)
     const formData = new FormData()
-    formData.append("file", file)
+    formData.append("file", compressed)
     formData.append("bucket", bucket)
-    const res = await fetch("/api/upload", { method: "POST", body: formData })
-    if (!res.ok) {
-      const err = await res.json().catch(() => null)
-      throw new Error(err?.error || `Error al subir ${file.name}`)
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData })
+        if (!res.ok) {
+          const err = await res.json().catch(() => null)
+          throw new Error(err?.error || `Error al subir ${file.name}`)
+        }
+        const data = await res.json()
+        return data.url
+      } catch (err) {
+        if (attempt === retries) throw err
+        // Wait before retry
+        await new Promise(r => setTimeout(r, 1500 * (attempt + 1)))
+      }
     }
-    const data = await res.json()
-    return data.url
+    return null
   }
 
   // Check if pre-registered when moving to step 2
