@@ -327,7 +327,7 @@ export default function RegistroCTPage() {
                 <Select value={rol} onValueChange={setRol}>
                   <SelectTrigger><SelectValue placeholder="Seleccioná tu rol" /></SelectTrigger>
                   <SelectContent>
-                    {ROLES_CT.map(r => <SelectItem key={r.value} value={r.value}>{r.label} — {r.precio}</SelectItem>)}
+                    {ROLES_CT.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
