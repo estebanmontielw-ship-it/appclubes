@@ -222,7 +222,50 @@ export default function RegistroCTPage() {
               </div>
               <div className="space-y-1">
                 <Label>Nacionalidad *</Label>
-                <Input value={nacionalidad} onChange={e => setNacionalidad(e.target.value)} placeholder="Paraguaya" />
+                <select value={nacionalidad} onChange={e => setNacionalidad(e.target.value)}
+                  className="w-full h-11 px-3 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                  style={{ fontSize: "16px" }}>
+                  <option value="">Seleccionar nacionalidad</option>
+                  <optgroup label="Sudamérica">
+                    <option value="Paraguaya">Paraguaya</option>
+                    <option value="Argentina">Argentina</option>
+                    <option value="Brasileña">Brasileña</option>
+                    <option value="Uruguaya">Uruguaya</option>
+                    <option value="Boliviana">Boliviana</option>
+                    <option value="Chilena">Chilena</option>
+                    <option value="Peruana">Peruana</option>
+                    <option value="Colombiana">Colombiana</option>
+                    <option value="Ecuatoriana">Ecuatoriana</option>
+                    <option value="Venezolana">Venezolana</option>
+                  </optgroup>
+                  <optgroup label="Norteamérica y Centroamérica">
+                    <option value="Estadounidense">Estadounidense</option>
+                    <option value="Mexicana">Mexicana</option>
+                    <option value="Canadiense">Canadiense</option>
+                    <option value="Puertorriqueña">Puertorriqueña</option>
+                    <option value="Dominicana">Dominicana</option>
+                    <option value="Cubana">Cubana</option>
+                    <option value="Panameña">Panameña</option>
+                  </optgroup>
+                  <optgroup label="Europa">
+                    <option value="Española">Española</option>
+                    <option value="Italiana">Italiana</option>
+                    <option value="Alemana">Alemana</option>
+                    <option value="Francesa">Francesa</option>
+                    <option value="Portuguesa">Portuguesa</option>
+                    <option value="Británica">Británica</option>
+                    <option value="Croata">Croata</option>
+                    <option value="Serbia">Serbia</option>
+                    <option value="Lituana">Lituana</option>
+                  </optgroup>
+                  <optgroup label="Otras">
+                    <option value="Japonesa">Japonesa</option>
+                    <option value="Coreana">Coreana</option>
+                    <option value="China">China</option>
+                    <option value="Australiana">Australiana</option>
+                    <option value="Otra">Otra</option>
+                  </optgroup>
+                </select>
               </div>
             </div>
             <div className="space-y-1"><Label>Teléfono *</Label><Input value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="0981..." /></div>
