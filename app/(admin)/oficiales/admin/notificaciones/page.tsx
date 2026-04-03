@@ -134,7 +134,7 @@ export default function AdminNotificacionesPage() {
           ? `Se envió ${parts.join(" y ")} a ${data.total} destinatarios`
           : `Notificación guardada para ${data.total} destinatarios`
         const warning = data.emailSkipped > 0
-          ? ` (${data.emailSkipped} emails no se enviaron — verificá RESEND_API_KEY en Vercel)`
+          ? ` (${data.emailSkipped} emails fallaron — revisá Resend → Logs para ver los errores)`
           : ""
         toast({
           title: parts.length > 0 ? "Enviado" : "Atención",
