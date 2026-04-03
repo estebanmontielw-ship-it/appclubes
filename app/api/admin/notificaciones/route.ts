@@ -5,6 +5,34 @@ import { NextResponse } from "next/server"
 import { createNotificacion } from "@/lib/notifications"
 import { sendEmail } from "@/lib/email"
 
+// Envía emails en lotes de 5 con 1.2s de pausa entre lotes (límite Resend: 5/seg)
+async function sendEmailsBatched(
+  recipients: { email: string; nombre: string }[],
+  subject: string,
+  body: string
+): Promise<number> {
+  const BATCH_SIZE = 5
+  const DELAY_MS = 1200
+  let sent = 0
+
+  for (let i = 0; i < recipients.length; i += BATCH_SIZE) {
+    const batch = recipients.slice(i, i + BATCH_SIZE)
+    const results = await Promise.allSettled(
+      batch.map((r) =>
+        sendEmail({ to: r.email, subject, nombre: r.nombre, body, type: "info" })
+      )
+    )
+    sent += results.filter((r) => r.status === "fulfilled" && r.value !== null).length
+
+    // Pausa entre lotes (excepto el último)
+    if (i + BATCH_SIZE < recipients.length) {
+      await new Promise((resolve) => setTimeout(resolve, DELAY_MS))
+    }
+  }
+
+  return sent
+}
+
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies()
@@ -117,36 +145,17 @@ export async function POST(request: Request) {
       notifSent += ctUsers.length
     }
 
-    // Send emails
+    // Send emails in batches to respect Resend rate limit (5/sec)
     if (shouldEmail) {
-      const results = await Promise.allSettled(
-        users.map((user) =>
-          sendEmail({
-            to: user.email,
-            subject: titulo,
-            nombre: user.nombre,
-            body: mensaje.replace(/\n/g, "<br>"),
-            type: "info",
-          })
-        )
+      const allRecipients = [
+        ...users.map((u) => ({ email: u.email, nombre: u.nombre })),
+        ...ctUsers.map((ct) => ({ email: ct.email, nombre: ct.nombre })),
+      ]
+      emailSent = await sendEmailsBatched(
+        allRecipients,
+        titulo,
+        mensaje.replace(/\n/g, "<br>")
       )
-      emailSent = results.filter((r) => r.status === "fulfilled" && r.value !== null).length
-    }
-
-    // Send emails to CT users
-    if (shouldEmail && ctUsers.length > 0) {
-      const ctResults = await Promise.allSettled(
-        ctUsers.map((ct) =>
-          sendEmail({
-            to: ct.email,
-            subject: titulo,
-            nombre: ct.nombre,
-            body: mensaje.replace(/\n/g, "<br>"),
-            type: "info",
-          })
-        )
-      )
-      emailSent += ctResults.filter((r) => r.status === "fulfilled" && r.value !== null).length
     }
 
     const total = users.length + ctUsers.length
