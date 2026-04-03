@@ -42,6 +42,7 @@ function getNavSections(
 ): NavSection[] {
   const isSuperAdmin = roles.includes("SUPER_ADMIN")
   const isInstructor = roles.includes("INSTRUCTOR")
+  const isVerificador = roles.includes("VERIFICADOR")
 
   if (isSuperAdmin) {
     return [
@@ -135,6 +136,25 @@ function getNavSections(
         label: "ASISTENTE IA",
         items: [
           { label: "CPB Bot", href: "/oficiales/admin/asistente", icon: Bot },
+        ],
+      },
+    ]
+  }
+
+  if (isVerificador) {
+    return [
+      {
+        label: "OFICIALES",
+        items: [
+          {
+            label: "Oficiales",
+            icon: Users,
+            subItems: [
+              { label: "Dashboard", href: "/oficiales/admin/usuarios/dashboard" },
+              { label: "Todos", href: "/oficiales/admin/usuarios" },
+              { label: "Pendientes", href: "/oficiales/admin/usuarios?estado=PENDIENTE", badge: badges.pendientesUsuarios },
+            ],
+          },
         ],
       },
     ]

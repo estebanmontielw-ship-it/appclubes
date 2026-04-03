@@ -51,6 +51,15 @@ export default function AdminUsuarioDetallePage() {
   const [motivoRechazo, setMotivoRechazo] = useState("")
   const [viewingImage, setViewingImage] = useState<string | null>(null)
   const [showCarnet, setShowCarnet] = useState(false)
+  const [myRoles, setMyRoles] = useState<string[]>([])
+
+  useEffect(() => {
+    fetch("/api/me").then(r => r.json()).then(d => {
+      setMyRoles(d.usuario?.roles?.map((r: any) => r.rol) ?? [])
+    }).catch(() => {})
+  }, [])
+
+  const isVerificador = myRoles.includes("VERIFICADOR") && !myRoles.includes("SUPER_ADMIN")
 
   const loadUser = () => {
     fetch(`/api/admin/usuarios/${params.id}`)
@@ -318,7 +327,7 @@ export default function AdminUsuarioDetallePage() {
             <CardTitle>Acciones</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {showRechazoForm ? (
+            {!isVerificador && showRechazoForm ? (
               <div className="space-y-3">
                 <div className="space-y-2">
                   <Label htmlFor="motivo">Motivo del rechazo *</Label>
@@ -330,21 +339,11 @@ export default function AdminUsuarioDetallePage() {
                   />
                 </div>
                 <div className="flex gap-3">
-                  <Button
-                    variant="destructive"
-                    onClick={() => handleAction("rechazar")}
-                    disabled={loading}
-                  >
+                  <Button variant="destructive" onClick={() => handleAction("rechazar")} disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Confirmar rechazo
                   </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowRechazoForm(false)
-                      setMotivoRechazo("")
-                    }}
-                  >
+                  <Button variant="outline" onClick={() => { setShowRechazoForm(false); setMotivoRechazo("") }}>
                     Cancelar
                   </Button>
                 </div>
@@ -354,45 +353,35 @@ export default function AdminUsuarioDetallePage() {
                 <Button
                   onClick={() => handleAction("verificar")}
                   disabled={loading}
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 flex-1 sm:flex-none py-3 text-base"
                 >
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <CheckCircle className="mr-2 h-4 w-4" />
+                  <CheckCircle className="mr-2 h-5 w-5" />
                   Verificar
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowRechazoForm(true)}
-                  disabled={loading}
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Rechazar
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => handleAction("suspender")}
-                  disabled={loading}
-                >
-                  <Ban className="mr-2 h-4 w-4" />
-                  Suspender
-                </Button>
+                {!isVerificador && (
+                  <>
+                    <Button variant="destructive" onClick={() => setShowRechazoForm(true)} disabled={loading}>
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Rechazar
+                    </Button>
+                    <Button variant="outline" onClick={() => handleAction("suspender")} disabled={loading}>
+                      <Ban className="mr-2 h-4 w-4" />
+                      Suspender
+                    </Button>
+                  </>
+                )}
               </div>
             )}
           </CardContent>
         </Card>
       )}
 
-      {usuario.estadoVerificacion === "VERIFICADO" && (
+      {usuario.estadoVerificacion === "VERIFICADO" && !isVerificador && (
         <Card>
-          <CardHeader>
-            <CardTitle>Acciones</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Acciones</CardTitle></CardHeader>
           <CardContent>
-            <Button
-              variant="outline"
-              onClick={() => handleAction("suspender")}
-              disabled={loading}
-            >
+            <Button variant="outline" onClick={() => handleAction("suspender")} disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               <Ban className="mr-2 h-4 w-4" />
               Suspender usuario
@@ -400,8 +389,9 @@ export default function AdminUsuarioDetallePage() {
           </CardContent>
         </Card>
       )}
-      {/* Role management */}
-      {usuario.estadoVerificacion === "VERIFICADO" && (
+
+      {/* Role management — solo SUPER_ADMIN */}
+      {usuario.estadoVerificacion === "VERIFICADO" && !isVerificador && (
         <RoleManager usuarioId={usuario.id} currentRoles={usuario.roles.map((r) => r.rol)} onUpdate={loadUser} />
       )}
     </div>
@@ -413,6 +403,7 @@ function RoleManager({ usuarioId, currentRoles, onUpdate }: { usuarioId: string;
   const [saving, setSaving] = useState(false)
 
   const adminRoles = [
+    { rol: "VERIFICADOR", label: "Verificador", desc: "Puede ver y verificar oficiales pendientes desde su celular" },
     { rol: "INSTRUCTOR", label: "Instructor", desc: "Puede crear y gestionar cursos, revisar exámenes" },
     { rol: "DESIGNADOR", label: "Designador", desc: "Puede crear partidos y designar oficiales" },
   ]

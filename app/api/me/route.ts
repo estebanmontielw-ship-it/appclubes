@@ -32,7 +32,7 @@ export async function GET() {
     })
 
     // If admin, count pending users and payments
-    const isAdmin = usuario.roles.some((r) => r.rol === "SUPER_ADMIN" || r.rol === "INSTRUCTOR")
+    const isAdmin = usuario.roles.some((r) => ["SUPER_ADMIN", "INSTRUCTOR", "VERIFICADOR"].includes(r.rol))
     let pendingUsers = 0
     let pendingPayments = 0
     let pendingCT = 0

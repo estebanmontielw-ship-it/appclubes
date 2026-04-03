@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     const adminRoles = await prisma.usuarioRol.findMany({
       where: {
         usuarioId: session.user.id,
-        rol: { in: ["SUPER_ADMIN", "INSTRUCTOR"] },
+        rol: { in: ["SUPER_ADMIN", "INSTRUCTOR", "VERIFICADOR"] },
       },
     })
 

@@ -30,7 +30,7 @@ export async function GET(
     const adminRoles = await prisma.usuarioRol.findMany({
       where: {
         usuarioId: session.user.id,
-        rol: { in: ["SUPER_ADMIN", "INSTRUCTOR"] },
+        rol: { in: ["SUPER_ADMIN", "INSTRUCTOR", "VERIFICADOR"] },
       },
     })
 
@@ -77,24 +77,28 @@ export async function PATCH(
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })
     }
 
-    const adminRoles = await prisma.usuarioRol.findMany({
+    const adminRolesCheck = await prisma.usuarioRol.findMany({
       where: {
         usuarioId: session.user.id,
-        rol: "SUPER_ADMIN",
+        rol: { in: ["SUPER_ADMIN", "VERIFICADOR"] },
       },
     })
 
-    if (adminRoles.length === 0) {
-      return NextResponse.json(
-        { error: "Solo SUPER_ADMIN puede verificar" },
-        { status: 403 }
-      )
+    if (adminRolesCheck.length === 0) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
     }
+
+    const isVerificador = adminRolesCheck.some((r) => r.rol === "VERIFICADOR") &&
+      !adminRolesCheck.some((r) => r.rol === "SUPER_ADMIN")
 
     const { accion, motivoRechazo } = await request.json()
 
     if (!["verificar", "rechazar", "suspender"].includes(accion)) {
       return NextResponse.json({ error: "Acción inválida" }, { status: 400 })
+    }
+
+    if (isVerificador && accion !== "verificar") {
+      return NextResponse.json({ error: "Solo podés verificar usuarios" }, { status: 403 })
     }
 
     let updateData: Record<string, unknown> = {}
