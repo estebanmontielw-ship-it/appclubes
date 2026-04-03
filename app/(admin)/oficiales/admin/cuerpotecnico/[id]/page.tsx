@@ -132,12 +132,12 @@ export default function CuerpoTecnicoDetailPage() {
         <ArrowLeft className="h-4 w-4" /> Volver a Cuerpo Técnico
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">{ct.nombre} {ct.apellido}</h1>
-          <p className="text-sm text-gray-500">{rolLabels[ct.rol] || ct.rol} · CI: {ct.cedula}</p>
+      <div className="flex items-start justify-between gap-3 mb-6">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold leading-tight">{ct.nombre} {ct.apellido}</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{rolLabels[ct.rol] || ct.rol} · CI: {ct.cedula}</p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${estadoColors[ct.estadoHabilitacion]}`}>
+        <span className={`shrink-0 px-3 py-1 rounded-full text-xs font-semibold ${estadoColors[ct.estadoHabilitacion]}`}>
           {ct.estadoHabilitacion}
         </span>
       </div>
@@ -314,19 +314,19 @@ export default function CuerpoTecnicoDetailPage() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2">
               <button onClick={() => handleAction("habilitar")} disabled={saving}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
                 <Check className="h-4 w-4" /> Habilitar
               </button>
               {!ct.pagoVerificado && (
                 <button onClick={() => handleAction("verificar_pago")} disabled={saving}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
                   <Check className="h-4 w-4" /> Verificar pago
                 </button>
               )}
               <button onClick={() => setShowRechazo(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-100 text-red-700 text-sm font-semibold hover:bg-red-200">
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-100 text-red-700 text-sm font-semibold hover:bg-red-200">
                 <X className="h-4 w-4" /> Rechazar
               </button>
             </div>
