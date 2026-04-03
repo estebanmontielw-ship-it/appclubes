@@ -15,7 +15,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Save } from "lucide-react"
+import { Loader2, Save, ShieldCheck } from "lucide-react"
+import Link from "next/link"
 import { ProfileSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS, CIUDADES_PY } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
@@ -110,6 +111,19 @@ export default function PerfilPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-2xl font-bold">Mi perfil</h1>
+
+      {perfil.roles.some((r) => r.rol === "VERIFICADOR") && (
+        <Link href="/oficiales/admin/usuarios?estado=PENDIENTE">
+          <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors">
+            <ShieldCheck className="h-5 w-5 text-blue-600 shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-blue-800">Tenés acceso al panel de verificación</p>
+              <p className="text-xs text-blue-600">Tocá para ver los oficiales pendientes</p>
+            </div>
+            <span className="text-blue-400 text-lg">›</span>
+          </div>
+        </Link>
+      )}
 
       <Card>
         <CardHeader>

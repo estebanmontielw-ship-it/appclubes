@@ -144,7 +144,15 @@ function getNavSections(
   if (isVerificador) {
     return [
       {
-        label: "OFICIALES",
+        label: "MI CUENTA",
+        items: [
+          { label: "Inicio", href: "/oficiales", icon: Home },
+          { label: "Mi perfil", href: "/oficiales/perfil", icon: User },
+          { label: "Mi carnet", href: "/oficiales/carnet", icon: CreditCard },
+        ],
+      },
+      {
+        label: "VERIFICACIÓN",
         items: [
           {
             label: "Oficiales",
