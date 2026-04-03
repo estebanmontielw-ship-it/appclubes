@@ -130,7 +130,7 @@ export default function NotificacionesPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">Notificaciones</h1>
           {unreadCount > 0 && (
@@ -138,7 +138,7 @@ export default function NotificacionesPage() {
           )}
         </div>
         {unreadCount > 0 && (
-          <Button variant="outline" size="sm" onClick={handleMarkAllRead}>
+          <Button variant="outline" size="sm" onClick={handleMarkAllRead} className="self-start sm:self-auto">
             <CheckCheck className="mr-2 h-4 w-4" />
             Marcar todas como leídas
           </Button>
