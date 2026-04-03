@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, Suspense } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -54,15 +54,25 @@ const estadoColor: Record<string, "success" | "warning" | "destructive" | "secon
 
 function AdminCTContent() {
   const searchParams = useSearchParams()
-  const estadoUrl = searchParams.get("estado") || ""
+  const router = useRouter()
+
+  // URL es la fuente de verdad
+  const eliminados = searchParams.get("eliminados") === "true"
+  const filtro = eliminados ? "ELIMINADOS" : (searchParams.get("estado") || "")
 
   const [miembros, setMiembros] = useState<CTMember[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [filtro, setFiltro] = useState(estadoUrl)
   const [buscar, setBuscar] = useState("")
   const [confirmDelete, setConfirmDelete] = useState<CTMember | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+
+  const setFiltro = (value: string) => {
+    const base = "/oficiales/admin/cuerpotecnico"
+    if (value === "ELIMINADOS") router.push(`${base}?eliminados=true`)
+    else if (value) router.push(`${base}?estado=${value}`)
+    else router.push(base)
+  }
 
   const fetchData = () => {
     setLoading(true)
