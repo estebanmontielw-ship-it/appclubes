@@ -7,7 +7,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
+    const session = _su ? { user: _su } : null
 
     if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
@@ -28,7 +29,8 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
+    const session = _su ? { user: _su } : null
 
     if (!session?.user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 

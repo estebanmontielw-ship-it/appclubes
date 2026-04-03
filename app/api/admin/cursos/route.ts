@@ -23,7 +23,8 @@ export async function POST(request: Request) {
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
-    const { data: { session } } = await supabase.auth.getSession()
+    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
+    const session = _su ? { user: _su } : null
 
     if (!session?.user) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 })

@@ -119,7 +119,8 @@ async function callAI(userPrompt: string, maxTokens = 2000) {
 async function checkAdmin() {
   const cookieStore = cookies()
   const supabase = createClient(cookieStore)
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
+    const session = _su ? { user: _su } : null
 
   if (!session?.user) return false
 
