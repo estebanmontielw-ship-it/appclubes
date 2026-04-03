@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Send, Bell, Mail, FileText, Search } from "lucide-react"
+import { Loader2, Send, Bell, Mail, FileText, Search, Sparkles, Wand2 } from "lucide-react"
 
 const DESTINATARIOS = [
   { value: "TODOS", label: "Todos los oficiales" },
@@ -74,6 +74,8 @@ export default function AdminNotificacionesPage() {
   const [busqueda, setBusqueda] = useState("")
   const [resultados, setResultados] = useState<any[]>([])
   const [buscando, setBuscando] = useState(false)
+  const [instruccionIA, setInstruccionIA] = useState("")
+  const [generandoIA, setGenerandoIA] = useState(false)
 
   const buscarUsuario = async (q: string) => {
     setBusqueda(q)
@@ -97,6 +99,35 @@ export default function AdminNotificacionesPage() {
   const handlePlantilla = (plantilla: typeof PLANTILLAS[0]) => {
     setTitulo(plantilla.titulo)
     setMensaje(plantilla.mensaje)
+  }
+
+  const generarConIA = async () => {
+    if (!instruccionIA.trim()) {
+      toast({ variant: "destructive", title: "Describí qué querés comunicar" })
+      return
+    }
+    setGenerandoIA(true)
+    try {
+      const destinatarioLabel = DESTINATARIOS.find(d => d.value === destinatarios)?.label || ""
+      const res = await fetch("/api/ai/comunicado", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruccion: instruccionIA, destinatarios: destinatarioLabel }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setTitulo(data.titulo)
+        setMensaje(data.mensaje)
+        toast({ title: "Comunicado generado", description: "Revisá y editá antes de enviar." })
+      } else {
+        const err = await res.json()
+        toast({ variant: "destructive", title: "Error", description: err.error })
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Error de conexión" })
+    } finally {
+      setGenerandoIA(false)
+    }
   }
 
   const handleSend = async () => {
@@ -181,6 +212,32 @@ export default function AdminNotificacionesPage() {
               </button>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Generador IA */}
+      <Card className="border-purple-100 bg-gradient-to-br from-purple-50/50 to-white">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-purple-500" /> Generar con IA
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">Describí brevemente qué querés comunicar y la IA redacta el título y mensaje.</p>
+          <textarea
+            className="flex min-h-[80px] w-full rounded-lg border border-input bg-background px-3.5 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            placeholder="Ej: Informar a los árbitros que el torneo clausura empieza el 15 de abril y deben confirmar disponibilidad..."
+            value={instruccionIA}
+            onChange={(e) => setInstruccionIA(e.target.value)}
+          />
+          <Button onClick={generarConIA} disabled={generandoIA} variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50">
+            {generandoIA ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Wand2 className="mr-2 h-4 w-4" />
+            )}
+            {generandoIA ? "Generando..." : "Generar comunicado"}
+          </Button>
         </CardContent>
       </Card>
 
