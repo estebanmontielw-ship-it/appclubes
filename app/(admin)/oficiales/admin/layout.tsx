@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import Sidebar from "@/components/layout/Sidebar"
 import Navbar from "@/components/layout/Navbar"
@@ -78,14 +78,16 @@ export default function AdminLayout({
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar
-        roles={roles}
-        onLogout={handleLogout}
-        pendingUsers={pendingUsers}
-        pendingPayments={pendingPayments}
-        pendingCT={pendingCT}
-        unreadNotifications={unreadCount}
-      />
+      <Suspense fallback={null}>
+        <Sidebar
+          roles={roles}
+          onLogout={handleLogout}
+          pendingUsers={pendingUsers}
+          pendingPayments={pendingPayments}
+          pendingCT={pendingCT}
+          unreadNotifications={unreadCount}
+        />
+      </Suspense>
 
       <div
         className={`fixed inset-0 z-50 md:hidden transition-opacity duration-200 ${
@@ -98,16 +100,18 @@ export default function AdminLayout({
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
         >
-          <Sidebar
-            roles={roles}
-            onLogout={handleLogout}
-            mobile
-            onNavigate={() => setMenuOpen(false)}
-            pendingUsers={pendingUsers}
-            pendingPayments={pendingPayments}
-            pendingCT={pendingCT}
-            unreadNotifications={unreadCount}
-          />
+          <Suspense fallback={null}>
+            <Sidebar
+              roles={roles}
+              onLogout={handleLogout}
+              mobile
+              onNavigate={() => setMenuOpen(false)}
+              pendingUsers={pendingUsers}
+              pendingPayments={pendingPayments}
+              pendingCT={pendingCT}
+              unreadNotifications={unreadCount}
+            />
+          </Suspense>
         </div>
       </div>
 
