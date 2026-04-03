@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   Home, User, CreditCard, BookOpen, FileText,
@@ -202,6 +202,8 @@ function NavItemConSub({
   pathname: string
   onNavigate?: () => void
 }) {
+  const searchParams = useSearchParams()
+  const currentSearch = searchParams.toString() ? `?${searchParams.toString()}` : ""
   const isActiveParent = item.subItems?.some((s) => pathname.startsWith(s.href.split("?")[0]))
   const [open, setOpen] = useState(isActiveParent ?? false)
   const totalBadge = item.subItems?.reduce((acc, s) => acc + (s.badge ?? 0), 0) ?? 0
@@ -242,10 +244,9 @@ function NavItemConSub({
           {item.subItems?.map((sub) => {
             const subPath = sub.href.split("?")[0]
             const subQuery = sub.href.includes("?") ? sub.href.split("?")[1] : null
-            const currentUrl = typeof window !== "undefined" ? window.location.search : ""
             const isActive = subQuery
-              ? pathname === subPath && currentUrl.includes(subQuery)
-              : pathname === subPath && !currentUrl.includes("estado=")
+              ? pathname === subPath && currentSearch.includes(subQuery)
+              : pathname === subPath && !currentSearch.includes("estado=")
             return (
               <Link
                 key={sub.href}

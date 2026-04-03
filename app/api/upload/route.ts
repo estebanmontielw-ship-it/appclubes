@@ -47,7 +47,13 @@ export async function POST(request: Request) {
         contentType = "image/jpeg"
       } catch (err) {
         console.error("Image conversion error:", err)
-        // If sharp fails, try uploading as-is
+        if (isHeic) {
+          return NextResponse.json(
+            { error: "No se pudo procesar la imagen HEIC. Por favor convertí la foto a JPG o PNG antes de subirla." },
+            { status: 400 }
+          )
+        }
+        // For non-HEIC images, upload as-is
       }
     }
 
