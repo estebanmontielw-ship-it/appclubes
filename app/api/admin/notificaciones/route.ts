@@ -39,7 +39,7 @@ export async function POST(request: Request) {
 
     // Get target users based on selection
     let users: { id: string; email: string; nombre: string }[] = []
-    let ctUsers: { email: string; nombre: string }[] = [] // CT don't have notificaciones table yet
+    let ctUsers: { id: string; email: string; nombre: string }[] = []
 
     const selectFields = { id: true, email: true, nombre: true }
 
@@ -62,21 +62,17 @@ export async function POST(request: Request) {
         select: selectFields,
       })
     } else if (destinatarios === "CT_TODOS") {
-      const cts = await prisma.cuerpoTecnico.findMany({ select: { email: true, nombre: true } })
-      ctUsers = cts
+      ctUsers = await prisma.cuerpoTecnico.findMany({ select: { id: true, email: true, nombre: true } })
     } else if (destinatarios === "CT_HABILITADOS") {
-      const cts = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "HABILITADO" }, select: { email: true, nombre: true } })
-      ctUsers = cts
+      ctUsers = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "HABILITADO" }, select: { id: true, email: true, nombre: true } })
     } else if (destinatarios === "CT_PENDIENTES") {
-      const cts = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "PENDIENTE" }, select: { email: true, nombre: true } })
-      ctUsers = cts
+      ctUsers = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "PENDIENTE" }, select: { id: true, email: true, nombre: true } })
     } else if (destinatarios === "USUARIO_ESPECIFICO" && emailEspecifico) {
-      // Search in both tables
       const oficial = await prisma.usuario.findFirst({ where: { email: emailEspecifico }, select: selectFields })
       if (oficial) {
         users = [oficial]
       } else {
-        const ct = await prisma.cuerpoTecnico.findFirst({ where: { email: emailEspecifico }, select: { email: true, nombre: true } })
+        const ct = await prisma.cuerpoTecnico.findFirst({ where: { email: emailEspecifico }, select: { id: true, email: true, nombre: true } })
         if (ct) ctUsers = [ct]
       }
     } else if (destinatarios.startsWith("USER_")) {
@@ -102,6 +98,24 @@ export async function POST(request: Request) {
         )
       )
       notifSent = results.filter((r) => r.status === "fulfilled").length
+    }
+
+    // Send internal notifications to CT
+    if (shouldNotify && ctUsers.length > 0) {
+      await Promise.allSettled(
+        ctUsers.map((ct) =>
+          prisma.notificacionCT.create({
+            data: {
+              ctId: ct.id,
+              tipo: "MENSAJE_ADMIN",
+              titulo,
+              mensaje,
+              enviadoPor: session.user.id,
+            },
+          })
+        )
+      )
+      notifSent += ctUsers.length
     }
 
     // Send emails

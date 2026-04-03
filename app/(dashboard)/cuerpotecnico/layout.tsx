@@ -29,6 +29,7 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const [ct, setCt] = useState<any>(null)
+  const [unread, setUnread] = useState(0)
   const [loading, setLoading] = useState(true)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [comingSoonMsg, setComingSoonMsg] = useState<{ label: string; desc: string } | null>(null)
@@ -36,7 +37,7 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetch("/api/ct/me")
       .then(r => { if (!r.ok) throw new Error(); return r.json() })
-      .then(data => setCt(data.ct))
+      .then(data => { setCt(data.ct); setUnread(data.unreadNotifications || 0) })
       .catch(() => router.push("/cuerpotecnico/login"))
       .finally(() => setLoading(false))
   }, [router])
@@ -75,7 +76,12 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
                 isActive ? "bg-primary text-white shadow-sm" : "text-gray-600 hover:bg-gray-50"
               }`}>
               <item.icon className={`h-[18px] w-[18px] shrink-0 ${isActive ? "text-white" : "text-gray-400"}`} />
-              <span>{item.label}</span>
+              <span className="flex-1">{item.label}</span>
+              {item.href === "/cuerpotecnico/notificaciones" && unread > 0 && (
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isActive ? "bg-white text-primary" : "bg-primary text-white"}`}>
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )}
             </Link>
           )
         })}
