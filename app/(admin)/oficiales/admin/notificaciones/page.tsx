@@ -130,9 +130,16 @@ export default function AdminNotificacionesPage() {
         const parts = []
         if (data.notifSent > 0) parts.push(`${data.notifSent} notificaciones`)
         if (data.emailSent > 0) parts.push(`${data.emailSent} emails`)
+        const desc = parts.length > 0
+          ? `Se envió ${parts.join(" y ")} a ${data.total} destinatarios`
+          : `Notificación guardada para ${data.total} destinatarios`
+        const warning = data.emailSkipped > 0
+          ? ` (${data.emailSkipped} emails no se enviaron — verificá RESEND_API_KEY en Vercel)`
+          : ""
         toast({
-          title: "Enviado",
-          description: `Se envió ${parts.join(" y ")} a ${data.total} usuarios`,
+          title: parts.length > 0 ? "Enviado" : "Atención",
+          description: desc + warning,
+          variant: data.emailSkipped > 0 ? "destructive" : "default",
         })
         setTitulo("")
         setMensaje("")

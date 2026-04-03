@@ -117,10 +117,10 @@ export async function POST(request: Request) {
           })
         )
       )
-      emailSent = results.filter((r) => r.status === "fulfilled").length
+      emailSent = results.filter((r) => r.status === "fulfilled" && r.value !== null).length
     }
 
-    // Send emails to CT users (they don't have internal notifications yet)
+    // Send emails to CT users
     if (shouldEmail && ctUsers.length > 0) {
       const ctResults = await Promise.allSettled(
         ctUsers.map((ct) =>
@@ -133,7 +133,7 @@ export async function POST(request: Request) {
           })
         )
       )
-      emailSent += ctResults.filter((r) => r.status === "fulfilled").length
+      emailSent += ctResults.filter((r) => r.status === "fulfilled" && r.value !== null).length
     }
 
     const total = users.length + ctUsers.length
@@ -142,6 +142,7 @@ export async function POST(request: Request) {
       notifSent,
       emailSent,
       total,
+      emailSkipped: shouldEmail ? (users.length + ctUsers.length) - emailSent : 0,
     })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })
