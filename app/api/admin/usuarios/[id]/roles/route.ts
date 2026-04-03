@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { emailRolVerificadorAsignado } from "@/lib/email"
 
 export async function POST(
   request: Request,
@@ -35,6 +36,16 @@ export async function POST(
         create: { usuarioId: params.id, rol },
         update: {},
       })
+
+      if (rol === "VERIFICADOR") {
+        const usuario = await prisma.usuario.findUnique({
+          where: { id: params.id },
+          select: { email: true, nombre: true },
+        })
+        if (usuario) {
+          await emailRolVerificadorAsignado(usuario.email, usuario.nombre)
+        }
+      }
     } else if (accion === "quitar") {
       await prisma.usuarioRol.deleteMany({
         where: { usuarioId: params.id, rol },

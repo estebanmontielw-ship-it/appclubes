@@ -213,6 +213,18 @@ export async function emailPagoConfirmado(
   })
 }
 
+export async function emailRolVerificadorAsignado(to: string, nombre: string) {
+  return sendEmail({
+    to,
+    subject: "Fuiste asignado como Verificador — CPB Oficiales",
+    nombre,
+    type: "info",
+    body: "La Confederación Paraguaya de Básquetbol te asignó el rol de <strong>Verificador</strong> en el portal CPB Oficiales.<br><br>Con este rol podés ingresar al panel de verificación y revisar las solicitudes de oficiales pendientes desde tu celular.<br><br>Lo encontrás en el menú lateral, sección <strong>Verificación</strong>.",
+    ctaText: "Ir al panel de verificación",
+    ctaUrl: `${BASE_URL}/oficiales/admin/usuarios?estado=PENDIENTE`,
+  })
+}
+
 export async function emailPagoRechazado(
   to: string,
   nombre: string,
