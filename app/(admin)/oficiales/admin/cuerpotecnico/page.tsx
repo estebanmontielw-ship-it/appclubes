@@ -1,13 +1,18 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Search, Eye, Users, UserCheck, Clock, DollarSign } from "lucide-react"
-import { formatDate } from "@/lib/utils"
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel,
+  AlertDialogContent, AlertDialogDescription, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Search, Users, UserCheck, Clock, DollarSign, Trash2, RotateCcw } from "lucide-react"
 import { PageSkeleton } from "@/components/ui/skeleton"
 
 interface CTMember {
@@ -23,6 +28,7 @@ interface CTMember {
   comprobanteUrl: string | null
   montoHabilitacion: number
   createdAt: string
+  activo: boolean
 }
 
 const ROL_LABELS: Record<string, string> = {
@@ -39,19 +45,34 @@ const TABS = [
   { label: "Pendientes", value: "PENDIENTE" },
   { label: "Habilitados", value: "HABILITADO" },
   { label: "Rechazados", value: "RECHAZADO" },
+  { label: "Eliminados", value: "ELIMINADOS" },
 ]
 
-export default function AdminCTPage() {
+const estadoColor: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
+  HABILITADO: "success", PENDIENTE: "warning", RECHAZADO: "destructive", SUSPENDIDO: "secondary",
+}
+
+function AdminCTContent() {
+  const searchParams = useSearchParams()
+  const estadoUrl = searchParams.get("estado") || ""
+
   const [miembros, setMiembros] = useState<CTMember[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [filtro, setFiltro] = useState("")
+  const [filtro, setFiltro] = useState(estadoUrl)
   const [buscar, setBuscar] = useState("")
+  const [confirmDelete, setConfirmDelete] = useState<CTMember | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
 
-  useEffect(() => {
+  const fetchData = () => {
     setLoading(true)
     const params = new URLSearchParams()
-    if (filtro) params.set("estado", filtro)
+    if (filtro === "ELIMINADOS") {
+      params.set("eliminados", "true")
+    } else if (filtro) {
+      params.set("estado", filtro)
+    }
+
     Promise.all([
       fetch(`/api/admin/cuerpotecnico?${params}`).then(r => r.json()),
       fetch("/api/admin/cuerpotecnico?tipo=stats").then(r => r.json()),
@@ -59,14 +80,42 @@ export default function AdminCTPage() {
       setMiembros(data.miembros || [])
       setStats(statsData)
     }).catch(() => {}).finally(() => setLoading(false))
-  }, [filtro])
+  }
+
+  useEffect(() => { fetchData() }, [filtro])
 
   const filtered = miembros.filter(m =>
     !buscar || `${m.nombre} ${m.apellido} ${m.cedula}`.toLowerCase().includes(buscar.toLowerCase())
   )
 
-  const estadoColor: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
-    HABILITADO: "success", PENDIENTE: "warning", RECHAZADO: "destructive", SUSPENDIDO: "secondary",
+  const handleEliminar = async () => {
+    if (!confirmDelete) return
+    setActionLoading(true)
+    try {
+      await fetch(`/api/admin/cuerpotecnico/${confirmDelete.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "eliminar" }),
+      })
+      setConfirmDelete(null)
+      fetchData()
+    } catch {} finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleRestaurar = async (m: CTMember) => {
+    setActionLoading(true)
+    try {
+      await fetch(`/api/admin/cuerpotecnico/${m.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "restaurar" }),
+      })
+      fetchData()
+    } catch {} finally {
+      setActionLoading(false)
+    }
   }
 
   if (loading) return <PageSkeleton />
@@ -90,9 +139,17 @@ export default function AdminCTPage() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {TABS.map(t => (
-            <Button key={t.value} variant={filtro === t.value ? "default" : "outline"} size="sm" onClick={() => setFiltro(t.value)}>{t.label}</Button>
+            <Button
+              key={t.value}
+              variant={filtro === t.value ? "default" : "outline"}
+              size="sm"
+              onClick={() => setFiltro(t.value)}
+              className={t.value === "ELIMINADOS" ? "border-red-200 text-red-600 hover:bg-red-50" : ""}
+            >
+              {t.label}
+            </Button>
           ))}
         </div>
         <div className="relative flex-1 max-w-sm">
@@ -105,7 +162,9 @@ export default function AdminCTPage() {
       <Card>
         <CardContent className="p-0">
           {filtered.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">No se encontraron miembros</div>
+            <div className="p-8 text-center text-muted-foreground">
+              {filtro === "ELIMINADOS" ? "No hay miembros eliminados" : "No se encontraron miembros"}
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -114,7 +173,9 @@ export default function AdminCTPage() {
                     <th className="text-left p-3 text-xs font-medium text-muted-foreground">Nombre</th>
                     <th className="text-left p-3 text-xs font-medium text-muted-foreground">Rol</th>
                     <th className="text-left p-3 text-xs font-medium text-muted-foreground hidden md:table-cell">Pago</th>
-                    <th className="text-left p-3 text-xs font-medium text-muted-foreground">Estado</th>
+                    {filtro !== "ELIMINADOS" && (
+                      <th className="text-left p-3 text-xs font-medium text-muted-foreground">Estado</th>
+                    )}
                     <th className="text-right p-3 text-xs font-medium text-muted-foreground">Acción</th>
                   </tr>
                 </thead>
@@ -137,13 +198,44 @@ export default function AdminCTPage() {
                           <Badge variant="warning" className="text-xs">Sin pago</Badge>
                         )}
                       </td>
-                      <td className="p-3"><Badge variant={estadoColor[m.estadoHabilitacion]} className="text-xs">{m.estadoHabilitacion}</Badge></td>
+                      {filtro !== "ELIMINADOS" && (
+                        <td className="p-3">
+                          <Badge variant={estadoColor[m.estadoHabilitacion]} className="text-xs">
+                            {m.estadoHabilitacion}
+                          </Badge>
+                        </td>
+                      )}
                       <td className="p-3 text-right">
-                        <Link href={`/oficiales/admin/cuerpotecnico/${m.id}`}>
-                          <Button size="sm" variant={m.estadoHabilitacion === "PENDIENTE" ? "default" : "outline"} className="text-xs h-7">
-                            {m.estadoHabilitacion === "PENDIENTE" ? "Revisar" : "Ver"}
-                          </Button>
-                        </Link>
+                        <div className="flex items-center justify-end gap-2">
+                          {filtro === "ELIMINADOS" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7 text-green-600 border-green-200 hover:bg-green-50"
+                              onClick={() => handleRestaurar(m)}
+                              disabled={actionLoading}
+                            >
+                              <RotateCcw className="h-3 w-3 mr-1" />
+                              Restaurar
+                            </Button>
+                          ) : (
+                            <>
+                              <Link href={`/oficiales/admin/cuerpotecnico/${m.id}`}>
+                                <Button size="sm" variant={m.estadoHabilitacion === "PENDIENTE" ? "default" : "outline"} className="text-xs h-7">
+                                  {m.estadoHabilitacion === "PENDIENTE" ? "Revisar" : "Ver"}
+                                </Button>
+                              </Link>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs h-7 text-red-500 hover:text-red-700 hover:bg-red-50 px-2"
+                                onClick={() => setConfirmDelete(m)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -153,6 +245,36 @@ export default function AdminCTPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Confirm delete dialog */}
+      <AlertDialog open={!!confirmDelete} onOpenChange={open => { if (!open) setConfirmDelete(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar miembro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Vas a eliminar a <strong>{confirmDelete?.nombre} {confirmDelete?.apellido}</strong>. Esta acción puede revertirse desde la pestaña "Eliminados".
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleEliminar}
+              disabled={actionLoading}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+  )
+}
+
+export default function AdminCTPage() {
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <AdminCTContent />
+    </Suspense>
   )
 }

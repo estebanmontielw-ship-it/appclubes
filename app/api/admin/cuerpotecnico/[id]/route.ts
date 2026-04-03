@@ -82,6 +82,10 @@ export async function PATCH(
       }
     } else if (accion === "verificar_pago") {
       updateData = { pagoVerificado: true }
+    } else if (accion === "eliminar") {
+      updateData = { activo: false }
+    } else if (accion === "restaurar") {
+      updateData = { activo: true }
     }
 
     const ct = await prisma.cuerpoTecnico.update({

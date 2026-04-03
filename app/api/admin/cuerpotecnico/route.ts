@@ -21,19 +21,20 @@ export async function GET(request: Request) {
 
     if (tipo === "stats") {
       const [total, habilitados, pendientes, pendientesPago] = await Promise.all([
-        prisma.cuerpoTecnico.count(),
-        prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "HABILITADO" } }),
-        prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "PENDIENTE" } }),
-        prisma.cuerpoTecnico.count({ where: { pagoVerificado: false } }),
+        prisma.cuerpoTecnico.count({ where: { activo: true } }),
+        prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: "HABILITADO" } }),
+        prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: "PENDIENTE" } }),
+        prisma.cuerpoTecnico.count({ where: { activo: true, pagoVerificado: false } }),
       ])
       return NextResponse.json({ total, habilitados, pendientes, pendientesPago })
     }
 
     const buscar = searchParams.get("buscar")
     const limite = parseInt(searchParams.get("limite") || "100")
+    const eliminados = searchParams.get("eliminados") === "true"
 
-    const where: Record<string, unknown> = {}
-    if (estado) where.estadoHabilitacion = estado
+    const where: Record<string, unknown> = { activo: !eliminados }
+    if (estado && !eliminados) where.estadoHabilitacion = estado
     if (buscar) {
       where.OR = [
         { nombre: { contains: buscar, mode: "insensitive" } },

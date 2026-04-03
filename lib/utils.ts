@@ -6,7 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: Date | string): string {
-  return new Date(date).toLocaleDateString("es-PY", {
+  const iso = typeof date === "string" ? date : date.toISOString()
+  const [year, month, day] = iso.split("T")[0].split("-").map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString("es-PY", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

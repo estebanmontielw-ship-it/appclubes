@@ -120,7 +120,11 @@ export default function CuerpoTecnicoDetailPage() {
   if (loading) return <div className="py-12 text-center text-gray-400">Cargando...</div>
   if (!ct) return <div className="py-12 text-center text-gray-400">No encontrado</div>
 
-  const formatDate = (d: string) => d ? new Date(d).toLocaleDateString("es-PY", { day: "numeric", month: "long", year: "numeric" }) : "-"
+  const formatDate = (d: string) => {
+    if (!d) return "-"
+    const [year, month, day] = d.split("T")[0].split("-").map(Number)
+    return new Date(year, month - 1, day).toLocaleDateString("es-PY", { day: "numeric", month: "long", year: "numeric" })
+  }
 
   return (
     <div className="max-w-3xl">
