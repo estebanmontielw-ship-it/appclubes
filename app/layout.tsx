@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Script from "next/script"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+import PWARegister from "@/components/PWARegister"
 
 export const metadata: Metadata = {
   title: {
@@ -67,6 +68,7 @@ export default function RootLayout({
         </noscript>
         {children}
         <Toaster />
+        <PWARegister />
       </body>
     </html>
   )
