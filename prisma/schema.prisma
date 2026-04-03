@@ -538,7 +538,26 @@ model CuerpoTecnico {
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
 
+  notificaciones NotificacionCT[]
+
   @@map("cuerpo_tecnico")
+}
+
+model NotificacionCT {
+  id         String           @id @default(uuid())
+  ctId       String
+  tipo       TipoNotificacion
+  titulo     String
+  mensaje    String           @db.Text
+  link       String?
+  leido      Boolean          @default(false)
+  leidoEn    DateTime?
+  enviadoPor String?
+  createdAt  DateTime         @default(now())
+
+  ct CuerpoTecnico @relation(fields: [ctId], references: [id], onDelete: Cascade)
+
+  @@map("notificaciones_ct")
 }
 
 model CtPreverificado {
