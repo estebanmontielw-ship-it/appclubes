@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PageSkeleton } from "@/components/ui/skeleton"
-import { Users, UserCheck, Clock, XCircle, MapPin } from "lucide-react"
+import { Users, UserCheck, Clock, XCircle, Venus, Mars } from "lucide-react"
 import { formatCurrency } from "@/lib/utils"
 
 const ROL_LABELS: Record<string, string> = {
@@ -46,6 +46,43 @@ export default function OficialesDashboardPage() {
         <KPI icon={<Clock className="h-5 w-5" />} label="Pendientes" value={data.pendientes} color="bg-yellow-100 text-yellow-600" />
         <KPI icon={<XCircle className="h-5 w-5" />} label="Rechazados" value={data.rechazados} color="bg-red-100 text-red-600" />
       </div>
+
+      {/* Gender breakdown */}
+      <Card>
+        <CardHeader><CardTitle className="text-base">Distribución por género</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="p-2.5 rounded-xl bg-blue-100 text-blue-600"><Mars className="h-5 w-5" /></div>
+              <div>
+                <p className="text-xs text-muted-foreground">Masculino</p>
+                <p className="text-2xl font-bold">{data.hombres}</p>
+              </div>
+              <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden ml-2">
+                <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: data.total > 0 ? `${(data.hombres / data.total) * 100}%` : "0%" }} />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground w-12 text-right">
+                {data.total > 0 ? Math.round((data.hombres / data.total) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center gap-6 mt-3">
+            <div className="flex items-center gap-3 flex-1">
+              <div className="p-2.5 rounded-xl bg-pink-100 text-pink-600"><Venus className="h-5 w-5" /></div>
+              <div>
+                <p className="text-xs text-muted-foreground">Femenino</p>
+                <p className="text-2xl font-bold">{data.mujeres}</p>
+              </div>
+              <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden ml-2">
+                <div className="h-full bg-pink-500 rounded-full transition-all" style={{ width: data.total > 0 ? `${(data.mujeres / data.total) * 100}%` : "0%" }} />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground w-12 text-right">
+                {data.total > 0 ? Math.round((data.mujeres / data.total) * 100) : 0}%
+              </span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* By role */}

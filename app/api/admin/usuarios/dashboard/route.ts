@@ -11,6 +11,8 @@ export async function GET() {
       pendientes,
       rechazados,
       allUsers,
+      hombres,
+      mujeres,
     ] = await Promise.all([
       prisma.usuario.count(),
       prisma.usuario.count({ where: { estadoVerificacion: "VERIFICADO" } }),
@@ -23,6 +25,8 @@ export async function GET() {
           roles: { select: { rol: true } },
         },
       }),
+      prisma.usuario.count({ where: { genero: "Masculino" } }),
+      prisma.usuario.count({ where: { genero: "Femenino" } }),
     ])
 
     // Distribution by role
@@ -73,6 +77,7 @@ export async function GET() {
 
     return NextResponse.json({
       total, verificados, pendientes, rechazados,
+      hombres, mujeres,
       roleCount, topCities, ageRanges, monthCount,
     })
   } catch {

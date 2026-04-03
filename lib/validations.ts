@@ -19,6 +19,7 @@ export const registroStep1Schema = z
       .string()
       .min(8, "Teléfono inválido")
       .regex(/^\+?\d{8,15}$/, "Número de teléfono inválido"),
+    genero: z.string().min(1, "Seleccioná un género"),
     ciudad: z.string().min(1, "Seleccioná una ciudad"),
     email: z.string().email("Email inválido"),
     password: z.string().min(8, "Mínimo 8 caracteres"),

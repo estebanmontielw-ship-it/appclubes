@@ -317,6 +317,22 @@ export default function RegistroPage() {
               </div>
 
               <div className="space-y-2">
+                <Label>Género *</Label>
+                <Select
+                  onValueChange={(value) => step1Form.setValue("genero", value)}
+                  defaultValue={step1Data?.genero || "Masculino"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccioná tu género" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Masculino">Masculino</SelectItem>
+                    <SelectItem value="Femenino">Femenino</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label htmlFor="ciudad">Ciudad *</Label>
                 <Select
                   onValueChange={(value) => { step1Form.setValue("ciudad", value); setSelectedCiudad(value); setBarrio(""); setBarrioCustom("") }}

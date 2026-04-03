@@ -36,6 +36,7 @@ model Usuario {
   telefono           String
   ciudad             String
   barrio             String?
+  genero             String             @default("Masculino")
   fotoCedulaUrl      String?
   fotoCarnetUrl      String?
   estadoVerificacion EstadoVerificacion @default(PENDIENTE)

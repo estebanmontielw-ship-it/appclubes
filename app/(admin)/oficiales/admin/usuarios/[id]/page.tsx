@@ -35,6 +35,7 @@ interface UsuarioDetalle {
   fotoCedulaUrl: string | null
   fotoCarnetUrl: string | null
   createdAt: string
+  genero: string
   roles: { rol: TipoRol }[]
 }
 
@@ -143,6 +144,7 @@ export default function AdminUsuarioDetallePage() {
           <CardContent className="space-y-3">
             <InfoRow label="Email" value={usuario.email} />
             <InfoRow label="Teléfono" value={usuario.telefono} />
+            <InfoRow label="Género" value={usuario.genero || "—"} />
             <InfoRow label="Ciudad" value={usuario.ciudad} />
             <InfoRow
               label="Fecha de nacimiento"

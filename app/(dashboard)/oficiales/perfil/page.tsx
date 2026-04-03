@@ -35,6 +35,7 @@ interface PerfilData {
   verificadoEn: string | null
   fotoCarnetUrl: string | null
   fotoCedulaUrl: string | null
+  genero: string
   roles: { rol: TipoRol }[]
 }
 
@@ -150,6 +151,11 @@ export default function PerfilPage() {
               <Label className="text-muted-foreground text-xs">Fecha de nacimiento</Label>
               <p className="font-medium">{formatDate(perfil.fechaNacimiento)}</p>
             </div>
+          </div>
+
+          <div>
+            <Label className="text-muted-foreground text-xs">Género</Label>
+            <p className="font-medium">{perfil.genero || "—"}</p>
           </div>
 
           <div>
