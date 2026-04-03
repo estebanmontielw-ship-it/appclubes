@@ -15,6 +15,7 @@ import {
   Ban,
   Loader2,
   ExternalLink,
+  CreditCard,
 } from "lucide-react"
 import { ROL_LABELS } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
@@ -36,6 +37,7 @@ interface UsuarioDetalle {
   fotoCarnetUrl: string | null
   createdAt: string
   genero: string
+  qrToken: string | null
   roles: { rol: TipoRol }[]
 }
 
@@ -48,6 +50,7 @@ export default function AdminUsuarioDetallePage() {
   const [showRechazoForm, setShowRechazoForm] = useState(false)
   const [motivoRechazo, setMotivoRechazo] = useState("")
   const [viewingImage, setViewingImage] = useState<string | null>(null)
+  const [showCarnet, setShowCarnet] = useState(false)
 
   const loadUser = () => {
     fetch(`/api/admin/usuarios/${params.id}`)
@@ -243,6 +246,69 @@ export default function AdminUsuarioDetallePage() {
           </div>
         )}
       </div>
+
+      {/* Carnet */}
+      {usuario.estadoVerificacion === "VERIFICADO" && (
+        <div>
+          <button
+            onClick={() => setShowCarnet(!showCarnet)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <CreditCard className="h-4 w-4" />
+            {showCarnet ? "Ocultar carnet" : "Ver carnet"}
+          </button>
+
+          {showCarnet && (
+            <div className="mt-4 max-w-sm mx-auto">
+              <div className="bg-gradient-to-br from-[#0a1628] to-[#132043] rounded-2xl overflow-hidden shadow-xl">
+                <div className="bg-gradient-to-r from-red-600 via-white to-blue-600 h-2" />
+                <div className="p-5 text-center">
+                  <img src="/favicon-cpb.png" alt="CPB" className="h-12 w-12 mx-auto mb-2" />
+                  <p className="text-white font-bold text-xs tracking-widest">CONFEDERACIÓN PARAGUAYA DE BÁSQUETBOL</p>
+                  <p className="text-blue-300 text-[10px] tracking-wider mt-0.5">CARNET OFICIAL — {new Date().getFullYear()}</p>
+                </div>
+                <div className="px-5 pb-5 flex gap-4">
+                  {usuario.fotoCarnetUrl ? (
+                    <img src={usuario.fotoCarnetUrl} alt="" className="w-24 h-28 rounded-xl object-cover border-2 border-white/20 shrink-0" />
+                  ) : (
+                    <div className="w-24 h-28 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-8 w-8 text-white/30" />
+                    </div>
+                  )}
+                  <div className="text-white flex-1 min-w-0">
+                    <p className="font-bold text-lg leading-tight">{usuario.nombre}</p>
+                    <p className="font-bold text-lg leading-tight">{usuario.apellido}</p>
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {usuario.roles.map((r) => (
+                        <span key={r.rol} className="text-[10px] bg-blue-500/40 text-blue-200 px-2 py-0.5 rounded-full">
+                          {ROL_LABELS[r.rol] || r.rol}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="text-white/60 text-xs mt-2">CI: {usuario.cedula}</p>
+                    <p className="text-white/60 text-xs">{usuario.ciudad}</p>
+                  </div>
+                </div>
+                <div className="bg-white/5 px-5 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-white/40">ESTADO</p>
+                    <p className="text-green-400 text-xs font-bold">VERIFICADO</p>
+                  </div>
+                  {usuario.qrToken && (
+                    <div className="bg-white rounded-lg p-1">
+                      <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(`https://cpb.com.py/verificar/${usuario.qrToken}`)}`}
+                        alt="QR"
+                        className="w-14 h-14"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Action buttons */}
       {(usuario.estadoVerificacion === "PENDIENTE" ||
