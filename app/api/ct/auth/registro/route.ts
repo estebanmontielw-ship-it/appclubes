@@ -37,7 +37,7 @@ export async function POST(request: Request) {
       razonSocial, ruc,
     } = body
 
-    if (!nombre || !apellido || !cedula || !email || !password || !rol) {
+    if (!nombre || !apellido || !cedula || !email || !password) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 })
     }
 
@@ -107,8 +107,28 @@ export async function POST(request: Request) {
       }
     }
 
+    // Determine final rol
+    const rolMap: Record<string, string> = {
+      "entrenador nacional": "ENTRENADOR_NACIONAL",
+      "entrenador extranjero": "ENTRENADOR_EXTRANJERO",
+      "asistente": "ASISTENTE",
+      "preparador fisico": "PREPARADOR_FISICO",
+      "preparador físico": "PREPARADOR_FISICO",
+      "fisioterapeuta": "FISIO",
+      "fisio": "FISIO",
+      "utilero": "UTILERO",
+    }
+
+    let finalRol = rol
+    if (!finalRol && autoVerificado && matchedPre?.rol) {
+      finalRol = rolMap[matchedPre.rol.toLowerCase()] || matchedPre.rol
+    }
+    if (!finalRol) {
+      return NextResponse.json({ error: "Seleccioná tu rol" }, { status: 400 })
+    }
+
     const qrToken = uuidv4()
-    const precio = getPrecio(rol)
+    const precio = getPrecio(finalRol)
 
     const ct = await prisma.cuerpoTecnico.create({
       data: {
@@ -122,7 +142,7 @@ export async function POST(request: Request) {
         ciudad,
         genero: genero || "Masculino",
         nacionalidad: nacionalidad || "Paraguaya",
-        rol,
+        rol: finalRol,
         fotoCarnetUrl: fotoCarnetUrl || null,
         fotoCedulaUrl: fotoCedulaUrl || null,
         tituloEntrenadorUrl: tituloEntrenadorUrl || null,

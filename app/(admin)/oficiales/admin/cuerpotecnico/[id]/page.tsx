@@ -74,6 +74,7 @@ export default function CuerpoTecnicoDetailPage() {
       email: ct.email,
       razonSocial: ct.razonSocial || "",
       ruc: ct.ruc || "",
+      fechaNacimiento: ct.fechaNacimiento ? new Date(ct.fechaNacimiento).toISOString().split("T")[0] : "",
     })
     setEditing(true)
   }
@@ -146,6 +147,7 @@ export default function CuerpoTecnicoDetailPage() {
               { key: "nombre", label: "Nombre" },
               { key: "apellido", label: "Apellido" },
               { key: "cedula", label: "Cédula" },
+              { key: "fechaNacimiento", label: "Fecha nacimiento (AAAA-MM-DD)" },
               { key: "telefono", label: "Teléfono" },
               { key: "ciudad", label: "Ciudad" },
               { key: "email", label: "Email" },

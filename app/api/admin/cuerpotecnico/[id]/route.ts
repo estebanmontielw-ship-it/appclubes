@@ -44,6 +44,9 @@ export async function PATCH(
       for (const field of allowedFields) {
         if (editar[field] !== undefined) updateData[field] = editar[field]
       }
+      if (editar.fechaNacimiento) {
+        updateData.fechaNacimiento = new Date(editar.fechaNacimiento)
+      }
       const ct = await prisma.cuerpoTecnico.update({
         where: { id: params.id },
         data: updateData,
