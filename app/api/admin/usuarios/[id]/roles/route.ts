@@ -25,8 +25,8 @@ export async function POST(
 
     const { rol, accion } = await request.json()
 
-    if (!["INSTRUCTOR", "DESIGNADOR"].includes(rol)) {
-      return NextResponse.json({ error: "Solo se pueden asignar roles INSTRUCTOR o DESIGNADOR" }, { status: 400 })
+    if (!["VERIFICADOR", "INSTRUCTOR", "DESIGNADOR"].includes(rol)) {
+      return NextResponse.json({ error: "Rol no válido" }, { status: 400 })
     }
 
     if (accion === "agregar") {

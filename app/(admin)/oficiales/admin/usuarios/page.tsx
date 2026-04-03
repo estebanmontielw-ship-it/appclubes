@@ -60,20 +60,21 @@ export default function AdminUsuariosPage() {
       <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex gap-2">
+      <div className="flex flex-col gap-3">
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           {TABS.map((tab) => (
             <Button
               key={tab.value}
               variant={filtro === tab.value ? "default" : "outline"}
               size="sm"
               onClick={() => setFiltro(tab.value)}
+              className="shrink-0"
             >
               {tab.label}
             </Button>
           ))}
         </div>
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nombre o CI..."
@@ -96,72 +97,101 @@ export default function AdminUsuariosPage() {
               No se encontraron usuarios
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b bg-gray-50/50">
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                      Nombre
-                    </th>
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                      CI
-                    </th>
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden md:table-cell">
-                      Roles
-                    </th>
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">
-                      Ciudad
-                    </th>
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">
-                      Registro
-                    </th>
-                    <th className="text-left p-4 text-sm font-medium text-muted-foreground">
-                      Estado
-                    </th>
-                    <th className="text-right p-4 text-sm font-medium text-muted-foreground">
-                      Acciones
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usuarios.map((u) => (
-                    <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50/50">
-                      <td className="p-4">
-                        <p className="font-medium">
-                          {u.nombre} {u.apellido}
-                        </p>
-                      </td>
-                      <td className="p-4 text-sm">{u.cedula}</td>
-                      <td className="p-4 hidden md:table-cell">
-                        <div className="flex gap-1 flex-wrap">
-                          {u.roles.map((r) => (
-                            <Badge key={r.rol} variant="outline" className="text-xs">
-                              {ROL_LABELS[r.rol] || r.rol}
-                            </Badge>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="p-4 text-sm hidden lg:table-cell">{u.ciudad}</td>
-                      <td className="p-4 text-sm hidden lg:table-cell">
-                        {formatDate(u.createdAt)}
-                      </td>
-                      <td className="p-4">
-                        <Badge variant={estadoBadge[u.estadoVerificacion]}>
-                          {u.estadoVerificacion}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-right">
-                        <Link href={`/oficiales/admin/usuarios/${u.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </Link>
-                      </td>
+            <>
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y divide-gray-100">
+                {usuarios.map((u) => (
+                  <Link key={u.id} href={`/oficiales/admin/usuarios/${u.id}`} className="block p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-sm">{u.nombre} {u.apellido}</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">CI: {u.cedula} · {u.ciudad}</p>
+                        {u.roles.length > 0 && (
+                          <div className="flex gap-1 flex-wrap mt-1.5">
+                            {u.roles.map((r) => (
+                              <Badge key={r.rol} variant="outline" className="text-[10px]">
+                                {ROL_LABELS[r.rol] || r.rol}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <Badge variant={estadoBadge[u.estadoVerificacion]} className="shrink-0 text-xs">
+                        {u.estadoVerificacion}
+                      </Badge>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b bg-gray-50/50">
+                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                        Nombre
+                      </th>
+                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                        CI
+                      </th>
+                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                        Roles
+                      </th>
+                      <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                        Ciudad
+                      </th>
+                      <th className="text-left p-4 text-sm font-medium text-muted-foreground hidden lg:table-cell">
+                        Registro
+                      </th>
+                      <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                        Estado
+                      </th>
+                      <th className="text-right p-4 text-sm font-medium text-muted-foreground">
+                        Acciones
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {usuarios.map((u) => (
+                      <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50/50">
+                        <td className="p-4">
+                          <p className="font-medium">
+                            {u.nombre} {u.apellido}
+                          </p>
+                        </td>
+                        <td className="p-4 text-sm">{u.cedula}</td>
+                        <td className="p-4">
+                          <div className="flex gap-1 flex-wrap">
+                            {u.roles.map((r) => (
+                              <Badge key={r.rol} variant="outline" className="text-xs">
+                                {ROL_LABELS[r.rol] || r.rol}
+                              </Badge>
+                            ))}
+                          </div>
+                        </td>
+                        <td className="p-4 text-sm hidden lg:table-cell">{u.ciudad}</td>
+                        <td className="p-4 text-sm hidden lg:table-cell">
+                          {formatDate(u.createdAt)}
+                        </td>
+                        <td className="p-4">
+                          <Badge variant={estadoBadge[u.estadoVerificacion]}>
+                            {u.estadoVerificacion}
+                          </Badge>
+                        </td>
+                        <td className="p-4 text-right">
+                          <Link href={`/oficiales/admin/usuarios/${u.id}`}>
+                            <Button variant="ghost" size="sm">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -132,17 +132,17 @@ export default function AdminUsuarioDetallePage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+      <div className="flex items-start gap-3">
+        <Button variant="ghost" size="icon" onClick={() => router.back()} className="shrink-0 mt-0.5">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-xl sm:text-2xl font-bold leading-tight">
             {usuario.nombre} {usuario.apellido}
           </h1>
-          <p className="text-muted-foreground">CI: {usuario.cedula}</p>
+          <p className="text-muted-foreground text-sm">CI: {usuario.cedula}</p>
         </div>
-        <Badge variant={estadoColor[usuario.estadoVerificacion]} className="text-sm">
+        <Badge variant={estadoColor[usuario.estadoVerificacion]} className="text-xs sm:text-sm shrink-0 mt-1">
           {usuario.estadoVerificacion}
         </Badge>
       </div>
