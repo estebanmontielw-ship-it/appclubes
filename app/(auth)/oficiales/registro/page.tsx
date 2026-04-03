@@ -112,7 +112,7 @@ export default function RegistroPage() {
   // Step 1 form
   const step1Form = useForm<RegistroStep1Data>({
     resolver: zodResolver(registroStep1Schema),
-    defaultValues: step1Data || undefined,
+    defaultValues: step1Data || { telefono: "+595", fechaNacimiento: "" },
   })
 
   const handleStep1 = (data: RegistroStep1Data) => {
@@ -293,7 +293,7 @@ export default function RegistroPage() {
               <div>
                 <DatePickerSimple
                   value={step1Form.watch("fechaNacimiento") || ""}
-                  onChange={(val) => step1Form.setValue("fechaNacimiento", val)}
+                  onChange={(val) => step1Form.setValue("fechaNacimiento", val, { shouldValidate: true, shouldDirty: true })}
                 />
                 {step1Form.formState.errors.fechaNacimiento && (
                   <p className="text-xs text-destructive mt-1">
@@ -307,7 +307,7 @@ export default function RegistroPage() {
                 <PhoneInput
                   id="telefono"
                   value={step1Form.watch("telefono") || ""}
-                  onChange={(val) => step1Form.setValue("telefono", val)}
+                  onChange={(val) => step1Form.setValue("telefono", val, { shouldValidate: true, shouldDirty: true })}
                 />
                 {step1Form.formState.errors.telefono && (
                   <p className="text-xs text-destructive">
@@ -335,7 +335,7 @@ export default function RegistroPage() {
               <div className="space-y-2">
                 <Label htmlFor="ciudad">Ciudad *</Label>
                 <Select
-                  onValueChange={(value) => { step1Form.setValue("ciudad", value); setSelectedCiudad(value); setBarrio(""); setBarrioCustom("") }}
+                  onValueChange={(value) => { step1Form.setValue("ciudad", value, { shouldValidate: true, shouldDirty: true }); setSelectedCiudad(value); setBarrio(""); setBarrioCustom("") }}
                   defaultValue={step1Data?.ciudad}
                 >
                   <SelectTrigger>
