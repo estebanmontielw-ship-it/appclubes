@@ -32,6 +32,15 @@ export async function GET() {
       inscripcionesActivas,
       ultimosUsuarios,
       ultimosPagos,
+      // CT stats
+      ctTotal,
+      ctHabilitados,
+      ctPendientes,
+      ctSinPago,
+      ultimosCT,
+      // Website stats
+      noticiasPublicadas,
+      mensajesSinLeer,
     ] = await Promise.all([
       prisma.usuario.count(),
       prisma.usuario.count({ where: { estadoVerificacion: "VERIFICADO" } }),
@@ -58,6 +67,19 @@ export async function GET() {
           },
         },
       }),
+      // CT
+      prisma.cuerpoTecnico.count(),
+      prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "HABILITADO" } }),
+      prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "PENDIENTE" } }),
+      prisma.cuerpoTecnico.count({ where: { pagoVerificado: false } }),
+      prisma.cuerpoTecnico.findMany({
+        take: 5,
+        orderBy: { createdAt: "desc" },
+        select: { id: true, nombre: true, apellido: true, rol: true, estadoHabilitacion: true, createdAt: true },
+      }),
+      // Website
+      prisma.noticia.count({ where: { publicada: true } }),
+      prisma.mensajeContacto.count({ where: { leido: false } }),
     ])
 
     return NextResponse.json({
@@ -70,6 +92,13 @@ export async function GET() {
       inscripcionesActivas,
       ultimosUsuarios,
       ultimosPagos,
+      ctTotal,
+      ctHabilitados,
+      ctPendientes,
+      ctSinPago,
+      ultimosCT,
+      noticiasPublicadas,
+      mensajesSinLeer,
     })
   } catch {
     return NextResponse.json({ error: "Error interno" }, { status: 500 })

@@ -22,6 +22,12 @@ interface Stats {
   pendientesPagos: number
   cursosActivos: number
   inscripcionesActivas: number
+  ctTotal: number
+  ctHabilitados: number
+  ctPendientes: number
+  ctSinPago: number
+  noticiasPublicadas: number
+  mensajesSinLeer: number
   ultimosUsuarios: {
     id: string
     nombre: string
@@ -40,6 +46,14 @@ interface Stats {
       usuario: { nombre: string; apellido: string }
       curso: { nombre: string }
     }
+  }[]
+  ultimosCT: {
+    id: string
+    nombre: string
+    apellido: string
+    rol: string
+    estadoHabilitacion: string
+    createdAt: string
   }[]
 }
 
@@ -62,7 +76,7 @@ export default function AdminDashboardPage() {
 
   const hora = new Date().getHours()
   const saludo = hora < 12 ? "Buenos días" : hora < 18 ? "Buenas tardes" : "Buenas noches"
-  const totalPendientes = stats.pendientesVerificacion + stats.pendientesPagos
+  const totalPendientes = stats.pendientesVerificacion + stats.pendientesPagos + stats.ctPendientes
 
   const estadoColor: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
     VERIFICADO: "success", PENDIENTE: "warning", RECHAZADO: "destructive", SUSPENDIDO: "secondary",
@@ -92,9 +106,13 @@ export default function AdminDashboardPage() {
               {stats.pendientesPagos > 0 && (
                 <strong>{stats.pendientesPagos} pago{stats.pendientesPagos > 1 ? "s" : ""} por revisar</strong>
               )}
+              {(stats.pendientesVerificacion > 0 || stats.pendientesPagos > 0) && stats.ctPendientes > 0 && " y "}
+              {stats.ctPendientes > 0 && (
+                <strong>{stats.ctPendientes} CT pendiente{stats.ctPendientes > 1 ? "s" : ""}</strong>
+              )}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             {stats.pendientesVerificacion > 0 && (
               <Link href="/oficiales/admin/usuarios?estado=PENDIENTE">
                 <Button size="sm" variant="outline" className="text-amber-700 border-amber-300 hover:bg-amber-100">
@@ -109,17 +127,38 @@ export default function AdminDashboardPage() {
                 </Button>
               </Link>
             )}
+            {stats.ctPendientes > 0 && (
+              <Link href="/oficiales/admin/cuerpotecnico?estado=PENDIENTE">
+                <Button size="sm" variant="outline" className="text-amber-700 border-amber-300 hover:bg-amber-100">
+                  Ver CT
+                </Button>
+              </Link>
+            )}
           </div>
         </div>
       )}
 
-      {/* Metric cards */}
+      {/* Oficiales Metrics */}
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Oficiales</p>
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <MetricCard href="/oficiales/admin/usuarios" icon={Users} label="Usuarios" value={stats.usuariosTotales} desc="registrados" color="blue" />
         <MetricCard href="/oficiales/admin/usuarios?estado=VERIFICADO" icon={UserCheck} label="Verificados" value={stats.verificados} desc="con carnet activo" color="green" />
         <MetricCard href="/oficiales/admin/usuarios?estado=PENDIENTE" icon={Clock} label="Pendientes" value={stats.pendientesVerificacion} desc="esperando verificación" color={stats.pendientesVerificacion > 0 ? "amber" : "gray"} urgent={stats.pendientesVerificacion > 0} />
         <MetricCard href="/oficiales/admin/pagos" icon={DollarSign} label="Pagos" value={stats.pendientesPagos} desc="por revisar" color={stats.pendientesPagos > 0 ? "amber" : "gray"} urgent={stats.pendientesPagos > 0} />
         <MetricCard href="/oficiales/admin/cursos" icon={BookOpen} label="Cursos" value={stats.cursosActivos} desc="activos" color="purple" />
+      </div>
+      </div>
+
+      {/* CT Metrics */}
+      <div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Cuerpo Técnico</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <MetricCard href="/oficiales/admin/cuerpotecnico" icon={Users} label="CT Total" value={stats.ctTotal} desc="registrados" color="blue" />
+          <MetricCard href="/oficiales/admin/cuerpotecnico?estado=HABILITADO" icon={UserCheck} label="Habilitados" value={stats.ctHabilitados} desc="con carnet activo" color="green" />
+          <MetricCard href="/oficiales/admin/cuerpotecnico?estado=PENDIENTE" icon={Clock} label="CT Pendientes" value={stats.ctPendientes} desc="esperando habilitación" color={stats.ctPendientes > 0 ? "amber" : "gray"} urgent={stats.ctPendientes > 0} />
+          <MetricCard href="/oficiales/admin/website/contacto" icon={Bell} label="Mensajes" value={stats.mensajesSinLeer} desc="sin leer" color={stats.mensajesSinLeer > 0 ? "amber" : "gray"} urgent={stats.mensajesSinLeer > 0} />
+        </div>
       </div>
 
       {/* Two columns */}
@@ -135,6 +174,12 @@ export default function AdminDashboardPage() {
             )}
             {stats.pendientesPagos > 0 && (
               <ActionItem href="/oficiales/admin/pagos" icon={DollarSign} label="Revisar comprobantes" desc={`${stats.pendientesPagos} por confirmar`} color="amber" />
+            )}
+            {stats.ctPendientes > 0 && (
+              <ActionItem href="/oficiales/admin/cuerpotecnico?estado=PENDIENTE" icon={UserCheck} label="Habilitar cuerpo técnico" desc={`${stats.ctPendientes} esperando`} color="amber" />
+            )}
+            {stats.mensajesSinLeer > 0 && (
+              <ActionItem href="/oficiales/admin/website/contacto" icon={Bell} label="Mensajes de contacto" desc={`${stats.mensajesSinLeer} sin leer`} color="amber" />
             )}
             <ActionItem href="/oficiales/admin/partidos" icon={Trophy} label="Crear nuevo partido" desc="Programar partido oficial" color="blue" />
             <ActionItem href="/oficiales/admin/recursos" icon={Upload} label="Agregar recurso" desc="PDF, video o link FIBA" color="green" />
@@ -167,6 +212,21 @@ export default function AdminDashboardPage() {
                         <strong>{pago.inscripcion.usuario.nombre} {pago.inscripcion.usuario.apellido}</strong> envió comprobante para <strong>{pago.inscripcion.curso.nombre}</strong>
                       </p>
                       <p className="text-xs text-muted-foreground">{timeAgo(pago.createdAt)}</p>
+                    </div>
+                  </div>
+                ))}
+                {/* Recent CT */}
+                {stats.ultimosCT?.slice(0, 3).map((ct) => (
+                  <div key={ct.id} className="flex items-start gap-3">
+                    <div className={`p-1.5 rounded-lg mt-0.5 ${ct.estadoHabilitacion === "HABILITADO" ? "bg-green-100" : "bg-orange-100"}`}>
+                      <Users className={`h-3.5 w-3.5 ${ct.estadoHabilitacion === "HABILITADO" ? "text-green-600" : "text-orange-600"}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm">
+                        <strong>{ct.nombre} {ct.apellido}</strong> (CT - {ct.rol}){" "}
+                        {ct.estadoHabilitacion === "HABILITADO" ? "fue habilitado" : "se registró"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">{timeAgo(ct.createdAt)}</p>
                     </div>
                   </div>
                 ))}
