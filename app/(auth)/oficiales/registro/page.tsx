@@ -112,7 +112,7 @@ export default function RegistroPage() {
   // Step 1 form
   const step1Form = useForm<RegistroStep1Data>({
     resolver: zodResolver(registroStep1Schema),
-    defaultValues: step1Data || { telefono: "+595", fechaNacimiento: "" },
+    defaultValues: step1Data || { telefono: "+595", fechaNacimiento: "", genero: "Masculino" },
   })
 
   const handleStep1 = (data: RegistroStep1Data) => {
@@ -253,7 +253,12 @@ export default function RegistroPage() {
 
         {/* STEP 1 — Datos personales */}
         {step === 1 && (
-          <form onSubmit={step1Form.handleSubmit(handleStep1)}>
+          <form onSubmit={step1Form.handleSubmit(handleStep1, (errors) => {
+            const firstError = Object.values(errors)[0]
+            if (firstError?.message) {
+              toast({ variant: "destructive", title: "Revisá los campos", description: String(firstError.message) })
+            }
+          })}>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -319,7 +324,7 @@ export default function RegistroPage() {
               <div className="space-y-2">
                 <Label>Género *</Label>
                 <Select
-                  onValueChange={(value) => step1Form.setValue("genero", value)}
+                  onValueChange={(value) => step1Form.setValue("genero", value, { shouldValidate: true, shouldDirty: true })}
                   defaultValue={step1Data?.genero || "Masculino"}
                 >
                   <SelectTrigger>
