@@ -16,9 +16,11 @@ export default function InstallPrompt() {
     if (window.matchMedia("(display-mode: standalone)").matches) return
     if ((navigator as any).standalone === true) return
 
-    // Show once per day
-    const dismissed = localStorage.getItem("cpb-pwa-dismissed")
-    if (dismissed && Date.now() - parseInt(dismissed) < 24 * 60 * 60 * 1000) return
+    // Show every 5 visits
+    const visitKey = "cpb-pwa-visits"
+    const visits = parseInt(localStorage.getItem(visitKey) || "0") + 1
+    localStorage.setItem(visitKey, String(visits))
+    if (visits % 5 !== 1) return // show on visit 1, 6, 11, 16...
 
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
     setIsIOS(ios)
