@@ -254,14 +254,24 @@ export default function RegistroCTPage() {
     try {
       let fotoCedulaUrl = null, fotoCarnetUrl = null, tituloUrl = null, comprobanteUrl = null
 
+      // Upload one by one for better error messages
       try {
-        const uploads = await Promise.all([
-          fotoCedula ? uploadFile(fotoCedula, "fotos-cedula") : null,
-          fotoCarnet ? uploadFile(fotoCarnet, "fotos-carnet") : null,
-          tituloFile ? uploadFile(tituloFile, "certificados") : null,
-          comprobanteFile ? uploadFile(comprobanteFile, "comprobantes") : null,
-        ])
-        fotoCedulaUrl = uploads[0]; fotoCarnetUrl = uploads[1]; tituloUrl = uploads[2]; comprobanteUrl = uploads[3]
+        if (fotoCarnet) {
+          toast({ title: "Subiendo foto carnet..." })
+          fotoCarnetUrl = await uploadFile(fotoCarnet, "fotos-carnet")
+        }
+        if (fotoCedula) {
+          toast({ title: "Subiendo foto cédula..." })
+          fotoCedulaUrl = await uploadFile(fotoCedula, "fotos-cedula")
+        }
+        if (tituloFile) {
+          toast({ title: "Subiendo título..." })
+          tituloUrl = await uploadFile(tituloFile, "certificados")
+        }
+        if (comprobanteFile) {
+          toast({ title: "Subiendo comprobante..." })
+          comprobanteUrl = await uploadFile(comprobanteFile, "comprobantes")
+        }
       } catch (uploadErr: any) {
         const msg = uploadErr?.message || ""
         let userMsg = "No se pudieron subir las fotos. "
