@@ -9,6 +9,7 @@ import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle, L
 import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
+import PortalInstallPrompt from "@/components/PortalInstallPrompt"
 
 interface DashboardData {
   usuario: {
@@ -56,6 +57,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      <PortalInstallPrompt portalName="CPB Oficiales" portalDesc="Accedé directo a tu carnet, partidos y cursos desde tu celular" />
       {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold">

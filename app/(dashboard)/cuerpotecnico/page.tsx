@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { CheckCircle, Clock, XCircle, AlertCircle, CreditCard, FileText, Bell, User, ChevronRight } from "lucide-react"
 import Link from "next/link"
+import PortalInstallPrompt from "@/components/PortalInstallPrompt"
 
 const rolLabels: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional",
@@ -34,6 +35,7 @@ export default function CTDashboardPage() {
 
   return (
     <div className="max-w-3xl space-y-4">
+      <PortalInstallPrompt portalName="CPB Cuerpo Técnico" portalDesc="Accedé directo a tu carnet y recursos desde tu celular" />
       <h1 className="text-2xl font-bold text-gray-900">Bienvenido, {ct.nombre}</h1>
 
       {/* Status */}

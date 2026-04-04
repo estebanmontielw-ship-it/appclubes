@@ -12,6 +12,7 @@ import {
   AlertCircle, CheckCircle, XCircle, CreditCard, Bell,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
+import PortalInstallPrompt from "@/components/PortalInstallPrompt"
 import { ROL_LABELS } from "@/lib/constants"
 
 interface Stats {
@@ -84,6 +85,8 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
+      <PortalInstallPrompt portalName="CPB Admin" portalDesc="Accedé directo al panel de administración desde tu celular" />
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">{saludo}</h1>
