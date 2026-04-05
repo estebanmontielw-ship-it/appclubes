@@ -1,9 +1,13 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 // Get verified users for designation dropdowns
 export async function GET(request: Request) {
   try {
+    const auth = await requireRole("SUPER_ADMIN", "INSTRUCTOR", "DESIGNADOR")
+    if (isAuthError(auth)) return auth
+
     const { searchParams } = new URL(request.url)
     const rol = searchParams.get("rol")
 

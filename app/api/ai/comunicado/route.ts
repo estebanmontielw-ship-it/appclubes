@@ -3,12 +3,17 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rate-limit"
 
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null
 
 export async function POST(request: Request) {
+  // Rate limit: 10 comunicados por minuto
+  const rateLimitResponse = rateLimit(request, 10, 60_000, "ai-comunicado")
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)

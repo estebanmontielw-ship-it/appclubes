@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rate-limit"
 
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -131,6 +132,10 @@ async function checkAdmin() {
 }
 
 export async function POST(request: Request) {
+  // Rate limit: 20 requests por minuto para AI
+  const rateLimitResponse = rateLimit(request, 20, 60_000, "ai")
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const { prompt, tipo, contexto } = body

@@ -2,12 +2,16 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireRole("SUPER_ADMIN", "DESIGNADOR")
+    if (isAuthError(auth)) return auth
+
     const partido = await prisma.partido.findUnique({
       where: { id: params.id },
       include: {
@@ -31,14 +35,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
-    const session = _su ? { user: _su } : null
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
+    const auth = await requireRole("SUPER_ADMIN", "DESIGNADOR")
+    if (isAuthError(auth)) return auth
 
     const body = await request.json()
     const partido = await prisma.partido.update({

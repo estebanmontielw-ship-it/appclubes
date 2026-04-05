@@ -5,8 +5,13 @@ import { v4 as uuidv4 } from "uuid"
 import type { TipoRol } from "@prisma/client"
 import { emailBienvenida } from "@/lib/email"
 import { sendAdminPush } from "@/lib/admin-push"
+import { rateLimit } from "@/lib/rate-limit"
 
 export async function POST(request: Request) {
+  // Rate limit: 5 registros por minuto por IP
+  const rateLimitResponse = rateLimit(request, 5, 60_000, "registro")
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const {

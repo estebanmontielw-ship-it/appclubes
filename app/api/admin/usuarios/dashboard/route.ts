@@ -1,10 +1,14 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
+    const auth = await requireRole("SUPER_ADMIN", "INSTRUCTOR", "VERIFICADOR")
+    if (isAuthError(auth)) return auth
+
     const [
       total,
       verificados,

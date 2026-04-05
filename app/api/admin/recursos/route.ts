@@ -1,11 +1,13 @@
-import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 import type { TipoRecurso, CategoriaRecurso, DisciplinaCurso } from "@prisma/client"
 
 export async function GET() {
   try {
+    const auth = await requireRole("SUPER_ADMIN")
+    if (isAuthError(auth)) return auth
+
     const recursos = await prisma.recurso.findMany({
       where: { activo: true },
       orderBy: { createdAt: "desc" },
@@ -18,21 +20,8 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
-    const session = _su ? { user: _su } : null
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
-
-    const adminRoles = await prisma.usuarioRol.findMany({
-      where: { usuarioId: session.user.id, rol: "SUPER_ADMIN" },
-    })
-    if (adminRoles.length === 0) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const auth = await requireRole("SUPER_ADMIN")
+    if (isAuthError(auth)) return auth
 
     const body = await request.json()
     const { titulo, descripcion, tipo, categoria, url, disciplina, esPublico } = body
@@ -50,7 +39,7 @@ export async function POST(request: Request) {
         url,
         disciplina: (disciplina as DisciplinaCurso) || null,
         esPublico: esPublico !== false,
-        creadoPor: session.user.id,
+        creadoPor: auth.user.id,
       },
     })
 
@@ -62,21 +51,8 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
-    const session = _su ? { user: _su } : null
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
-
-    const adminRoles = await prisma.usuarioRol.findMany({
-      where: { usuarioId: session.user.id, rol: "SUPER_ADMIN" },
-    })
-    if (adminRoles.length === 0) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const auth = await requireRole("SUPER_ADMIN")
+    if (isAuthError(auth)) return auth
 
     const { id } = await request.json()
     await prisma.recurso.update({ where: { id }, data: { activo: false } })

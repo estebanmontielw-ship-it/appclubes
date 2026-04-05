@@ -2,8 +2,13 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rate-limit"
 
 export async function POST(request: Request) {
+  // Rate limit: 10 registros de token por minuto
+  const rateLimitResponse = rateLimit(request, 10, 60_000, "push-register")
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const { token } = await request.json()
     if (!token) return NextResponse.json({ error: "Token requerido" }, { status: 400 })

@@ -3,12 +3,16 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { emailCTHabilitado, emailCTRechazado } from "@/lib/email"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireRole("SUPER_ADMIN")
+    if (isAuthError(auth)) return auth
+
     const ct = await prisma.cuerpoTecnico.findUnique({
       where: { id: params.id },
     })

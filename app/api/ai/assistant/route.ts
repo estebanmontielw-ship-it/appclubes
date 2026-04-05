@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rate-limit"
 
 async function checkAdmin() {
   const cookieStore = cookies()
@@ -128,6 +129,10 @@ async function callNvidia(systemPrompt: string, userMessage: string, history: an
 }
 
 export async function POST(request: Request) {
+  // Rate limit: 15 mensajes por minuto para el asistente
+  const rateLimitResponse = rateLimit(request, 15, 60_000, "ai-assistant")
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
