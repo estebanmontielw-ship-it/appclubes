@@ -36,8 +36,8 @@ export async function requireRole(
 ): Promise<AuthResult | NextResponse> {
   const authResult = await requireAuth()
 
-  // Si es un NextResponse (error), retornarlo directamente
-  if (authResult instanceof NextResponse) return authResult
+  // Si no tiene .user, es un error response
+  if (!("user" in authResult)) return authResult
 
   const userRoles = await prisma.usuarioRol.findMany({
     where: {
@@ -60,5 +60,5 @@ export async function requireRole(
 export function isAuthError(
   result: AuthResult | NextResponse
 ): result is NextResponse {
-  return result instanceof NextResponse
+  return !("user" in result)
 }
