@@ -134,17 +134,27 @@ export default function AdminDashboardPage() {
           <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-20 max-h-80 overflow-y-auto">
             {searchResults.map((r) => (
               r._type === "pre" ? (
-                <div key={r.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 bg-amber-50/50">
-                  <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-amber-100">
-                    <Users className="h-4 w-4 text-amber-600" />
+                <div key={r.id} className="border-b border-gray-50 last:border-0 bg-amber-50/50">
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-amber-100">
+                      <Users className="h-4 w-4 text-amber-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900">{r.nombre}</p>
+                      <p className="text-xs text-amber-600">Pre-registrado (108) · {r.rol}</p>
+                      <p className="text-xs text-amber-500 mt-0.5">Puede estar en la cancha pero debe registrarse en el portal para el siguiente encuentro</p>
+                    </div>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
+                      NO REGISTRADO
+                    </span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900">{r.nombre}</p>
-                    <p className="text-xs text-amber-600">Pre-registrado (108) · {r.rol} · Sin registrar en el portal</p>
+                  <div className="px-4 pb-3 flex items-center gap-3">
+                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent("https://cpb.com.py/cuerpotecnico/registro")}`} alt="QR" className="w-14 h-14 rounded-lg border" />
+                    <div className="text-xs text-amber-700">
+                      <p className="font-semibold">QR de registro</p>
+                      <p>Escaneá para registrarte en cpb.com.py/cuerpotecnico/registro</p>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                    NO REGISTRADO
-                  </span>
                 </div>
               ) : (
               <Link
@@ -153,9 +163,13 @@ export default function AdminDashboardPage() {
                 onClick={() => { setSearchQuery(""); setSearchResults([]) }}
                 className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0"
               >
-                <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${r._type === "oficial" ? "bg-blue-100" : "bg-green-100"}`}>
-                  <Users className={`h-4 w-4 ${r._type === "oficial" ? "text-blue-600" : "text-green-600"}`} />
-                </div>
+                {r.fotoCarnetUrl ? (
+                  <img src={r.fotoCarnetUrl} alt="" className="shrink-0 w-9 h-9 rounded-lg object-cover" />
+                ) : (
+                  <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${r._type === "oficial" ? "bg-blue-100" : "bg-green-100"}`}>
+                    <Users className={`h-4 w-4 ${r._type === "oficial" ? "text-blue-600" : "text-green-600"}`} />
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900">{r.nombre} {r.apellido}</p>
                   <p className="text-xs text-gray-500">
