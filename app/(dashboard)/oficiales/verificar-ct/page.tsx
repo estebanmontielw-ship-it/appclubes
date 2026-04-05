@@ -1,7 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { Search, Loader2, CheckCircle, Clock, User } from "lucide-react"
+import { Search, Loader2, CheckCircle, Clock, User, UserPlus } from "lucide-react"
+import Link from "next/link"
 
 const rolLabels: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional",
@@ -15,7 +16,8 @@ const rolLabels: Record<string, string> = {
 export default function VerificarCTPage() {
   const [query, setQuery] = useState("")
   const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<any[]>([])
+  const [registered, setRegistered] = useState<any[]>([])
+  const [preVerified, setPreVerified] = useState<any[]>([])
   const [searched, setSearched] = useState(false)
 
   async function handleSearch(e: React.FormEvent) {
@@ -27,9 +29,11 @@ export default function VerificarCTPage() {
     try {
       const res = await fetch(`/api/ct/buscar?q=${encodeURIComponent(query.trim())}`)
       const data = await res.json()
-      setResults(data.registered || [])
+      setRegistered(data.registered || [])
+      setPreVerified(data.preVerified || [])
     } catch {
-      setResults([])
+      setRegistered([])
+      setPreVerified([])
     } finally {
       setLoading(false)
     }
@@ -61,7 +65,8 @@ export default function VerificarCTPage() {
 
       {searched && !loading && (
         <div className="space-y-3">
-          {results.map((ct) => (
+          {/* Registered CT */}
+          {registered.map((ct) => (
             <div key={ct.id} className="bg-white rounded-xl border border-gray-100 p-4">
               <div className="flex items-center gap-4">
                 {ct.fotoCarnetUrl ? (
@@ -105,7 +110,27 @@ export default function VerificarCTPage() {
             </div>
           ))}
 
-          {results.length === 0 && (
+          {/* Pre-verified (108 not registered yet) */}
+          {preVerified.map((p, i) => (
+            <div key={i} className="bg-amber-50 rounded-xl border border-amber-200 p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                  <UserPlus className="h-6 w-6 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-gray-900">{p.nombre}</h3>
+                  <p className="text-sm text-amber-700">Pre-registrado como {p.rol}</p>
+                  <p className="text-xs text-amber-600 mt-0.5">Puede estar en la cancha pero debe registrarse en el portal</p>
+                </div>
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 shrink-0">
+                  NO REGISTRADO
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {/* No results */}
+          {registered.length === 0 && preVerified.length === 0 && (
             <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
               <Search className="h-10 w-10 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-500">No se encontraron resultados</p>
