@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, Share2, AlertCircle } from "lucide-react"
+import { Download, Share2, AlertCircle, WifiOff } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ROL_LABELS } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
+import { saveCarnetToCache, loadCarnetFromCache } from "@/lib/carnet-cache"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
 
 interface CarnetData {
@@ -27,29 +28,66 @@ export default function CarnetPage() {
   const [usuario, setUsuario] = useState<CarnetData | null>(null)
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isOffline, setIsOffline] = useState(false)
 
   useEffect(() => {
     async function load() {
       try {
         const res = await fetch("/api/me")
-        if (!res.ok) return
+        if (!res.ok) {
+          // Try offline cache
+          loadFromCache()
+          return
+        }
         const data = await res.json()
         setUsuario(data.usuario)
 
+        let qr: string | null = null
         if (data.usuario.qrToken) {
           const qrRes = await fetch(`/api/qr/${data.usuario.qrToken}`)
           if (qrRes.ok) {
             const qrData = await qrRes.json()
-            setQrDataUrl(qrData.qr)
+            qr = qrData.qr
+            setQrDataUrl(qr)
           }
         }
+
+        // Save to cache for offline use
+        saveCarnetToCache(data.usuario, qr)
       } catch {
-        // silently fail
+        // Network error — try to load from cache
+        loadFromCache()
       } finally {
         setLoading(false)
       }
     }
+
+    function loadFromCache() {
+      const cached = loadCarnetFromCache()
+      if (cached) {
+        setUsuario(cached.usuario as CarnetData)
+        setQrDataUrl(cached.qrDataUrl)
+        setIsOffline(true)
+      }
+      setLoading(false)
+    }
+
     load()
+
+    // Listen for online/offline events
+    const handleOnline = () => {
+      setIsOffline(false)
+      load()
+    }
+    const handleOffline = () => setIsOffline(true)
+    window.addEventListener("online", handleOnline)
+    window.addEventListener("offline", handleOffline)
+    if (!navigator.onLine) setIsOffline(true)
+
+    return () => {
+      window.removeEventListener("online", handleOnline)
+      window.removeEventListener("offline", handleOffline)
+    }
   }, [])
 
   const handleShare = async () => {
@@ -85,6 +123,15 @@ export default function CarnetPage() {
   return (
     <div className="max-w-lg mx-auto space-y-6">
       <h1 className="text-2xl font-bold">Mi Carnet</h1>
+
+      {isOffline && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-3">
+          <WifiOff className="h-4 w-4 text-yellow-600 shrink-0" />
+          <p className="text-sm text-yellow-700">
+            Modo offline — mostrando carnet guardado
+          </p>
+        </div>
+      )}
 
       {isRejected && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
