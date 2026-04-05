@@ -359,13 +359,7 @@ export default function CuerpoTecnicoDetailPage() {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              <button onClick={() => {
-                if (!ct.fotoCarnetUrl) {
-                  alert("Este miembro no tiene foto de carnet. Subí una foto antes de habilitar.")
-                  return
-                }
-                handleAction("habilitar")
-              }} disabled={saving}
+              <button onClick={() => handleAction("habilitar")} disabled={saving}
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
                 <Check className="h-4 w-4" /> Habilitar
               </button>
