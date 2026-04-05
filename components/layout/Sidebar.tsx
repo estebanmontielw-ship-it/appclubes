@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X, Globe, Bot,
+  DollarSign, BarChart3, Lock, X, Globe, Bot, Search,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -214,6 +214,12 @@ function getNavSections(
       items: [
         { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar, comingSoon: "Acá vas a ver todos los partidos donde fuiste designado como oficial, con fecha, hora, cancha y tu rol asignado." },
         { label: "Mis honorarios", href: "/oficiales/mis-honorarios", icon: Banknote, comingSoon: "Acá vas a poder ver tus partidos trabajados, los aranceles correspondientes y el estado de tus cobros." },
+      ],
+    },
+    {
+      label: "CONSULTAS",
+      items: [
+        { label: "Verificar CT", href: "/oficiales/verificar-ct", icon: Search },
       ],
     },
   ]
