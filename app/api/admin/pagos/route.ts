@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { notifPagoConfirmado, notifPagoRechazado } from "@/lib/notifications"
 import { emailPagoConfirmado, emailPagoRechazado } from "@/lib/email"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET(request: Request) {
   try {
@@ -40,8 +41,8 @@ export async function GET(request: Request) {
     })
 
     return NextResponse.json({ pagos })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/pagos" })
   }
 }
 
@@ -133,7 +134,7 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/pagos" })
   }
 }

@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 async function getAdminId() {
   const cookieStore = cookies()
@@ -28,8 +29,8 @@ export async function GET() {
     })
 
     return NextResponse.json({ conversaciones })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ai/assistant/conversations" })
   }
 }
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ conversacion }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ai/assistant/conversations" })
   }
 }

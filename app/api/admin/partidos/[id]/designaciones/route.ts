@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { notifDesignacionAsignada } from "@/lib/notifications"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(
   request: Request,
@@ -64,8 +65,8 @@ export async function POST(
     await notifDesignacionAsignada(usuarioId, partidoDesc, rol)
 
     return NextResponse.json({ designacion }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/partidos/[id]/designaciones" })
   }
 }
 
@@ -90,7 +91,7 @@ export async function DELETE(request: Request) {
     const { designacionId } = await request.json()
     await prisma.designacion.delete({ where: { id: designacionId } })
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/partidos/[id]/designaciones" })
   }
 }

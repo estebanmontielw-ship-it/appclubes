@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 // Get verified users for designation dropdowns
 export async function GET(request: Request) {
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
     })
 
     return NextResponse.json({ usuarios })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/usuarios/verificados" })
   }
 }

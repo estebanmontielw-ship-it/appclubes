@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export const dynamic = "force-dynamic"
 
@@ -28,8 +29,8 @@ export async function GET(request: Request) {
     ])
 
     return NextResponse.json({ notificaciones, totalNoLeidas })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ct/notificaciones" })
   }
 }
 
@@ -55,7 +56,7 @@ export async function PATCH(request: Request) {
     }
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ct/notificaciones" })
   }
 }

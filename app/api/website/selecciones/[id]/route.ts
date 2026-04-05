@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -20,8 +21,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     const body = await request.json()
     const seleccion = await prisma.seleccion.update({ where: { id: params.id }, data: body })
     return NextResponse.json({ seleccion })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/selecciones/[id]" })
   }
 }
 
@@ -41,7 +42,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
 
     await prisma.seleccion.delete({ where: { id: params.id } })
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/selecciones/[id]" })
   }
 }

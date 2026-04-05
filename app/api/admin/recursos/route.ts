@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { requireRole, isAuthError } from "@/lib/api-auth"
 import type { TipoRecurso, CategoriaRecurso, DisciplinaCurso } from "@prisma/client"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET() {
   try {
@@ -13,8 +14,8 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     })
     return NextResponse.json({ recursos })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/recursos" })
   }
 }
 
@@ -44,8 +45,8 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ recurso }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/recursos" })
   }
 }
 
@@ -57,7 +58,7 @@ export async function DELETE(request: Request) {
     const { id } = await request.json()
     await prisma.recurso.update({ where: { id }, data: { activo: false } })
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/recursos" })
   }
 }

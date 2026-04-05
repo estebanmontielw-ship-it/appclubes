@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(
   _request: Request,
@@ -44,7 +45,7 @@ export async function POST(
     })
 
     return NextResponse.json({ inscripcion }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "POST /api/cursos/inscribir" })
   }
 }

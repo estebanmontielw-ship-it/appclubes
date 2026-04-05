@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 // Create exam for a module
 export async function POST(request: Request) {
@@ -65,7 +66,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ examen }, { status: 201 })
   } catch (error) {
-    console.error(error)
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+    return handleApiError(error, { context: "POST admin/examenes" })
   }
 }

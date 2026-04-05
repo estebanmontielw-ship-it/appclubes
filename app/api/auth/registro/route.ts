@@ -6,6 +6,7 @@ import type { TipoRol } from "@prisma/client"
 import { emailBienvenida } from "@/lib/email"
 import { sendAdminPush } from "@/lib/admin-push"
 import { rateLimit } from "@/lib/rate-limit"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(request: Request) {
   // Rate limit: 5 registros por minuto por IP
@@ -111,9 +112,7 @@ export async function POST(request: Request) {
     sendAdminPush("Nuevo oficial registrado", `${nombre} ${apellido} se registró como oficial`).catch(() => {})
 
     return NextResponse.json({ usuario }, { status: 201 })
-  } catch (error: unknown) {
-    console.error("Error en registro:", error)
-    const message = error instanceof Error ? error.message : "Error interno del servidor"
-    return NextResponse.json({ error: message }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "POST /api/auth/registro" })
   }
 }

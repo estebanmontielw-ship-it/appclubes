@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
 import { loginSchema } from "@/lib/validations"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(request: Request) {
   // Rate limit: 10 intentos por minuto por IP
@@ -37,10 +38,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ user: data.user })
-  } catch {
-    return NextResponse.json(
-      { error: "Error interno del servidor" },
-      { status: 500 }
-    )
+  } catch (error) {
+    return handleApiError(error, { context: "POST /api/auth/login" })
   }
 }

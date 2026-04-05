@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 export const dynamic = "force-dynamic"
 
@@ -84,7 +85,7 @@ export async function GET() {
       hombres, mujeres,
       roleCount, topCities, ageRanges, monthCount,
     })
-  } catch {
-    return NextResponse.json({ error: "Error" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/usuarios/dashboard" })
   }
 }

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { generateQRDataURL } from "@/lib/qr"
 import { ROL_LABELS } from "@/lib/constants"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET() {
   try {
@@ -140,7 +141,7 @@ export async function GET() {
         "Content-Disposition": `inline; filename="carnet-cpb-${usuario.cedula}.html"`,
       },
     })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "carnet/pdf" })
   }
 }

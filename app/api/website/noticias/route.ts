@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET(request: Request) {
   try {
@@ -25,8 +26,8 @@ export async function GET(request: Request) {
     ])
 
     return NextResponse.json({ noticias, total, pagina, totalPaginas: Math.ceil(total / limite) })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/noticias" })
   }
 }
 
@@ -77,6 +78,6 @@ export async function POST(request: Request) {
     if (error?.code === "P2002") {
       return NextResponse.json({ error: "Ya existe una noticia con ese slug" }, { status: 409 })
     }
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+    return handleApiError(error, { context: "website/noticias" })
   }
 }

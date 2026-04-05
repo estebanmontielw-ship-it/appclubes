@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { emailCTHabilitado, emailCTRechazado } from "@/lib/email"
 import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET(
   _request: Request,
@@ -20,8 +21,8 @@ export async function GET(
       return NextResponse.json({ error: "No encontrado" }, { status: 404 })
     }
     return NextResponse.json({ ct })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cuerpotecnico/[id]" })
   }
 }
 
@@ -105,7 +106,7 @@ export async function PATCH(
     }
 
     return NextResponse.json({ ct })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cuerpotecnico/[id]" })
   }
 }

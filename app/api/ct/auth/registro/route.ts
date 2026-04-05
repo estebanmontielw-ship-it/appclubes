@@ -4,6 +4,7 @@ import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
 import { emailBienvenidaCT, emailCTAutoHabilitado } from "@/lib/email"
 import { sendAdminPush } from "@/lib/admin-push"
+import { handleApiError } from "@/lib/api-errors"
 
 // Normalize name for matching
 function normalizeName(s: string): string {
@@ -184,9 +185,7 @@ export async function POST(request: Request) {
       autoVerificado,
       precio,
     }, { status: 201 })
-  } catch (error: unknown) {
-    console.error("Error en registro CT:", error)
-    const message = error instanceof Error ? error.message : "Error interno"
-    return NextResponse.json({ error: message }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "POST /api/ct/auth/registro" })
   }
 }

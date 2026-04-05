@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 async function getAdminId() {
   const cookieStore = cookies()
@@ -29,8 +30,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     if (!conversacion) return NextResponse.json({ error: "No encontrada" }, { status: 404 })
 
     return NextResponse.json({ conversacion })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ai/assistant/conversations/[id]" })
   }
 }
 
@@ -50,8 +51,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     })
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ai/assistant/conversations/[id]" })
   }
 }
 
@@ -63,7 +64,7 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
 
     await prisma.conversacionBot.deleteMany({ where: { id: params.id, usuarioId: userId } })
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ai/assistant/conversations/[id]" })
   }
 }

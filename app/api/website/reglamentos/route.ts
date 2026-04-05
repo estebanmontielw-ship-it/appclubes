@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET() {
   try {
@@ -10,8 +11,8 @@ export async function GET() {
       orderBy: [{ categoria: "asc" }, { orden: "asc" }],
     })
     return NextResponse.json({ reglamentos })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/reglamentos" })
   }
 }
 
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ reglamento }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/reglamentos" })
   }
 }

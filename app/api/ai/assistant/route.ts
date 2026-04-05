@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
+import { handleApiError } from "@/lib/api-errors"
 
 async function checkAdmin() {
   const cookieStore = cookies()
@@ -218,7 +219,7 @@ export async function POST(request: Request) {
               const desc = visionData.choices?.[0]?.message?.content?.trim()
               if (desc) imageDescriptions.push(`${img.name}: ${desc}`)
             }
-          } catch {}
+          } catch (error) {}
         }
       }
 

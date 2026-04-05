@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 async function checkAdmin() {
   const cookieStore = cookies()
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
             source: "instagram-oembed",
           })
         }
-      } catch {}
+      } catch (error) {}
 
       // Fallback: try fetching the page HTML and extracting meta tags
       try {
@@ -72,7 +73,7 @@ export async function POST(request: Request) {
             source: "meta-tags",
           })
         }
-      } catch {}
+      } catch (error) {}
     }
 
     // Generic: try fetching meta tags from any URL
@@ -93,10 +94,10 @@ export async function POST(request: Request) {
         author: "",
         source: "meta-tags",
       })
-    } catch {
+    } catch (error) {
       return NextResponse.json({ error: "No se pudo extraer contenido de la URL" }, { status: 400 })
     }
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "scrape" })
   }
 }

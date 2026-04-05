@@ -2,14 +2,15 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
     const noticia = await prisma.noticia.findUnique({ where: { id: params.id } })
     if (!noticia) return NextResponse.json({ error: "No encontrado" }, { status: 404 })
     return NextResponse.json({ noticia })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/noticias/[id]" })
   }
 }
 
@@ -58,7 +59,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (error?.code === "P2002") {
       return NextResponse.json({ error: "Ya existe una noticia con ese slug" }, { status: 409 })
     }
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+    return handleApiError(error, { context: "website/noticias/[id]" })
   }
 }
 
@@ -78,7 +79,7 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
 
     await prisma.noticia.delete({ where: { id: params.id } })
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/noticias/[id]" })
   }
 }

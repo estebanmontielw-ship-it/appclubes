@@ -10,6 +10,7 @@ import {
   emailCarnetVerificado,
   emailCarnetRechazado,
 } from "@/lib/email"
+import { handleApiError } from "@/lib/api-errors"
 
 // GET - Get single user details
 export async function GET(
@@ -55,8 +56,8 @@ export async function GET(
     }
 
     return NextResponse.json({ usuario })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/usuarios/[id]" })
   }
 }
 
@@ -149,7 +150,7 @@ export async function PATCH(
     }
 
     return NextResponse.json({ usuario })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/usuarios/[id]" })
   }
 }

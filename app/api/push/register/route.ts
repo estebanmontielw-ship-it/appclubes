@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(request: Request) {
   // Rate limit: 10 registros de token por minuto
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
           if (ct) userType = "ct"
         }
       }
-    } catch {}
+    } catch (error) {}
 
     // Upsert token
     await prisma.pushToken.upsert({
@@ -43,7 +44,7 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "push/register" })
   }
 }

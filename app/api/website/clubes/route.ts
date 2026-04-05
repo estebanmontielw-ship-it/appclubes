@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET() {
   try {
@@ -10,8 +11,8 @@ export async function GET() {
       orderBy: { orden: "asc" },
     })
     return NextResponse.json({ clubes })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/clubes" })
   }
 }
 
@@ -57,6 +58,6 @@ export async function POST(request: Request) {
     if (error?.code === "P2002") {
       return NextResponse.json({ error: "Ya existe un club con ese slug" }, { status: 409 })
     }
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+    return handleApiError(error, { context: "website/clubes" })
   }
 }

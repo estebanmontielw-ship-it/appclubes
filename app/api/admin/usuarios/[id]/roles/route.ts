@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { emailRolVerificadorAsignado } from "@/lib/email"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(
   request: Request,
@@ -55,7 +56,7 @@ export async function POST(
     }
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "POST admin/usuarios/roles" })
   }
 }

@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET(
   _request: Request,
@@ -29,8 +30,8 @@ export async function GET(
     }
 
     return NextResponse.json({ curso })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cursos/[id]" })
   }
 }
 
@@ -74,8 +75,8 @@ export async function PATCH(
     })
 
     return NextResponse.json({ curso })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cursos/[id]" })
   }
 }
 
@@ -131,7 +132,7 @@ export async function DELETE(
 
     await prisma.curso.delete({ where: { id: cursoId } })
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cursos/[id]" })
   }
 }

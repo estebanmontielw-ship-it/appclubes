@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function PATCH(request: Request) {
   try {
@@ -27,7 +28,7 @@ export async function PATCH(request: Request) {
     })
 
     return NextResponse.json({ usuario })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "perfil" })
   }
 }

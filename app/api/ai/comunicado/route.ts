@@ -4,6 +4,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
+import { handleApiError } from "@/lib/api-errors"
 
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -70,7 +71,7 @@ Respondé ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown,
     let resultado: { titulo: string; mensaje: string }
     try {
       resultado = JSON.parse(raw)
-    } catch {
+    } catch (error) {
       // Try to extract JSON from the response if wrapped in markdown
       const match = raw.match(/\{[\s\S]*\}/)
       if (!match) {
@@ -80,7 +81,7 @@ Respondé ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown,
     }
 
     return NextResponse.json(resultado)
-  } catch {
+  } catch (error) {
     return NextResponse.json({ error: "Error al generar el comunicado" }, { status: 500 })
   }
 }

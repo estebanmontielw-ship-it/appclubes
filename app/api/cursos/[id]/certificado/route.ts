@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { notifCertificadoEmitido } from "@/lib/notifications"
+import { handleApiError } from "@/lib/api-errors"
 
 // Generate certificate when course is completed
 export async function POST(
@@ -47,8 +48,8 @@ export async function POST(
     await notifCertificadoEmitido(session.user.id, inscripcion.curso.nombre)
 
     return NextResponse.json({ certificado }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "cursos/[id]/certificado" })
   }
 }
 
@@ -125,7 +126,7 @@ export async function GET(
     return new NextResponse(html, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "cursos/[id]/certificado" })
   }
 }

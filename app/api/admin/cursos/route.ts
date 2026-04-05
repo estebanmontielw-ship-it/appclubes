@@ -1,6 +1,7 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET() {
   try {
@@ -16,8 +17,8 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     })
     return NextResponse.json({ cursos })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cursos" })
   }
 }
 
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ curso }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cursos" })
   }
 }
