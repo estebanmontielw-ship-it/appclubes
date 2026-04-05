@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { CheckCircle, Clock, XCircle, AlertCircle, CreditCard, FileText, Bell, User, ChevronRight } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { CheckCircle, Clock, XCircle, AlertCircle, CreditCard, FileText, Bell, User, ChevronRight, Camera, Loader2 } from "lucide-react"
 import Link from "next/link"
 import PortalInstallPrompt from "@/components/PortalInstallPrompt"
 
@@ -28,13 +28,64 @@ export default function CTDashboardPage() {
     fetch("/api/ct/me").then(r => r.json()).then(data => setCt(data.ct)).catch(() => {})
   }, [])
 
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    try {
+      // Compress if needed
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("bucket", "fotos-carnet")
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      if (!res.ok) throw new Error()
+      const { url } = await res.json()
+
+      // Update profile via API
+      const updateRes = await fetch("/api/ct/perfil", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fotoCarnetUrl: url }),
+      })
+      if (updateRes.ok) {
+        setCt({ ...ct, fotoCarnetUrl: url })
+      }
+    } catch {} finally { setUploadingPhoto(false) }
+  }
+
   if (!ct) return <div className="py-12 text-center text-gray-400">Cargando...</div>
 
   const estado = estadoConfig[ct.estadoHabilitacion] || estadoConfig.PENDIENTE
   const StatusIcon = estado.icon
+  const needsPhoto = !ct.fotoCarnetUrl
 
   return (
     <div className="max-w-3xl space-y-4">
+      {/* Photo required popup */}
+      {needsPhoto && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <Camera className="h-8 w-8 text-amber-600" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">Foto de carnet requerida</h2>
+            <p className="text-sm text-gray-500 mt-2">
+              Para completar tu registro y activar tu carnet digital, necesitamos tu foto tipo carnet.
+            </p>
+            <p className="text-xs text-gray-400 mt-1">Foto de frente, fondo claro</p>
+
+            <label className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 cursor-pointer">
+              {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+              {uploadingPhoto ? "Subiendo..." : "Subir mi foto"}
+              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+            </label>
+          </div>
+        </div>
+      )}
+
       <PortalInstallPrompt portalName="CPB Cuerpo Técnico" portalDesc="Accedé directo a tu carnet y recursos desde tu celular" />
       <h1 className="text-2xl font-bold text-gray-900">Bienvenido, {ct.nombre}</h1>
 

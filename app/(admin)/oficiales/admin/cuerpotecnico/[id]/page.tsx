@@ -322,11 +322,32 @@ export default function CuerpoTecnicoDetailPage() {
             <div className="flex-1">
               <p className="font-semibold text-sm text-amber-800">Falta foto de carnet</p>
               <p className="text-xs text-amber-600 mt-0.5">Este miembro no tiene foto tipo carnet. Es obligatoria para habilitar su carnet digital.</p>
-              <label className="inline-flex items-center gap-2 mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 cursor-pointer">
-                {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
-                {uploadingPhoto ? "Subiendo..." : "Subir foto ahora"}
-                <input type="file" className="hidden" accept="image/*" onChange={uploadCarnetPhoto} disabled={uploadingPhoto} />
-              </label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 cursor-pointer">
+                  {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                  {uploadingPhoto ? "Subiendo..." : "Subir foto ahora"}
+                  <input type="file" className="hidden" accept="image/*" onChange={uploadCarnetPhoto} disabled={uploadingPhoto} />
+                </label>
+                <button onClick={async () => {
+                  try {
+                    await fetch("/api/admin/notificaciones", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        titulo: "Actualizá tu foto de carnet",
+                        mensaje: `Hola ${ct.nombre}, necesitamos que subas tu foto tipo carnet en el portal de Cuerpo Técnico de la CPB. Es obligatoria para tu carnet digital.\n\nIngresá a cpb.com.py/cuerpotecnico y subí tu foto.\n\nGracias,\nCPB Paraguay`,
+                        destinatarios: "USUARIO_ESPECIFICO",
+                        emailEspecifico: ct.email,
+                        enviarEmail: true,
+                        enviarNotificacion: false,
+                      }),
+                    })
+                    alert("Email enviado a " + ct.email)
+                  } catch { alert("Error al enviar") }
+                }} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-amber-300 text-amber-700 text-sm font-semibold hover:bg-amber-50">
+                  Notificar por email
+                </button>
+              </div>
             </div>
           </div>
         </div>
