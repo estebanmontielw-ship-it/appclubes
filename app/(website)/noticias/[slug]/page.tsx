@@ -1,7 +1,22 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
+import { cache } from "react"
 import prisma from "@/lib/prisma"
+
+// Deduplicate DB call between generateMetadata and page component
+const getNoticia = cache(async (slug: string) => {
+  try {
+    return await prisma.noticia.findUnique({
+      where: { slug, publicada: true },
+    })
+  } catch {
+    return null
+  }
+})
+
+// Revalidate individual news every 1 hour
+export const revalidate = 3600
 
 const categoryLabels: Record<string, string> = {
   GENERAL: "General",
@@ -13,50 +28,35 @@ const categoryLabels: Record<string, string> = {
 }
 
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  try {
-    const noticia = await prisma.noticia.findUnique({
-      where: { slug: params.slug, publicada: true },
-    })
-    if (!noticia) return { title: "Noticia no encontrada" }
+  const noticia = await getNoticia(params.slug)
+  if (!noticia) return { title: "Noticia no encontrada" }
 
-    const images = noticia.imagenUrl
-      ? [{ url: noticia.imagenUrl, alt: noticia.titulo }]
-      : [{ url: "/logo-cpb.jpg", alt: "CPB - Confederación Paraguaya de Básquetbol" }]
+  const images = noticia.imagenUrl
+    ? [{ url: noticia.imagenUrl, alt: noticia.titulo }]
+    : [{ url: "/logo-cpb.jpg", alt: "CPB - Confederación Paraguaya de Básquetbol" }]
 
-    return {
+  return {
+    title: noticia.titulo,
+    description: noticia.extracto,
+    openGraph: {
+      type: "article",
       title: noticia.titulo,
       description: noticia.extracto,
-      openGraph: {
-        type: "article",
-        title: noticia.titulo,
-        description: noticia.extracto,
-        url: `/noticias/${params.slug}`,
-        images,
-        publishedTime: noticia.publicadaEn?.toISOString(),
-      },
-      twitter: {
-        card: "summary_large_image",
-        title: noticia.titulo,
-        description: noticia.extracto,
-        images: noticia.imagenUrl ? [noticia.imagenUrl] : ["/logo-cpb.jpg"],
-      },
-    }
-  } catch {
-    return { title: "Noticias" }
+      url: `/noticias/${params.slug}`,
+      images,
+      publishedTime: noticia.publicadaEn?.toISOString(),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: noticia.titulo,
+      description: noticia.extracto,
+      images: noticia.imagenUrl ? [noticia.imagenUrl] : ["/logo-cpb.jpg"],
+    },
   }
 }
 
 export default async function NoticiaDetailPage({ params }: { params: { slug: string } }) {
-  let noticia: any = null
-
-  try {
-    noticia = await prisma.noticia.findUnique({
-      where: { slug: params.slug, publicada: true },
-    })
-  } catch {
-    // Table may not exist yet
-  }
-
+  const noticia = await getNoticia(params.slug)
   if (!noticia) notFound()
 
   const fecha = noticia.publicadaEn

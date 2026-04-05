@@ -25,7 +25,10 @@ export async function GET(request: Request) {
       prisma.noticia.count({ where }),
     ])
 
-    return NextResponse.json({ noticias, total, pagina, totalPaginas: Math.ceil(total / limite) })
+    return NextResponse.json(
+      { noticias, total, pagina, totalPaginas: Math.ceil(total / limite) },
+      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
+    )
   } catch (error) {
     return handleApiError(error, { context: "website/noticias" })
   }

@@ -2,6 +2,9 @@ import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
 import prisma from "@/lib/prisma"
 
+// Revalidate selections every 1 hour
+export const revalidate = 3600
+
 export const metadata: Metadata = {
   title: "Selecciones Nacionales",
   description: "Selecciones nacionales de básquetbol de Paraguay - Confederación Paraguaya de Básquetbol",
@@ -19,6 +22,15 @@ export default async function SeleccionesPage() {
     selecciones = await prisma.seleccion.findMany({
       where: { activo: true },
       orderBy: { orden: "asc" },
+      select: {
+        id: true,
+        nombre: true,
+        genero: true,
+        categoria: true,
+        imagenUrl: true,
+        entrenador: true,
+        descripcion: true,
+      },
     })
   } catch {
     // Table may not exist yet

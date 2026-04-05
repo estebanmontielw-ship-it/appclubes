@@ -4,6 +4,9 @@ import NewsCard from "@/components/website/NewsCard"
 import prisma from "@/lib/prisma"
 import Link from "next/link"
 
+// Revalidate news list every 5 minutes
+export const revalidate = 300
+
 export const metadata: Metadata = {
   title: "Noticias",
   description: "Últimas noticias del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
@@ -46,6 +49,15 @@ export default async function NoticiasPage({
         orderBy: [{ destacada: "desc" }, { publicadaEn: "desc" }],
         skip: (page - 1) * ITEMS_PER_PAGE,
         take: ITEMS_PER_PAGE,
+        select: {
+          id: true,
+          titulo: true,
+          slug: true,
+          extracto: true,
+          imagenUrl: true,
+          categoria: true,
+          publicadaEn: true,
+        },
       }),
       prisma.noticia.count({ where }),
     ])

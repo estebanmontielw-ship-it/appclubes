@@ -10,7 +10,10 @@ export async function GET() {
       where: { activo: true },
       orderBy: [{ categoria: "asc" }, { orden: "asc" }],
     })
-    return NextResponse.json({ reglamentos })
+    return NextResponse.json(
+      { reglamentos },
+      { headers: { "Cache-Control": "public, s-maxage=7200, stale-while-revalidate=14400" } }
+    )
   } catch (error) {
     return handleApiError(error, { context: "website/reglamentos" })
   }

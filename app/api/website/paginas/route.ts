@@ -11,14 +11,20 @@ export async function GET(request: Request) {
 
     if (clave) {
       const pagina = await prisma.paginaContenido.findUnique({ where: { clave } })
-      return NextResponse.json({ pagina })
+      return NextResponse.json(
+        { pagina },
+        { headers: { "Cache-Control": "public, s-maxage=7200, stale-while-revalidate=14400" } }
+      )
     }
 
     const paginas = await prisma.paginaContenido.findMany({
       where: { activo: true },
       orderBy: { clave: "asc" },
     })
-    return NextResponse.json({ paginas })
+    return NextResponse.json(
+      { paginas },
+      { headers: { "Cache-Control": "public, s-maxage=7200, stale-while-revalidate=14400" } }
+    )
   } catch (error) {
     return handleApiError(error, { context: "website/paginas" })
   }

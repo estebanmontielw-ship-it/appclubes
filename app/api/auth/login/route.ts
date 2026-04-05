@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     // Validar entrada con Zod
     const parsed = loginSchema.safeParse(body)
     if (!parsed.success) {
-      const firstError = parsed.error.errors[0]?.message || "Datos inválidos"
+      const firstError = parsed.error.issues[0]?.message || "Datos inválidos"
       return NextResponse.json({ error: firstError }, { status: 400 })
     }
 

@@ -3,6 +3,9 @@ import SectionTitle from "@/components/website/SectionTitle"
 import prisma from "@/lib/prisma"
 import { FileText, Download } from "lucide-react"
 
+// Revalidate regulations every 2 hours
+export const revalidate = 7200
+
 export const metadata: Metadata = {
   title: "Reglamentos",
   description: "Reglamentos, estatutos y documentos oficiales de la Confederación Paraguaya de Básquetbol",
@@ -28,6 +31,13 @@ export default async function ReglamentosPage() {
     reglamentos = await prisma.reglamento.findMany({
       where: { activo: true },
       orderBy: [{ categoria: "asc" }, { orden: "asc" }],
+      select: {
+        id: true,
+        titulo: true,
+        descripcion: true,
+        archivoUrl: true,
+        categoria: true,
+      },
     })
   } catch {
     // Table may not exist yet
