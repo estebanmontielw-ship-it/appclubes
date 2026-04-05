@@ -71,14 +71,16 @@ export default function AdminDashboardPage() {
     if (q.length < 2) { setSearchResults([]); return }
     setSearching(true)
     try {
-      const [res1, res2] = await Promise.all([
+      const [res1, res2, res3] = await Promise.all([
         fetch(`/api/admin/usuarios?buscar=${encodeURIComponent(q)}&limite=5`),
         fetch(`/api/admin/cuerpotecnico?buscar=${encodeURIComponent(q)}&limite=5`),
+        fetch(`/api/ct/buscar?q=${encodeURIComponent(q)}`),
       ])
-      const [data1, data2] = await Promise.all([res1.json(), res2.json()])
+      const [data1, data2, data3] = await Promise.all([res1.json(), res2.json(), res3.json()])
       const oficiales = (data1.usuarios || []).map((u: any) => ({ ...u, _type: "oficial" }))
       const cts = (data2.miembros || []).map((c: any) => ({ ...c, _type: "ct" }))
-      setSearchResults([...oficiales, ...cts])
+      const preVerified = (data3.preVerified || []).map((p: any) => ({ ...p, _type: "pre", id: `pre-${p.nombre}` }))
+      setSearchResults([...oficiales, ...cts, ...preVerified])
     } catch {} finally { setSearching(false) }
   }
 
@@ -131,6 +133,20 @@ export default function AdminDashboardPage() {
         {searchResults.length > 0 && searchQuery.length >= 2 && (
           <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-20 max-h-80 overflow-y-auto">
             {searchResults.map((r) => (
+              r._type === "pre" ? (
+                <div key={r.id} className="flex items-center gap-3 px-4 py-3 border-b border-gray-50 last:border-0 bg-amber-50/50">
+                  <div className="shrink-0 w-9 h-9 rounded-lg flex items-center justify-center bg-amber-100">
+                    <Users className="h-4 w-4 text-amber-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900">{r.nombre}</p>
+                    <p className="text-xs text-amber-600">Pre-registrado (108) · {r.rol} · Sin registrar en el portal</p>
+                  </div>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                    NO REGISTRADO
+                  </span>
+                </div>
+              ) : (
               <Link
                 key={r.id}
                 href={r._type === "oficial" ? `/oficiales/admin/usuarios/${r.id}` : `/oficiales/admin/cuerpotecnico/${r.id}`}
@@ -154,6 +170,7 @@ export default function AdminDashboardPage() {
                   {r.estadoVerificacion || r.estadoHabilitacion}
                 </span>
               </Link>
+              )
             ))}
           </div>
         )}
