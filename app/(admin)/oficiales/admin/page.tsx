@@ -10,6 +10,7 @@ import {
   Users, UserCheck, Clock, DollarSign, BookOpen,
   ArrowRight, Eye, Trophy, Upload, Send, GraduationCap,
   AlertCircle, CheckCircle, XCircle, CreditCard, Bell,
+  Search, Loader2,
 } from "lucide-react"
 import { formatDate } from "@/lib/utils"
 import PortalInstallPrompt from "@/components/PortalInstallPrompt"
@@ -61,6 +62,25 @@ interface Stats {
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<any[]>([])
+  const [searching, setSearching] = useState(false)
+
+  async function handleSearch(q: string) {
+    setSearchQuery(q)
+    if (q.length < 2) { setSearchResults([]); return }
+    setSearching(true)
+    try {
+      const [res1, res2] = await Promise.all([
+        fetch(`/api/admin/usuarios?buscar=${encodeURIComponent(q)}&limite=5`),
+        fetch(`/api/admin/cuerpotecnico?buscar=${encodeURIComponent(q)}&limite=5`),
+      ])
+      const [data1, data2] = await Promise.all([res1.json(), res2.json()])
+      const oficiales = (data1.usuarios || []).map((u: any) => ({ ...u, _type: "oficial" }))
+      const cts = (data2.miembros || []).map((c: any) => ({ ...c, _type: "ct" }))
+      setSearchResults([...oficiales, ...cts])
+    } catch {} finally { setSearching(false) }
+  }
 
   useEffect(() => {
     fetch("/api/admin/stats")
@@ -93,6 +113,50 @@ export default function AdminDashboardPage() {
         <p className="text-muted-foreground">
           {new Date().toLocaleDateString("es-PY", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
         </p>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <div className="relative">
+          <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
+          <input
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Buscar oficial o cuerpo técnico por nombre, CI o email..."
+            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            style={{ fontSize: "16px" }}
+          />
+          {searching && <Loader2 className="absolute right-3 top-3 h-5 w-5 text-gray-400 animate-spin" />}
+        </div>
+        {searchResults.length > 0 && searchQuery.length >= 2 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-gray-200 shadow-lg z-20 max-h-80 overflow-y-auto">
+            {searchResults.map((r) => (
+              <Link
+                key={r.id}
+                href={r._type === "oficial" ? `/oficiales/admin/usuarios/${r.id}` : `/oficiales/admin/cuerpotecnico/${r.id}`}
+                onClick={() => { setSearchQuery(""); setSearchResults([]) }}
+                className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 last:border-0"
+              >
+                <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${r._type === "oficial" ? "bg-blue-100" : "bg-green-100"}`}>
+                  <Users className={`h-4 w-4 ${r._type === "oficial" ? "text-blue-600" : "text-green-600"}`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900">{r.nombre} {r.apellido}</p>
+                  <p className="text-xs text-gray-500">
+                    CI: {r.cedula} · {r._type === "oficial" ? "Oficial" : `CT - ${r.rol}`}
+                  </p>
+                </div>
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
+                  (r.estadoVerificacion === "VERIFICADO" || r.estadoHabilitacion === "HABILITADO") ? "bg-green-100 text-green-700" :
+                  (r.estadoVerificacion === "PENDIENTE" || r.estadoHabilitacion === "PENDIENTE") ? "bg-yellow-100 text-yellow-700" :
+                  "bg-gray-100 text-gray-600"
+                }`}>
+                  {r.estadoVerificacion || r.estadoHabilitacion}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Alert banner */}
