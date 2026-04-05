@@ -26,6 +26,7 @@ interface CTMember {
   pagoVerificado: boolean
   pagoAutoVerificado: boolean
   comprobanteUrl: string | null
+  fotoCarnetUrl: string | null
   montoHabilitacion: number
   createdAt: string
   activo: boolean
@@ -191,6 +192,13 @@ function AdminCTContent() {
                   return (
                     <div key={m.id} className="p-4">
                       <div className="flex items-start justify-between gap-3 mb-3">
+                        {m.fotoCarnetUrl ? (
+                          <img src={m.fotoCarnetUrl} alt="" className="w-11 h-11 rounded-lg object-cover shrink-0" />
+                        ) : (
+                          <div className="w-11 h-11 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-primary">{m.nombre?.charAt(0)}{m.apellido?.charAt(0)}</span>
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-sm">{m.nombre} {m.apellido}</p>
                           <p className="text-xs text-muted-foreground mt-0.5">CI: {m.cedula}</p>
@@ -244,8 +252,19 @@ function AdminCTContent() {
                     {filtered.map(m => (
                       <tr key={m.id} className="border-b last:border-0 hover:bg-gray-50/50">
                         <td className="p-3">
-                          <p className="font-medium text-sm">{m.nombre} {m.apellido}</p>
-                          <p className="text-xs text-muted-foreground">CI: {m.cedula}</p>
+                          <div className="flex items-center gap-3">
+                            {m.fotoCarnetUrl ? (
+                              <img src={m.fotoCarnetUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <span className="text-[10px] font-bold text-primary">{m.nombre?.charAt(0)}{m.apellido?.charAt(0)}</span>
+                              </div>
+                            )}
+                            <div>
+                              <p className="font-medium text-sm">{m.nombre} {m.apellido}</p>
+                              <p className="text-xs text-muted-foreground">CI: {m.cedula}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="p-3"><Badge variant="outline" className="text-xs">{ROL_LABELS[m.rol] || m.rol}</Badge></td>
                         <td className="p-3">

@@ -19,6 +19,7 @@ interface UsuarioRow {
   ciudad: string
   estadoVerificacion: EstadoVerificacion
   createdAt: string
+  fotoCarnetUrl: string | null
   roles: { rol: TipoRol }[]
 }
 
@@ -103,6 +104,13 @@ export default function AdminUsuariosPage() {
                 {usuarios.map((u) => (
                   <Link key={u.id} href={`/oficiales/admin/usuarios/${u.id}`} className="block p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors">
                     <div className="flex items-start justify-between gap-3">
+                      {u.fotoCarnetUrl ? (
+                        <img src={u.fotoCarnetUrl} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-primary">{u.nombre?.charAt(0)}{u.apellido?.charAt(0)}</span>
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold text-sm">{u.nombre} {u.apellido}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">CI: {u.cedula} · {u.ciudad}</p>
@@ -156,9 +164,16 @@ export default function AdminUsuariosPage() {
                     {usuarios.map((u) => (
                       <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50/50">
                         <td className="p-4">
-                          <p className="font-medium">
-                            {u.nombre} {u.apellido}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            {u.fotoCarnetUrl ? (
+                              <img src={u.fotoCarnetUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                            ) : (
+                              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                                <span className="text-xs font-bold text-primary">{u.nombre?.charAt(0)}{u.apellido?.charAt(0)}</span>
+                              </div>
+                            )}
+                            <p className="font-medium">{u.nombre} {u.apellido}</p>
+                          </div>
                         </td>
                         <td className="p-4 text-sm">{u.cedula}</td>
                         <td className="p-4">

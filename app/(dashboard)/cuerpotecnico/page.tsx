@@ -31,27 +31,25 @@ export default function CTDashboardPage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, field: "fotoCarnetUrl" | "fotoCedulaUrl", bucket: string) {
     const file = e.target.files?.[0]
     if (!file) return
     setUploadingPhoto(true)
     try {
-      // Compress if needed
       const formData = new FormData()
       formData.append("file", file)
-      formData.append("bucket", "fotos-carnet")
+      formData.append("bucket", bucket)
       const res = await fetch("/api/upload", { method: "POST", body: formData })
       if (!res.ok) throw new Error()
       const { url } = await res.json()
 
-      // Update profile via API
       const updateRes = await fetch("/api/ct/perfil", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fotoCarnetUrl: url }),
+        body: JSON.stringify({ [field]: url }),
       })
       if (updateRes.ok) {
-        setCt({ ...ct, fotoCarnetUrl: url })
+        setCt({ ...ct, [field]: url })
       }
     } catch {} finally { setUploadingPhoto(false) }
   }
@@ -61,6 +59,7 @@ export default function CTDashboardPage() {
   const estado = estadoConfig[ct.estadoHabilitacion] || estadoConfig.PENDIENTE
   const StatusIcon = estado.icon
   const needsPhoto = !ct.fotoCarnetUrl
+  const needsCedula = !ct.fotoCedulaUrl
 
   return (
     <div className="max-w-3xl space-y-4">
@@ -80,7 +79,28 @@ export default function CTDashboardPage() {
             <label className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 cursor-pointer">
               {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
               {uploadingPhoto ? "Subiendo..." : "Subir mi foto"}
-              <input ref={fileInputRef} type="file" className="hidden" accept="image/*" onChange={handlePhotoUpload} disabled={uploadingPhoto} />
+              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleUpload(e, "fotoCarnetUrl", "fotos-carnet")} disabled={uploadingPhoto} />
+            </label>
+          </div>
+        </div>
+      )}
+
+      {/* Cédula required popup (shows after carnet is uploaded) */}
+      {!needsPhoto && needsCedula && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4">
+              <CreditCard className="h-8 w-8 text-amber-600" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900">Foto de cédula requerida</h2>
+            <p className="text-sm text-gray-500 mt-2">
+              Necesitamos una foto del frente de tu cédula de identidad para verificar tus datos.
+            </p>
+
+            <label className="mt-5 inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 cursor-pointer">
+              {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <CreditCard className="h-4 w-4" />}
+              {uploadingPhoto ? "Subiendo..." : "Subir foto de cédula"}
+              <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleUpload(e, "fotoCedulaUrl", "fotos-cedula")} disabled={uploadingPhoto} />
             </label>
           </div>
         </div>
