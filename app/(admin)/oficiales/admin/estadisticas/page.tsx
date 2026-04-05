@@ -34,7 +34,6 @@ const MESES = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep"
 export default function EstadisticasPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [exporting, setExporting] = useState(false)
 
   useEffect(() => {
     fetch("/api/admin/estadisticas")
@@ -44,20 +43,9 @@ export default function EstadisticasPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleExportPDF = async () => {
-    setExporting(true)
-    try {
-      const res = await fetch("/api/admin/estadisticas/pdf")
-      if (!res.ok) throw new Error("Error al generar PDF")
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const w = window.open(url, "_blank")
-      if (w) w.focus()
-    } catch {
-      alert("Error al generar el reporte. Intentá de nuevo.")
-    } finally {
-      setExporting(false)
-    }
+  const handleExportPDF = () => {
+    // Open directly — the endpoint returns HTML that can be printed as PDF
+    window.open("/api/admin/estadisticas/pdf", "_blank")
   }
 
   if (loading || !data) return <PageSkeleton />
@@ -76,11 +64,10 @@ export default function EstadisticasPage() {
         </div>
         <button
           onClick={handleExportPDF}
-          disabled={exporting}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors"
         >
           <Download className="h-4 w-4" />
-          {exporting ? "Generando..." : "Exportar PDF"}
+          Exportar PDF
         </button>
       </div>
 
