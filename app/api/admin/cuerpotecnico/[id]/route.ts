@@ -39,7 +39,7 @@ export async function PATCH(
 
     // Edit mode - update any field
     if (editar) {
-      const allowedFields = ["nombre", "apellido", "cedula", "telefono", "ciudad", "email", "genero", "nacionalidad", "rol", "razonSocial", "ruc", "tieneTitulo"]
+      const allowedFields = ["nombre", "apellido", "cedula", "telefono", "ciudad", "email", "genero", "nacionalidad", "rol", "razonSocial", "ruc", "tieneTitulo", "fotoCarnetUrl", "fotoCedulaUrl"]
       const updateData: Record<string, unknown> = {}
       for (const field of allowedFields) {
         if (editar[field] !== undefined) updateData[field] = editar[field]

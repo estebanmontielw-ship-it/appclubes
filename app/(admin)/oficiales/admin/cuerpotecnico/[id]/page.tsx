@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Check, X, AlertCircle, Ban, CreditCard, FileText, ExternalLink } from "lucide-react"
+import { ArrowLeft, Check, X, AlertCircle, Ban, CreditCard, FileText, ExternalLink, Upload, Camera, Loader2 } from "lucide-react"
 
 function DocPreview({ label, url }: { label: string; url: string }) {
   const isPdf = url.toLowerCase().includes(".pdf")
@@ -56,6 +56,32 @@ export default function CuerpoTecnicoDetailPage() {
   const [showCarnet, setShowCarnet] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState<any>({})
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
+  async function uploadCarnetPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingPhoto(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("bucket", "fotos-carnet")
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      if (!res.ok) throw new Error()
+      const { url } = await res.json()
+
+      // Update CT record
+      const updateRes = await fetch(`/api/admin/cuerpotecnico/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editar: { fotoCarnetUrl: url } }),
+      })
+      if (updateRes.ok) {
+        const { ct: updated } = await updateRes.json()
+        setCt(updated)
+      }
+    } catch {} finally { setUploadingPhoto(false) }
+  }
 
   useEffect(() => {
     fetch(`/api/admin/cuerpotecnico/${params.id}`)
@@ -288,6 +314,24 @@ export default function CuerpoTecnicoDetailPage() {
         </div>
       )}
 
+      {/* Missing photo alert */}
+      {!ct.fotoCarnetUrl && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-semibold text-sm text-amber-800">Falta foto de carnet</p>
+              <p className="text-xs text-amber-600 mt-0.5">Este miembro no tiene foto tipo carnet. Es obligatoria para habilitar su carnet digital.</p>
+              <label className="inline-flex items-center gap-2 mt-2 px-4 py-2 rounded-lg bg-amber-600 text-white text-sm font-semibold hover:bg-amber-700 cursor-pointer">
+                {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
+                {uploadingPhoto ? "Subiendo..." : "Subir foto ahora"}
+                <input type="file" className="hidden" accept="image/*" onChange={uploadCarnetPhoto} disabled={uploadingPhoto} />
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       {ct.estadoHabilitacion === "PENDIENTE" && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -315,7 +359,13 @@ export default function CuerpoTecnicoDetailPage() {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              <button onClick={() => handleAction("habilitar")} disabled={saving}
+              <button onClick={() => {
+                if (!ct.fotoCarnetUrl) {
+                  alert("Este miembro no tiene foto de carnet. Subí una foto antes de habilitar.")
+                  return
+                }
+                handleAction("habilitar")
+              }} disabled={saving}
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
                 <Check className="h-4 w-4" /> Habilitar
               </button>
