@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { sendAdminPush } from "@/lib/admin-push"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(
   request: Request,
@@ -51,7 +52,7 @@ export async function POST(
     sendAdminPush("Nuevo comprobante de pago", "Un oficial envió un comprobante de pago para revisión").catch(() => {})
 
     return NextResponse.json({ pago }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "POST /api/cursos/pago" })
   }
 }

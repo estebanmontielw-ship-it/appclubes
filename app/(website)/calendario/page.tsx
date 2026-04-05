@@ -5,6 +5,11 @@ import GeniusSportsWidget from "@/components/website/GeniusSportsWidget"
 export const metadata: Metadata = {
   title: "Calendario",
   description: "Calendario de partidos del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Calendario de Partidos | CPB",
+    description: "Calendario de partidos del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+    url: "/calendario",
+  },
 }
 
 export default function CalendarioPage() {

@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import admin from "firebase-admin"
+import { rateLimit } from "@/lib/rate-limit"
 
 // Initialize Firebase Admin
 if (!admin.apps.length) {
@@ -17,6 +18,10 @@ if (!admin.apps.length) {
 }
 
 export async function POST(request: Request) {
+  // Rate limit: 5 envíos masivos por minuto
+  const rateLimitResponse = rateLimit(request, 5, 60_000, "push-send")
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)

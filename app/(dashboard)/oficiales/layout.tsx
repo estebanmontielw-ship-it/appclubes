@@ -6,6 +6,7 @@ import Sidebar from "@/components/layout/Sidebar"
 import Navbar from "@/components/layout/Navbar"
 import { createClient } from "@/utils/supabase/client"
 import type { TipoRol } from "@prisma/client"
+import { useNotifications } from "@/hooks/useNotifications"
 
 interface UserData {
   nombre: string
@@ -24,6 +25,17 @@ export default function DashboardLayout({
   const [unreadCount, setUnreadCount] = useState(0)
   const [pendingUsers, setPendingUsers] = useState(0)
   const [pendingPayments, setPendingPayments] = useState(0)
+  const [userLoaded, setUserLoaded] = useState(false)
+
+  // Real-time notification polling (every 30s when tab is visible)
+  const { unreadCount: polledUnreadCount } = useNotifications({
+    enabled: userLoaded,
+  })
+
+  // Sync polled count to state when it changes
+  useEffect(() => {
+    if (userLoaded) setUnreadCount(polledUnreadCount)
+  }, [polledUnreadCount, userLoaded])
 
   useEffect(() => {
     async function loadUser() {
@@ -35,6 +47,7 @@ export default function DashboardLayout({
           setUnreadCount(data.unreadNotifications || 0)
           setPendingUsers(data.pendingUsers || 0)
           setPendingPayments(data.pendingPayments || 0)
+          setUserLoaded(true)
         }
       } catch {}
     }

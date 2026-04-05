@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 function normalizeName(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
         type: "pre-verified",
       })),
     })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "ct/buscar" })
   }
 }

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { createNotificacion } from "@/lib/notifications"
 import { sendEmail } from "@/lib/email"
+import { handleApiError } from "@/lib/api-errors"
 
 // Envía emails en lotes de 5 con 1.2s de pausa entre lotes (límite Resend: 5/seg)
 async function sendEmailsBatched(
@@ -166,7 +167,7 @@ export async function POST(request: Request) {
       total,
       emailSkipped: shouldEmail ? (users.length + ctUsers.length) - emailSent : 0,
     })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/notificaciones" })
   }
 }

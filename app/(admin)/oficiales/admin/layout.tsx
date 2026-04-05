@@ -7,6 +7,7 @@ import Navbar from "@/components/layout/Navbar"
 import { createClient } from "@/utils/supabase/client"
 import type { TipoRol } from "@prisma/client"
 import AdminChatWidget from "@/components/layout/AdminChatWidget"
+import { useNotifications } from "@/hooks/useNotifications"
 
 interface UserData {
   nombre: string
@@ -27,6 +28,16 @@ export default function AdminLayout({
   const [pendingPayments, setPendingPayments] = useState(0)
   const [pendingCT, setPendingCT] = useState(0)
   const [authorized, setAuthorized] = useState<boolean | null>(null)
+
+  // Real-time notification polling (every 30s when tab is visible)
+  const { unreadCount: polledUnreadCount } = useNotifications({
+    enabled: authorized === true,
+  })
+
+  // Sync polled count to state when it changes
+  useEffect(() => {
+    if (authorized) setUnreadCount(polledUnreadCount)
+  }, [polledUnreadCount, authorized])
 
   useEffect(() => {
     async function loadUser() {

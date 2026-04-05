@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { markAsRead, markAllAsRead } from "@/lib/notifications"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "notificaciones/read" })
   }
 }

@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 // Mark module as completed
 export async function POST(
@@ -93,7 +94,7 @@ export async function POST(
     }
 
     return NextResponse.json({ progreso, completed: completedModulos, total: totalModulos })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "cursos/[id]/progreso" })
   }
 }

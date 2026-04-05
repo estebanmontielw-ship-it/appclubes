@@ -3,6 +3,8 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { rateLimit } from "@/lib/rate-limit"
+import { handleApiError } from "@/lib/api-errors"
 
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -131,6 +133,10 @@ async function checkAdmin() {
 }
 
 export async function POST(request: Request) {
+  // Rate limit: 20 requests por minuto para AI
+  const rateLimitResponse = rateLimit(request, 20, 60_000, "ai")
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.json()
     const { prompt, tipo, contexto } = body
@@ -166,7 +172,7 @@ Categorías válidas: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, C
 
       try {
         return NextResponse.json({ result: JSON.parse(text) })
-      } catch {
+      } catch (error) {
         return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
       }
     }
@@ -187,7 +193,7 @@ El contenido debe ser informativo, profesional y detallado.`, 3000)
 
       try {
         return NextResponse.json({ result: JSON.parse(text) })
-      } catch {
+      } catch (error) {
         return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
       }
     }
@@ -214,7 +220,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
 
       try {
         return NextResponse.json({ result: JSON.parse(text) })
-      } catch {
+      } catch (error) {
         return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
       }
     }
@@ -238,7 +244,7 @@ El tono debe ser formal e institucional. Incluí fecha, formato de comunicado of
 
       try {
         return NextResponse.json({ result: JSON.parse(text) })
-      } catch {
+      } catch (error) {
         return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
       }
     }
@@ -309,7 +315,7 @@ Eliminá hashtags y emojis del título y extracto. Podés mantenerlos en el cont
 
       try {
         return NextResponse.json({ result: JSON.parse(text) })
-      } catch {
+      } catch (error) {
         return NextResponse.json({ error: "Error al procesar respuesta", raw: text }, { status: 500 })
       }
     }
@@ -340,7 +346,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
       try {
         const result = JSON.parse(text)
         return NextResponse.json({ result })
-      } catch {
+      } catch (error) {
         return NextResponse.json({ result: { url: "/", mensaje: "No pude determinar lo que buscás. Probá navegando desde el inicio." } })
       }
     }
@@ -388,7 +394,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
         if (reglamentos.length > 0) {
           reglamentosContext = "\n\nREGLAMENTOS DISPONIBLES:\n" + reglamentos.map(r => `- ${r.titulo} (${r.categoria})`).join("\n")
         }
-      } catch {}
+      } catch (error) {}
 
       const chatPrompt = `Sos el asistente virtual de la Confederación Paraguaya de Básquetbol (CPB). Un visitante del sitio cpb.com.py pregunta:
 
@@ -420,7 +426,7 @@ INSTRUCCIONES:
       try {
         const text = await callNvidia(chatPrompt, "chatbot", 400)
         return NextResponse.json({ result: { respuesta: text } })
-      } catch {
+      } catch (error) {
         if (anthropic) {
           const text = await callClaude(chatPrompt, 400)
           return NextResponse.json({ result: { respuesta: text.trim() } })

@@ -2,9 +2,17 @@ import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
 import prisma from "@/lib/prisma"
 
+// Revalidate clubs every 1 hour
+export const revalidate = 3600
+
 export const metadata: Metadata = {
   title: "Clubes Afiliados",
   description: "Clubes afiliados a la Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Clubes Afiliados | CPB",
+    description: "Clubes afiliados a la Confederación Paraguaya de Básquetbol",
+    url: "/clubes",
+  },
 }
 
 export default async function ClubesPage() {
@@ -14,6 +22,16 @@ export default async function ClubesPage() {
     clubes = await prisma.club.findMany({
       where: { activo: true },
       orderBy: { orden: "asc" },
+      select: {
+        id: true,
+        nombre: true,
+        sigla: true,
+        logoUrl: true,
+        ciudad: true,
+        sitioWeb: true,
+        instagram: true,
+        facebook: true,
+      },
     })
   } catch {
     // Table may not exist yet

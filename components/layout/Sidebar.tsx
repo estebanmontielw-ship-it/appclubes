@@ -133,6 +133,12 @@ function getNavSections(
         ],
       },
       {
+        label: "REPORTES",
+        items: [
+          { label: "Estadísticas", href: "/oficiales/admin/estadisticas", icon: BarChart3 },
+        ],
+      },
+      {
         label: "ASISTENTE IA",
         items: [
           { label: "CPB Bot", href: "/oficiales/admin/asistente", icon: Bot },

@@ -5,6 +5,8 @@ import ChatWidget from "@/components/website/ChatWidget"
 import InstallPrompt from "@/components/website/InstallPrompt"
 import ServiceWorkerRegister from "@/components/website/ServiceWorkerRegister"
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
+
 export const metadata: Metadata = {
   title: {
     template: "%s | CPB - Confederación Paraguaya de Básquetbol",
@@ -15,6 +17,34 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon-cpb.png",
     apple: "/favicon-cpb.png",
+  },
+  metadataBase: new URL(baseUrl),
+  openGraph: {
+    type: "website",
+    locale: "es_PY",
+    siteName: "CPB - Confederación Paraguaya de Básquetbol",
+    title: "CPB - Confederación Paraguaya de Básquetbol",
+    description:
+      "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
+    images: [
+      {
+        url: "/logo-cpb.jpg",
+        width: 800,
+        height: 600,
+        alt: "Logo CPB - Confederación Paraguaya de Básquetbol",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "CPB - Confederación Paraguaya de Básquetbol",
+    description:
+      "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
+    images: ["/logo-cpb.jpg"],
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 }
 

@@ -1,10 +1,13 @@
-import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET() {
   try {
+    const auth = await requireRole("SUPER_ADMIN", "INSTRUCTOR")
+    if (isAuthError(auth)) return auth
+
     const cursos = await prisma.curso.findMany({
       include: {
         modulos: { orderBy: { orden: "asc" }, select: { id: true } },
@@ -14,28 +17,15 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     })
     return NextResponse.json({ cursos })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cursos" })
   }
 }
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
-    const session = _su ? { user: _su } : null
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
-
-    const adminRoles = await prisma.usuarioRol.findMany({
-      where: { usuarioId: session.user.id, rol: { in: ["SUPER_ADMIN", "INSTRUCTOR"] } },
-    })
-    if (adminRoles.length === 0) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
-    }
+    const auth = await requireRole("SUPER_ADMIN", "INSTRUCTOR")
+    if (isAuthError(auth)) return auth
 
     const body = await request.json()
     const { nombre, descripcion, disciplina, nivel, precio, esGratuito, estado, imagen, instructorId } = body
@@ -59,7 +49,7 @@ export async function POST(request: Request) {
     })
 
     return NextResponse.json({ curso }, { status: 201 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cursos" })
   }
 }

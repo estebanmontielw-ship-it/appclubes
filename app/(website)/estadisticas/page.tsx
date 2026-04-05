@@ -5,6 +5,11 @@ import GeniusSportsWidget from "@/components/website/GeniusSportsWidget"
 export const metadata: Metadata = {
   title: "Estadísticas",
   description: "Estadísticas de jugadores y equipos del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Estadísticas | CPB",
+    description: "Estadísticas de jugadores y equipos del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+    url: "/estadisticas",
+  },
 }
 
 export default function EstadisticasPage() {

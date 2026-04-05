@@ -1,10 +1,15 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
+    const auth = await requireRole("SUPER_ADMIN")
+    if (isAuthError(auth)) return auth
+
     const all = await prisma.cuerpoTecnico.findMany({
       where: { activo: true, estadoHabilitacion: { in: ["HABILITADO", "PENDIENTE"] } },
     })
@@ -62,7 +67,7 @@ export async function GET() {
       ingresoPorRol, ingresoTotal, ingresoPotencial,
       topCities, generoCount,
     })
-  } catch {
-    return NextResponse.json({ error: "Error" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/cuerpotecnico/dashboard" })
   }
 }

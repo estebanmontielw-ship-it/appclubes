@@ -2,6 +2,7 @@ import { createServiceClient } from "@/lib/supabase"
 import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
 import sharp from "sharp"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function POST(request: Request) {
   try {
@@ -79,11 +80,7 @@ export async function POST(request: Request) {
       .getPublicUrl(fileName)
 
     return NextResponse.json({ url: urlData.publicUrl, path: fileName })
-  } catch (err) {
-    console.error("Upload error:", err)
-    return NextResponse.json(
-      { error: "Error al subir archivo" },
-      { status: 500 }
-    )
+  } catch (error) {
+    return handleApiError(error, { context: "POST /api/upload" })
   }
 }

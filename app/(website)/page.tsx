@@ -1,5 +1,21 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import HeroSection from "@/components/website/HeroSection"
+
+// Revalidate homepage every 5 minutes
+export const revalidate = 300
+
+export const metadata: Metadata = {
+  title: "Inicio | CPB - Confederación Paraguaya de Básquetbol",
+  description:
+    "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
+  openGraph: {
+    title: "CPB - Confederación Paraguaya de Básquetbol",
+    description:
+      "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
+    url: "/",
+  },
+}
 import SectionTitle from "@/components/website/SectionTitle"
 import NewsCard from "@/components/website/NewsCard"
 import QuickLinks from "@/components/website/QuickLinks"
@@ -16,6 +32,15 @@ export default async function HomePage() {
       where: { publicada: true },
       orderBy: [{ destacada: "desc" }, { publicadaEn: "desc" }],
       take: 4,
+      select: {
+        id: true,
+        titulo: true,
+        slug: true,
+        extracto: true,
+        imagenUrl: true,
+        categoria: true,
+        publicadaEn: true,
+      },
     })
   } catch {
     // Table may not exist yet during development

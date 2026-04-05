@@ -67,6 +67,19 @@ export default function NotificacionesPage() {
 
   useEffect(() => {
     loadNotifs()
+
+    // Poll for new notifications every 30 seconds
+    const timer = setInterval(loadNotifs, 30_000)
+
+    const handleVisibility = () => {
+      if (!document.hidden) loadNotifs()
+    }
+    document.addEventListener("visibilitychange", handleVisibility)
+
+    return () => {
+      clearInterval(timer)
+      document.removeEventListener("visibilitychange", handleVisibility)
+    }
   }, [])
 
   const handleMarkAllRead = async () => {

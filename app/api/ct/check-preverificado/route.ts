@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 function normalizeName(s: string): string {
   return s
@@ -74,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ found: false })
-  } catch {
+  } catch (error) {
     return NextResponse.json({ found: false })
   }
 }

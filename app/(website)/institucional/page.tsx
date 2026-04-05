@@ -2,9 +2,17 @@ import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
 import prisma from "@/lib/prisma"
 
+// Revalidate institutional page every 2 hours
+export const revalidate = 7200
+
 export const metadata: Metadata = {
   title: "Institucional",
   description: "Sobre la Confederación Paraguaya de Básquetbol - Historia, autoridades e información institucional",
+  openGraph: {
+    title: "Institucional | CPB",
+    description: "Sobre la Confederación Paraguaya de Básquetbol - Historia, autoridades e información institucional",
+    url: "/institucional",
+  },
 }
 
 export default async function InstitucionalPage() {
@@ -17,6 +25,12 @@ export default async function InstitucionalPage() {
         clave: { startsWith: "institucional" },
       },
       orderBy: { clave: "asc" },
+      select: {
+        id: true,
+        titulo: true,
+        contenido: true,
+        imagenUrl: true,
+      },
     })
   } catch {
     // Table may not exist yet

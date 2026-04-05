@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 // GET - Dashboard financiero stats + honorarios
 export async function GET(request: Request) {
@@ -57,8 +58,8 @@ export async function GET(request: Request) {
       totalPagado: totalPagado._sum.monto || 0,
       honorariosCount,
     })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/finanzas" })
   }
 }
 
@@ -128,7 +129,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ error: "Acción inválida" }, { status: 400 })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/finanzas" })
   }
 }

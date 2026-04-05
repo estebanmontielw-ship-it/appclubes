@@ -2,12 +2,17 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
+    const auth = await requireRole("SUPER_ADMIN", "DESIGNADOR")
+    if (isAuthError(auth)) return auth
+
     const partido = await prisma.partido.findUnique({
       where: { id: params.id },
       include: {
@@ -21,8 +26,8 @@ export async function GET(
       return NextResponse.json({ error: "Partido no encontrado" }, { status: 404 })
     }
     return NextResponse.json({ partido })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/partidos/[id]" })
   }
 }
 
@@ -31,14 +36,8 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
-    const session = _su ? { user: _su } : null
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
+    const auth = await requireRole("SUPER_ADMIN", "DESIGNADOR")
+    if (isAuthError(auth)) return auth
 
     const body = await request.json()
     const partido = await prisma.partido.update({
@@ -52,7 +51,7 @@ export async function PATCH(
       },
     })
     return NextResponse.json({ partido })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/partidos/[id]" })
   }
 }

@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET() {
   try {
@@ -23,7 +24,7 @@ export async function GET() {
     })
 
     return NextResponse.json({ mensajes })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "website/contacto" })
   }
 }

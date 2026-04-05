@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import type { EstadoVerificacion } from "@prisma/client"
+import { handleApiError } from "@/lib/api-errors"
 
 export async function GET(request: Request) {
   try {
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
     })
 
     return NextResponse.json({ usuarios })
-  } catch {
-    return NextResponse.json({ error: "Error interno" }, { status: 500 })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/usuarios" })
   }
 }
