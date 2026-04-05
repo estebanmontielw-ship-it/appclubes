@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle, Lock } from "lucide-react"
+import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle, Lock, Search } from "lucide-react"
 import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
@@ -140,6 +140,12 @@ export default function DashboardPage() {
                 ? `${unreadNotifications} sin leer`
                 : "Al día"
             }
+          />
+          <QuickCard
+            href="/oficiales/verificar-ct"
+            icon={<Search className="h-6 w-6" />}
+            title="Verificar CT"
+            description="Buscar cuerpo técnico"
           />
         </div>
       ) : (
