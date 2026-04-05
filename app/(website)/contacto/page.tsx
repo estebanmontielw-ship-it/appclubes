@@ -5,7 +5,12 @@ import { Mail, MapPin, Phone } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Contacto",
-  description: "Contacto - Confederación Paraguaya de Básquetbol",
+  description: "Contacto con la Confederación Paraguaya de Básquetbol. Escribinos o visitanos en Asunción, Paraguay.",
+  openGraph: {
+    title: "Contacto | CPB",
+    description: "Contacto con la Confederación Paraguaya de Básquetbol. Escribinos o visitanos en Asunción, Paraguay.",
+    url: "/contacto",
+  },
 }
 
 export default function ContactoPage() {

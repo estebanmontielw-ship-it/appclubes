@@ -5,6 +5,11 @@ import GeniusSportsWidget from "@/components/website/GeniusSportsWidget"
 export const metadata: Metadata = {
   title: "Posiciones",
   description: "Tabla de posiciones del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Tabla de Posiciones | CPB",
+    description: "Tabla de posiciones del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+    url: "/posiciones",
+  },
 }
 
 export default function PosicionesPage() {

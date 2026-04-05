@@ -6,6 +6,11 @@ import { FileText, Download } from "lucide-react"
 export const metadata: Metadata = {
   title: "Reglamentos",
   description: "Reglamentos, estatutos y documentos oficiales de la Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Reglamentos | CPB",
+    description: "Reglamentos, estatutos y documentos oficiales de la Confederación Paraguaya de Básquetbol",
+    url: "/reglamentos",
+  },
 }
 
 const categoryLabels: Record<string, string> = {

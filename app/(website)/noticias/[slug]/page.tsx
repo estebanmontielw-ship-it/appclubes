@@ -18,13 +18,27 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       where: { slug: params.slug, publicada: true },
     })
     if (!noticia) return { title: "Noticia no encontrada" }
+
+    const images = noticia.imagenUrl
+      ? [{ url: noticia.imagenUrl, alt: noticia.titulo }]
+      : [{ url: "/logo-cpb.jpg", alt: "CPB - Confederación Paraguaya de Básquetbol" }]
+
     return {
       title: noticia.titulo,
       description: noticia.extracto,
       openGraph: {
+        type: "article",
         title: noticia.titulo,
         description: noticia.extracto,
-        images: noticia.imagenUrl ? [noticia.imagenUrl] : [],
+        url: `/noticias/${params.slug}`,
+        images,
+        publishedTime: noticia.publicadaEn?.toISOString(),
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: noticia.titulo,
+        description: noticia.extracto,
+        images: noticia.imagenUrl ? [noticia.imagenUrl] : ["/logo-cpb.jpg"],
       },
     }
   } catch {

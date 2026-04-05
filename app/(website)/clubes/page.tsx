@@ -5,6 +5,11 @@ import prisma from "@/lib/prisma"
 export const metadata: Metadata = {
   title: "Clubes Afiliados",
   description: "Clubes afiliados a la Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Clubes Afiliados | CPB",
+    description: "Clubes afiliados a la Confederación Paraguaya de Básquetbol",
+    url: "/clubes",
+  },
 }
 
 export default async function ClubesPage() {

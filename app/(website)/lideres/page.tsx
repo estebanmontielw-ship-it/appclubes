@@ -5,6 +5,11 @@ import GeniusSportsWidget from "@/components/website/GeniusSportsWidget"
 export const metadata: Metadata = {
   title: "Líderes",
   description: "Líderes estadísticos del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Líderes Estadísticos | CPB",
+    description: "Líderes estadísticos del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+    url: "/lideres",
+  },
 }
 
 export default function LideresPage() {

@@ -5,6 +5,11 @@ import prisma from "@/lib/prisma"
 export const metadata: Metadata = {
   title: "Selecciones Nacionales",
   description: "Selecciones nacionales de básquetbol de Paraguay - Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Selecciones Nacionales | CPB",
+    description: "Selecciones nacionales de básquetbol de Paraguay - Confederación Paraguaya de Básquetbol",
+    url: "/selecciones",
+  },
 }
 
 export default async function SeleccionesPage() {

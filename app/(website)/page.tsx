@@ -1,5 +1,18 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import HeroSection from "@/components/website/HeroSection"
+
+export const metadata: Metadata = {
+  title: "Inicio | CPB - Confederación Paraguaya de Básquetbol",
+  description:
+    "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
+  openGraph: {
+    title: "CPB - Confederación Paraguaya de Básquetbol",
+    description:
+      "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
+    url: "/",
+  },
+}
 import SectionTitle from "@/components/website/SectionTitle"
 import NewsCard from "@/components/website/NewsCard"
 import QuickLinks from "@/components/website/QuickLinks"

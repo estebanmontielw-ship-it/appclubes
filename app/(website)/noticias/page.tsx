@@ -7,6 +7,11 @@ import Link from "next/link"
 export const metadata: Metadata = {
   title: "Noticias",
   description: "Últimas noticias del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+  openGraph: {
+    title: "Noticias | CPB",
+    description: "Últimas noticias del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
+    url: "/noticias",
+  },
 }
 
 const ITEMS_PER_PAGE = 12

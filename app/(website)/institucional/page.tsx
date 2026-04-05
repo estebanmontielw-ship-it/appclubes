@@ -5,6 +5,11 @@ import prisma from "@/lib/prisma"
 export const metadata: Metadata = {
   title: "Institucional",
   description: "Sobre la Confederación Paraguaya de Básquetbol - Historia, autoridades e información institucional",
+  openGraph: {
+    title: "Institucional | CPB",
+    description: "Sobre la Confederación Paraguaya de Básquetbol - Historia, autoridades e información institucional",
+    url: "/institucional",
+  },
 }
 
 export default async function InstitucionalPage() {
