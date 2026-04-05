@@ -31,14 +31,18 @@ export async function GET(request: Request) {
       take: 10,
     })
 
-    // Search in pre-verified (not yet registered)
+    // Search in pre-verified (not yet registered) - strict matching
     const qNorm = normalizeName(q)
+    const qParts = qNorm.split(" ").filter(p => p.length > 2)
     const allPre = await prisma.ctPreverificado.findMany({
       where: { usado: false },
     })
-    const preMatches = allPre.filter(p =>
-      p.nombreNormalizado.includes(qNorm) || qNorm.split(" ").some(part => part.length > 2 && p.nombreNormalizado.includes(part))
-    ).slice(0, 5)
+    const preMatches = allPre.filter(p => {
+      // Require at least 2 parts matching or full name contained
+      if (p.nombreNormalizado.includes(qNorm)) return true
+      const matchCount = qParts.filter(part => p.nombreNormalizado.includes(part)).length
+      return matchCount >= 2
+    }).slice(0, 5)
 
     return NextResponse.json({
       registered: registered.map(r => ({

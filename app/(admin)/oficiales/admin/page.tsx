@@ -186,6 +186,14 @@ export default function AdminDashboardPage() {
               </Link>
               )
             ))}
+            {searchResults.length === 0 && (
+              <div className="p-5 text-center">
+                <p className="text-sm text-gray-500 mb-3">No se encontró a <strong>{searchQuery}</strong></p>
+                <p className="text-xs text-gray-400 mb-4">Si es miembro del cuerpo técnico, puede registrarse escaneando este QR:</p>
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent("https://cpb.com.py/cuerpotecnico/registro")}`} alt="QR Registro" className="w-32 h-32 mx-auto rounded-xl border" />
+                <p className="text-xs text-primary font-medium mt-2">cpb.com.py/cuerpotecnico/registro</p>
+              </div>
+            )}
           </div>
         )}
       </div>
