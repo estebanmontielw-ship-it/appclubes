@@ -67,13 +67,14 @@ export async function GET() {
           },
         },
       }),
-      // CT
-      prisma.cuerpoTecnico.count(),
-      prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "HABILITADO" } }),
-      prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "PENDIENTE" } }),
-      prisma.cuerpoTecnico.count({ where: { pagoVerificado: false } }),
+      // CT (exclude deleted/inactive)
+      prisma.cuerpoTecnico.count({ where: { activo: true } }),
+      prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: "HABILITADO" } }),
+      prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: "PENDIENTE" } }),
+      prisma.cuerpoTecnico.count({ where: { activo: true, pagoVerificado: false } }),
       prisma.cuerpoTecnico.findMany({
         take: 5,
+        where: { activo: true },
         orderBy: { createdAt: "desc" },
         select: { id: true, nombre: true, apellido: true, rol: true, estadoHabilitacion: true, createdAt: true },
       }),
