@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
 import { emailBienvenidaCT, emailCTAutoHabilitado } from "@/lib/email"
+import { sendAdminPush } from "@/lib/admin-push"
 
 // Normalize name for matching
 function normalizeName(s: string): string {
@@ -171,6 +172,12 @@ export async function POST(request: Request) {
     } else {
       emailBienvenidaCT(email, nombre).catch(() => {})
     }
+
+    // Notify admin
+    sendAdminPush(
+      "Nuevo cuerpo técnico",
+      `${nombre} ${apellido} se registró como ${finalRol}${autoVerificado ? " (auto-habilitado)" : ""}`
+    ).catch(() => {})
 
     return NextResponse.json({
       ct,

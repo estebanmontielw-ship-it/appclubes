@@ -2,6 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
+import { sendAdminPush } from "@/lib/admin-push"
 
 export async function POST(
   request: Request,
@@ -45,6 +46,9 @@ export async function POST(
         estado: "PENDIENTE_REVISION",
       },
     })
+
+    // Notify admin
+    sendAdminPush("Nuevo comprobante de pago", "Un oficial envió un comprobante de pago para revisión").catch(() => {})
 
     return NextResponse.json({ pago }, { status: 201 })
   } catch {

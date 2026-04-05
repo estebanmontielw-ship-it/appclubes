@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
+import { sendAdminPush } from "@/lib/admin-push"
 
 export async function POST(request: Request) {
   try {
@@ -27,6 +28,9 @@ export async function POST(request: Request) {
         mensaje,
       },
     })
+
+    // Notify admin
+    sendAdminPush("Nuevo mensaje de contacto", `${nombre}: ${asunto}`).catch(() => {})
 
     return NextResponse.json({ ok: true })
   } catch {
