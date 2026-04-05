@@ -67,14 +67,14 @@ export async function GET() {
           },
         },
       }),
-      // CT (exclude deleted/inactive)
-      prisma.cuerpoTecnico.count({ where: { activo: true } }),
+      // CT (only HABILITADO + PENDIENTE count as total)
+      prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: { in: ["HABILITADO", "PENDIENTE"] } } }),
       prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: "HABILITADO" } }),
       prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: "PENDIENTE" } }),
-      prisma.cuerpoTecnico.count({ where: { activo: true, pagoVerificado: false } }),
+      prisma.cuerpoTecnico.count({ where: { activo: true, estadoHabilitacion: { in: ["HABILITADO", "PENDIENTE"] }, pagoVerificado: false } }),
       prisma.cuerpoTecnico.findMany({
         take: 5,
-        where: { activo: true },
+        where: { activo: true, estadoHabilitacion: { in: ["HABILITADO", "PENDIENTE"] } },
         orderBy: { createdAt: "desc" },
         select: { id: true, nombre: true, apellido: true, rol: true, estadoHabilitacion: true, createdAt: true },
       }),
