@@ -4,6 +4,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import PWARegister from "@/components/PWARegister"
 import ManifestSwitcher from "@/components/ManifestSwitcher"
+import PushNotifications from "@/components/PushNotifications"
 
 export const metadata: Metadata = {
   title: {
@@ -73,6 +74,7 @@ export default function RootLayout({
         <Toaster />
         <PWARegister />
         <ManifestSwitcher />
+        <PushNotifications />
       </body>
     </html>
   )

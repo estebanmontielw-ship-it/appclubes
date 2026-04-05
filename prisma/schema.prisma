@@ -720,3 +720,16 @@ model MensajeBot {
 
   @@map("mensajes_bot")
 }
+
+// ─── PUSH NOTIFICATIONS ─────────────────────────────────
+
+model PushToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String?
+  userType  String?  // "oficial" | "ct" | "public"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("push_tokens")
+}

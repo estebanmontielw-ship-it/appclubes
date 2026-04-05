@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Send, Bell, Mail, FileText, Search, Sparkles, Wand2 } from "lucide-react"
+import { Loader2, Send, Bell, Mail, FileText, Search, Sparkles, Wand2, Smartphone } from "lucide-react"
 
 const DESTINATARIOS = [
   { value: "TODOS", label: "Todos los oficiales" },
@@ -69,6 +69,7 @@ export default function AdminNotificacionesPage() {
   const [destinatarios, setDestinatarios] = useState("")
   const [enviarNotificacion, setEnviarNotificacion] = useState(true)
   const [enviarEmail, setEnviarEmail] = useState(true)
+  const [enviarPush, setEnviarPush] = useState(true)
   const [loading, setLoading] = useState(false)
   const [emailEspecifico, setEmailEspecifico] = useState("")
   const [busqueda, setBusqueda] = useState("")
@@ -136,7 +137,7 @@ export default function AdminNotificacionesPage() {
       return
     }
 
-    if (!enviarNotificacion && !enviarEmail) {
+    if (!enviarNotificacion && !enviarEmail && !enviarPush) {
       toast({ variant: "destructive", title: "Seleccioná al menos un canal (notificación o email)" })
       return
     }
@@ -156,16 +157,37 @@ export default function AdminNotificacionesPage() {
         }),
       })
 
+      // Send push notifications
+      let pushSent = 0
+      if (enviarPush) {
+        try {
+          const pushRes = await fetch("/api/push/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              titulo,
+              mensaje,
+              destinatarios: destinatarios.startsWith("CT_") ? "ct" : destinatarios === "USUARIO_ESPECIFICO" ? "all" : "oficiales",
+            }),
+          })
+          if (pushRes.ok) {
+            const pushData = await pushRes.json()
+            pushSent = pushData.sent || 0
+          }
+        } catch {}
+      }
+
       if (res.ok) {
         const data = await res.json()
         const parts = []
         if (data.notifSent > 0) parts.push(`${data.notifSent} notificaciones`)
         if (data.emailSent > 0) parts.push(`${data.emailSent} emails`)
+        if (pushSent > 0) parts.push(`${pushSent} push`)
         const desc = parts.length > 0
           ? `Se envió ${parts.join(" y ")} a ${data.total} destinatarios`
           : `Notificación guardada para ${data.total} destinatarios`
         const warning = data.emailSkipped > 0
-          ? ` (${data.emailSkipped} emails fallaron — revisá Resend → Logs para ver los errores)`
+          ? ` (${data.emailSkipped} emails fallaron)`
           : ""
         toast({
           title: parts.length > 0 ? "Enviado" : "Atención",
@@ -338,6 +360,17 @@ export default function AdminNotificacionesPage() {
                 <label htmlFor="email" className="text-sm cursor-pointer flex items-center gap-1.5">
                   <Mail className="h-3.5 w-3.5 text-gray-500" />
                   Email
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="push"
+                  checked={enviarPush}
+                  onCheckedChange={(c) => setEnviarPush(c === true)}
+                />
+                <label htmlFor="push" className="text-sm cursor-pointer flex items-center gap-1.5">
+                  <Smartphone className="h-3.5 w-3.5 text-gray-500" />
+                  Push (celular)
                 </label>
               </div>
             </div>
