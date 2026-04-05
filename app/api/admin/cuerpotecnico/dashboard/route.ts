@@ -5,7 +5,9 @@ export const dynamic = "force-dynamic"
 
 export async function GET() {
   try {
-    const all = await prisma.cuerpoTecnico.findMany()
+    const all = await prisma.cuerpoTecnico.findMany({
+      where: { activo: true, estadoHabilitacion: { in: ["HABILITADO", "PENDIENTE"] } },
+    })
 
     const total = all.length
     const habilitados = all.filter(m => m.estadoHabilitacion === "HABILITADO").length
