@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
+import * as Sentry from "@sentry/nextjs"
 
 /**
  * Manejo centralizado de errores para API routes.
@@ -58,6 +59,7 @@ export function handleApiError(
           { status: 400 }
         )
       default:
+        Sentry.captureException(error, { tags: { context: ctx, prismaCode: error.code } })
         return NextResponse.json(
           { error: "Error de base de datos" },
           { status: 500 }
@@ -77,6 +79,7 @@ export function handleApiError(
   // Errores genéricos de JavaScript
   if (error instanceof Error) {
     console.error(`${ctx} Error:`, error.message)
+    Sentry.captureException(error, { tags: { context: ctx } })
     return NextResponse.json(
       { error: "Error interno del servidor" },
       { status: 500 }
@@ -85,6 +88,7 @@ export function handleApiError(
 
   // Error desconocido
   console.error(`${ctx} Unknown error:`, error)
+  Sentry.captureException(error, { tags: { context: ctx } })
   return NextResponse.json(
     { error: "Error interno del servidor" },
     { status: 500 }
