@@ -34,20 +34,27 @@ export default function PushNotifications() {
     try {
       // Register Firebase SW
       if ("serviceWorker" in navigator) {
-        await navigator.serviceWorker.register("/firebase-messaging-sw.js")
+        try {
+          await navigator.serviceWorker.register("/firebase-messaging-sw.js")
+        } catch (swErr) {
+          console.warn("Firebase SW registration failed:", swErr)
+        }
       }
 
-      const { requestNotificationPermission } = await import("@/lib/firebase")
-      const token = await requestNotificationPermission()
-
-      if (token) {
-        // Save token to server
-        await fetch("/api/push/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token }),
-        })
+      let token: string | null = null
+      try {
+        const { requestNotificationPermission } = await import("@/lib/firebase")
+        token = await requestNotificationPermission()
+      } catch (fcmErr) {
+        console.warn("FCM token error:", fcmErr)
       }
+
+      // Save token or at least record that user accepted
+      await fetch("/api/push/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token || `ios-accepted-${Date.now()}` }),
+      })
     } catch (err) {
       console.error("Push registration error:", err)
     } finally {
