@@ -36,10 +36,13 @@ export default function GeniusSportsAdminPage() {
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/genius/explore?path=/competitions?limit=100%26offset=0")
+      const res = await fetch("/api/genius/explore")
       const json = await res.json()
-      if (!json.ok) throw new Error(json.error)
-      const comps: Competition[] = json.data?.data || []
+      if (!json.ok) throw new Error(json.error || "Error cargando competencias")
+      // The explore endpoint returns { ok, data } where data is the raw API response
+      // Raw API: { response: { meta }, data: [...] } or just { data: [...] }
+      const raw = json.data
+      const comps: Competition[] = raw?.data || (Array.isArray(raw) ? raw : [])
       // Sort by year descending, then name
       comps.sort((a, b) => (b.year || 0) - (a.year || 0) || a.competitionName.localeCompare(b.competitionName))
       setCompetitions(comps)
@@ -63,8 +66,10 @@ export default function GeniusSportsAdminPage() {
 
       const res = await fetch(`/api/genius/explore?path=${encodeURIComponent(path)}`)
       const json = await res.json()
-      if (!json.ok) throw new Error(json.error)
-      setDetail(json.data)
+      if (!json.ok) throw new Error(json.error || "Error cargando datos")
+      // Normalize: the raw API wraps arrays in { data: [...] }
+      const raw = json.data
+      setDetail(raw?.data ? raw : { data: Array.isArray(raw) ? raw : [] })
     } catch (e: any) {
       setDetail({ error: e.message })
     } finally {
