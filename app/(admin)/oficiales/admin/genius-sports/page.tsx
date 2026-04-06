@@ -69,7 +69,9 @@ export default function GeniusSportsAdminPage() {
       if (!json.ok) throw new Error(json.error || "Error cargando datos")
       // Normalize: the raw API wraps arrays in { data: [...] }
       const raw = json.data
-      setDetail(raw?.data ? raw : { data: Array.isArray(raw) ? raw : [] })
+      // Normalize: API may return { response: { data: [...] } } or { data: [...] } or just [...]
+      const items = raw?.response?.data || raw?.data || (Array.isArray(raw) ? raw : [])
+      setDetail({ data: Array.isArray(items) ? items : [] })
     } catch (e: any) {
       setDetail({ error: e.message })
     } finally {
