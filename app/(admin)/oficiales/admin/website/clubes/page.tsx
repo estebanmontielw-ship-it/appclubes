@@ -12,6 +12,7 @@ export default function AdminClubesPage() {
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [seeding, setSeeding] = useState(false)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -54,6 +55,25 @@ export default function AdminClubesPage() {
     }
   }
 
+  async function handleSeed() {
+    if (!confirm("¿Cargar los 55 clubes de SADE? Los que ya existen no se duplicarán.")) return
+    setSeeding(true)
+    try {
+      const res = await fetch("/api/admin/seed-clubes", { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      alert(data.message)
+      // Reload clubs
+      const res2 = await fetch("/api/website/clubes")
+      const data2 = await res2.json()
+      setClubes(data2.clubes ?? [])
+    } catch (err: any) {
+      alert("Error: " + err.message)
+    } finally {
+      setSeeding(false)
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("¿Eliminar este club?")) return
     await fetch(`/api/website/clubes/${id}`, { method: "DELETE" })
@@ -67,12 +87,23 @@ export default function AdminClubesPage() {
           <h1 className="text-2xl font-bold">Clubes Afiliados</h1>
           <p className="text-sm text-gray-500 mt-1">Gestión de clubes del sitio web</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" /> Agregar club
-        </button>
+        <div className="flex gap-2">
+          {clubes.length === 0 && (
+            <button
+              onClick={handleSeed}
+              disabled={seeding}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50 transition-colors"
+            >
+              {seeding ? "Cargando..." : "Cargar clubes SADE"}
+            </button>
+          )}
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Agregar club
+          </button>
+        </div>
       </div>
 
       {showForm && (

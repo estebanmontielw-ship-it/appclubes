@@ -182,9 +182,19 @@ export default async function ClubesPage() {
     // Table may not exist yet
   }
 
+  // Use DB clubs if available, otherwise fall back to hardcoded
+  const allClubes: Equipo[] = clubesDB.length > 0
+    ? clubesDB.map((c) => ({
+        nombre: c.nombre,
+        federacion: c.sigla || "",
+        ciudad: c.ciudad,
+        logo: c.logoUrl || "",
+      }))
+    : equipos
+
   // Group all clubs by federation
   const federaciones = new Map<string, Equipo[]>()
-  for (const eq of equipos) {
+  for (const eq of allClubes) {
     const fed = eq.federacion
     if (!federaciones.has(fed)) federaciones.set(fed, [])
     federaciones.get(fed)!.push(eq)
@@ -218,7 +228,7 @@ export default async function ClubesPage() {
       {/* All 55 affiliated clubs grouped by federation */}
       <div className="mt-16">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Clubes Afiliados</h2>
-        <p className="text-sm text-gray-500 mb-8">{equipos.length} instituciones deportivas afiliadas a la CPB</p>
+        <p className="text-sm text-gray-500 mb-8">{allClubes.length} instituciones deportivas afiliadas a la CPB</p>
 
         <div className="space-y-10">
           {fedEntries.map(([fed, eqs]) => (
@@ -248,42 +258,6 @@ export default async function ClubesPage() {
         </div>
       </div>
 
-      {/* DB clubs if any extra exist */}
-      {clubesDB.length > 0 && (
-        <div className="mt-16">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Otros Clubes</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {clubesDB.map((club) => (
-              <div key={club.id} className="bg-white rounded-xl border border-gray-100 p-6 text-center hover:shadow-md transition-shadow">
-                {club.logoUrl ? (
-                  <img src={club.logoUrl} alt={club.nombre} className="w-20 h-20 object-contain mx-auto mb-4" />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <span className="text-2xl font-bold text-primary">{club.sigla || club.nombre.charAt(0)}</span>
-                  </div>
-                )}
-                <h3 className="font-bold text-gray-900">{club.nombre}</h3>
-                {club.sigla && <p className="text-sm text-gray-400">{club.sigla}</p>}
-                <p className="text-sm text-gray-500 mt-1">{club.ciudad}</p>
-                {(club.sitioWeb || club.instagram || club.facebook) && (
-                  <div className="mt-3 flex items-center justify-center gap-2">
-                    {club.sitioWeb && (
-                      <a href={club.sitioWeb} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-                        Sitio web
-                      </a>
-                    )}
-                    {club.instagram && (
-                      <a href={`https://instagram.com/${club.instagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-                        Instagram
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
