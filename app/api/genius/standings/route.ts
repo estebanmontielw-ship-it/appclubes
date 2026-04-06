@@ -1,0 +1,24 @@
+import { NextResponse } from "next/server"
+import { getStandings } from "@/lib/genius-sports"
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const competitionId = searchParams.get("competitionId")
+
+  if (!competitionId) {
+    return NextResponse.json(
+      { error: "competitionId es requerido" },
+      { status: 400 }
+    )
+  }
+
+  try {
+    const data = await getStandings(competitionId)
+    return NextResponse.json(data)
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: "Error obteniendo posiciones" },
+      { status: 500 }
+    )
+  }
+}
