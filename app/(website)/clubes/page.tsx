@@ -76,8 +76,15 @@ const equipos: Equipo[] = [
   { nombre: "Club Deportivo Británico", federacion: "Federación Paranaense", ciudad: "Ciudad del Este", logo: "/logos/Club_Deportivo_Britanico.jpg" },
   { nombre: "Deportivo San José", federacion: "Metropolitano", ciudad: "Asunción", logo: "/logos/Deportivo_San_Jose.png" },
   { nombre: "Félix Pérez Cardozo", federacion: "Metropolitano", ciudad: "Asunción", logo: "/logos/Felix_Perez_Cardozo.jpg" },
-  { nombre: "Olimpia", federacion: "Metropolitano", ciudad: "Asunción", logo: "/logos/Olimpia_Kings.png" },
+  { nombre: "Olimpia", federacion: "Metropolitano", ciudad: "Asunción", logo: "/logos/Logo_de_Olimpia_2022_PNG_HD.png" },
 ]
+
+// Logo overrides per league (e.g. Olimpia Kings logo only for masculine)
+const logoOverrides: Record<string, Record<string, string>> = {
+  "LNB Masculino — Primera 2026": {
+    Olimpia: "/logos/Olimpia_Kings.png",
+  },
+}
 
 const ligas = [
   {
@@ -118,10 +125,13 @@ const ligas = [
   },
 ]
 
-function getEquipo(name: string): Equipo {
+function getEquipo(name: string, ligaNombre?: string): Equipo {
   const found = equipos.find((e) => e.nombre === name)
-  if (found) return found
-  return { nombre: name, federacion: "", ciudad: "", logo: "" }
+  const equipo = found || { nombre: name, federacion: "", ciudad: "", logo: "" }
+  if (ligaNombre && logoOverrides[ligaNombre]?.[name]) {
+    return { ...equipo, logo: logoOverrides[ligaNombre][name] }
+  }
+  return equipo
 }
 
 function getInitials(nombre: string): string {
@@ -198,7 +208,7 @@ export default async function ClubesPage() {
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {liga.equipoNames.map((name) => (
-                <LeagueTeamCard key={name} equipo={getEquipo(name)} />
+                <LeagueTeamCard key={name} equipo={getEquipo(name, liga.nombre)} />
               ))}
             </div>
           </section>
