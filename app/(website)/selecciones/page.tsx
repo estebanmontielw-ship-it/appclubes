@@ -23,6 +23,8 @@ interface Evento {
   sede: string
   confirmado: boolean
   destacado?: boolean
+  /** End date for auto-sorting (YYYY-MM-DD). Events past this date move to "anteriores" */
+  fechaFin: string
 }
 
 const eventos2026: Evento[] = [
@@ -35,6 +37,7 @@ const eventos2026: Evento[] = [
     sede: "Panamá",
     confirmado: true,
     destacado: true,
+    fechaFin: "2026-04-26",
   },
   {
     nombre: "AmeriCup Femenino",
@@ -44,6 +47,7 @@ const eventos2026: Evento[] = [
     fecha: "Junio 2026",
     sede: "Por confirmar",
     confirmado: false,
+    fechaFin: "2026-06-30",
   },
   {
     nombre: "3x3 Nation League U23",
@@ -54,6 +58,7 @@ const eventos2026: Evento[] = [
     sede: "Asunción, Paraguay",
     confirmado: true,
     destacado: true,
+    fechaFin: "2026-07-27",
   },
   {
     nombre: "Sudamericano Mayores Femenino",
@@ -63,6 +68,7 @@ const eventos2026: Evento[] = [
     fecha: "Agosto 2026",
     sede: "Por confirmar",
     confirmado: false,
+    fechaFin: "2026-08-31",
   },
   {
     nombre: "ODESUR 3x3 Mayores",
@@ -72,6 +78,7 @@ const eventos2026: Evento[] = [
     fecha: "20 al 27 de septiembre",
     sede: "Santa Fe, Argentina",
     confirmado: true,
+    fechaFin: "2026-09-27",
   },
   {
     nombre: "Sudamericano U15 Masculino",
@@ -81,6 +88,7 @@ const eventos2026: Evento[] = [
     fecha: "Octubre 2026 (Finales)",
     sede: "Por confirmar",
     confirmado: false,
+    fechaFin: "2026-10-31",
   },
   {
     nombre: "AmeriCup 3x3 Femenino Mayores",
@@ -90,6 +98,7 @@ const eventos2026: Evento[] = [
     fecha: "4 al 7 de noviembre",
     sede: "El Salvador",
     confirmado: true,
+    fechaFin: "2026-11-07",
   },
   {
     nombre: "Sudamericano U15 Femenino",
@@ -99,6 +108,7 @@ const eventos2026: Evento[] = [
     fecha: "Noviembre 2026 (comienzos)",
     sede: "Por confirmar",
     confirmado: false,
+    fechaFin: "2026-11-30",
   },
   {
     nombre: "Juegos Olímpicos de la Juventud",
@@ -109,6 +119,7 @@ const eventos2026: Evento[] = [
     sede: "Dakar, Senegal",
     confirmado: false,
     destacado: true,
+    fechaFin: "2026-12-31",
   },
   {
     nombre: "Women Series 3x3 Tour",
@@ -119,6 +130,7 @@ const eventos2026: Evento[] = [
     sede: "Gira por Europa — Rumbo a Los Ángeles 2028",
     confirmado: true,
     destacado: true,
+    fechaFin: "2026-12-31",
   },
 ]
 
@@ -164,8 +176,11 @@ export default async function SeleccionesPage() {
   const masculinas = selecciones.filter((s) => s.genero === "Masculina")
   const femeninas = selecciones.filter((s) => s.genero === "Femenina")
 
-  const eventosProximos = eventos2026.filter((e) => e.destacado)
-  const eventosResto = eventos2026.filter((e) => !e.destacado)
+  // Auto-sort: past events go to "anteriores", future stay in calendar
+  const hoy = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
+  const eventosFuturos = eventos2026.filter((e) => e.fechaFin >= hoy)
+  const eventosAnteriores = eventos2026.filter((e) => e.fechaFin < hoy)
+  const eventosDestacados = eventosFuturos.filter((e) => e.destacado)
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -175,13 +190,14 @@ export default async function SeleccionesPage() {
       />
 
       {/* Hero: Próximos eventos destacados */}
+      {eventosDestacados.length > 0 && (
       <div className="mt-8">
         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-          Eventos Destacados 2026
+          Próximos Eventos Destacados
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {eventosProximos.map((ev) => (
+          {eventosDestacados.map((ev) => (
             <div
               key={ev.nombre}
               className="relative bg-gradient-to-br from-[#0a1628] to-[#1a2d50] rounded-2xl p-6 text-white overflow-hidden"
@@ -218,13 +234,15 @@ export default async function SeleccionesPage() {
           ))}
         </div>
       </div>
+      )}
 
-      {/* Calendario completo */}
+      {/* Próximos eventos */}
+      {eventosFuturos.length > 0 && (
       <div className="mt-12">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Calendario Internacional 2026</h2>
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="grid grid-cols-[1fr] divide-y divide-gray-100">
-            {eventos2026.map((ev, i) => (
+            {eventosFuturos.map((ev, i) => (
               <div
                 key={ev.nombre + i}
                 className={`p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3 ${ev.destacado ? "bg-primary/[0.02]" : ""}`}
@@ -262,6 +280,42 @@ export default async function SeleccionesPage() {
           <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" /> Por confirmar</span>
         </div>
       </div>
+      )}
+
+      {/* Eventos anteriores */}
+      {eventosAnteriores.length > 0 && (
+        <div className="mt-12">
+          <h2 className="text-lg font-bold text-gray-900 mb-4 text-gray-400">Eventos Anteriores</h2>
+          <div className="bg-gray-50 rounded-2xl border border-gray-100 overflow-hidden opacity-70">
+            <div className="grid grid-cols-[1fr] divide-y divide-gray-100">
+              {eventosAnteriores.map((ev, i) => (
+                <div
+                  key={ev.nombre + i}
+                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-3"
+                >
+                  <div className="flex items-center gap-2 sm:w-48 shrink-0">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getModalidadColor(ev.modalidad)}`}>
+                      {ev.modalidad}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${getGeneroColor(ev.genero)}`}>
+                      {getGeneroIcon(ev.genero)}
+                    </span>
+                    <span className="text-[10px] text-gray-400">{ev.categoria}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-500 text-sm line-through">{ev.nombre}</h3>
+                    <p className="text-xs text-gray-400">{ev.genero}</p>
+                  </div>
+                  <div className="text-right sm:w-56 shrink-0">
+                    <p className="text-sm text-gray-400">{ev.fecha}</p>
+                    <p className="text-xs text-gray-400">{ev.sede}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Selecciones from DB */}
       {selecciones.length > 0 && (
