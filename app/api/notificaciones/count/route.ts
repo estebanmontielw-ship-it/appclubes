@@ -19,9 +19,28 @@ export async function GET() {
       return NextResponse.json({ unreadCount: 0 })
     }
 
-    const unreadCount = await prisma.notificacion.count({
-      where: { usuarioId: user.id, leido: false },
-    })
+    const [unreadCount, roles] = await Promise.all([
+      prisma.notificacion.count({
+        where: { usuarioId: user.id, leido: false },
+      }),
+      prisma.usuarioRol.findMany({
+        where: { usuarioId: user.id },
+        select: { rol: true },
+      }),
+    ])
+
+    const isAdmin = roles.some((r) =>
+      ["SUPER_ADMIN", "INSTRUCTOR", "VERIFICADOR"].includes(r.rol)
+    )
+
+    if (isAdmin) {
+      const [pendingUsers, pendingPayments, pendingCT] = await Promise.all([
+        prisma.usuario.count({ where: { estadoVerificacion: "PENDIENTE" } }),
+        prisma.pago.count({ where: { estado: "PENDIENTE_REVISION" } }),
+        prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "PENDIENTE" } }),
+      ])
+      return NextResponse.json({ unreadCount, pendingUsers, pendingPayments, pendingCT })
+    }
 
     return NextResponse.json({ unreadCount })
   } catch {

@@ -30,14 +30,23 @@ export default function AdminLayout({
   const [authorized, setAuthorized] = useState<boolean | null>(null)
 
   // Real-time notification polling (every 30s when tab is visible)
-  const { unreadCount: polledUnreadCount } = useNotifications({
+  const {
+    unreadCount: polledUnreadCount,
+    pendingUsers: polledPendingUsers,
+    pendingPayments: polledPendingPayments,
+    pendingCT: polledPendingCT,
+  } = useNotifications({
     enabled: authorized === true,
   })
 
-  // Sync polled count to state when it changes
+  // Sync polled counts to state when they change
   useEffect(() => {
-    if (authorized) setUnreadCount(polledUnreadCount)
-  }, [polledUnreadCount, authorized])
+    if (!authorized) return
+    setUnreadCount(polledUnreadCount)
+    setPendingUsers(polledPendingUsers)
+    setPendingPayments(polledPendingPayments)
+    setPendingCT(polledPendingCT)
+  }, [polledUnreadCount, polledPendingUsers, polledPendingPayments, polledPendingCT, authorized])
 
   useEffect(() => {
     async function loadUser() {

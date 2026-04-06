@@ -11,6 +11,9 @@ interface UseNotificationsOptions {
 
 interface UseNotificationsReturn {
   unreadCount: number
+  pendingUsers: number
+  pendingPayments: number
+  pendingCT: number
   /** Force an immediate refresh */
   refresh: () => void
 }
@@ -24,6 +27,9 @@ interface UseNotificationsReturn {
 export function useNotifications(options: UseNotificationsOptions = {}): UseNotificationsReturn {
   const { interval = 30_000, enabled = true } = options
   const [unreadCount, setUnreadCount] = useState(0)
+  const [pendingUsers, setPendingUsers] = useState(0)
+  const [pendingPayments, setPendingPayments] = useState(0)
+  const [pendingCT, setPendingCT] = useState(0)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const enabledRef = useRef(enabled)
   enabledRef.current = enabled
@@ -35,6 +41,9 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
       if (res.ok) {
         const data = await res.json()
         setUnreadCount(data.unreadCount ?? 0)
+        setPendingUsers(data.pendingUsers ?? 0)
+        setPendingPayments(data.pendingPayments ?? 0)
+        setPendingCT(data.pendingCT ?? 0)
       }
     } catch {
       // Network error — silently skip this cycle
@@ -83,5 +92,5 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
     fetchCount()
   }, [fetchCount])
 
-  return { unreadCount, refresh }
+  return { unreadCount, pendingUsers, pendingPayments, pendingCT, refresh }
 }
