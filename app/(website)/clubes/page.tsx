@@ -76,7 +76,7 @@ const equipos: Equipo[] = [
   { nombre: "Club Deportivo Británico", federacion: "Federación Paranaense", ciudad: "Ciudad del Este", logo: "" },
   { nombre: "Deportivo San José", federacion: "Metropolitano", ciudad: "Asunción", logo: "/logos/San_Jose_De_Concepcion.jpg" },
   { nombre: "Félix Pérez Cardozo", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
-  { nombre: "Olimpia Kings", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
+  { nombre: "Olimpia", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
 ]
 
 const ligas = [
@@ -84,7 +84,7 @@ const ligas = [
     nombre: "LNB Masculino — Primera 2026",
     color: "from-blue-600 to-blue-800",
     equipoNames: [
-      "Olimpia Kings",
+      "Olimpia",
       "Colonias Gold",
       "Deportivo San José",
       "Félix Pérez Cardozo",
@@ -100,7 +100,7 @@ const ligas = [
     equipoNames: [
       "Félix Pérez Cardozo",
       "Deportivo San José",
-      "Olimpia Queens",
+      "Olimpia",
       "Sol de América",
     ],
   },
@@ -108,7 +108,7 @@ const ligas = [
     nombre: "Liga de Desarrollo U22 Femenino 2026",
     color: "from-purple-600 to-purple-800",
     equipoNames: [
-      "Olimpia Queens",
+      "Olimpia",
       "Félix Pérez Cardozo",
       "Deportivo San José",
       "Sol de América",
