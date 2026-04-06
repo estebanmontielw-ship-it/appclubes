@@ -57,6 +57,31 @@ export default function CuerpoTecnicoDetailPage() {
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState<any>({})
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadingComprobante, setUploadingComprobante] = useState(false)
+
+  async function uploadComprobante(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingComprobante(true)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("bucket", "comprobantes")
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      if (!res.ok) throw new Error()
+      const { url } = await res.json()
+
+      const updateRes = await fetch(`/api/admin/cuerpotecnico/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ editar: { comprobanteUrl: url } }),
+      })
+      if (updateRes.ok) {
+        const { ct: updated } = await updateRes.json()
+        setCt(updated)
+      }
+    } catch {} finally { setUploadingComprobante(false) }
+  }
 
   async function uploadCarnetPhoto(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -257,9 +282,16 @@ export default function CuerpoTecnicoDetailPage() {
             <DocPreview label="Comprobante de pago" url={ct.comprobanteUrl} />
           )}
           {!ct.comprobanteUrl && !ct.pagoAutoVerificado && (
-            <div className="col-span-full bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-              <p className="text-sm text-red-700">Sin comprobante de pago — el CT no subió comprobante de transferencia</p>
+            <div className="col-span-full bg-red-50 border border-red-200 rounded-lg p-3">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+                <p className="text-sm text-red-700 flex-1">Sin comprobante de pago — el CT no subió comprobante de transferencia</p>
+                <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 cursor-pointer shrink-0">
+                  {uploadingComprobante ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                  {uploadingComprobante ? "Subiendo..." : "Subir comprobante"}
+                  <input type="file" className="hidden" accept="image/*,.pdf" onChange={uploadComprobante} disabled={uploadingComprobante} />
+                </label>
+              </div>
             </div>
           )}
         </div>

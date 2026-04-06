@@ -13,11 +13,12 @@ export async function PATCH(request: Request) {
     if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
     const body = await request.json()
-    const { fotoCarnetUrl, fotoCedulaUrl } = body
+    const { fotoCarnetUrl, fotoCedulaUrl, comprobanteUrl } = body
 
     const updateData: any = {}
     if (fotoCarnetUrl) updateData.fotoCarnetUrl = fotoCarnetUrl
     if (fotoCedulaUrl) updateData.fotoCedulaUrl = fotoCedulaUrl
+    if (comprobanteUrl) updateData.comprobanteUrl = comprobanteUrl
 
     const ct = await prisma.cuerpoTecnico.update({
       where: { id: user.id },
