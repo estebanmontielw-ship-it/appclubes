@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, Trophy, Calendar, BarChart3, Users, ChevronRight, Loader2, RefreshCw } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Search, Trophy, Calendar, BarChart3, Users, ChevronRight, Loader2, RefreshCw, ChevronDown } from "lucide-react"
 
 interface Competition {
   competitionId: number
@@ -22,6 +22,7 @@ export default function GeniusSportsAdminPage() {
   const [competitions, setCompetitions] = useState<Competition[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [selectedYear, setSelectedYear] = useState(2026)
   const [selectedComp, setSelectedComp] = useState<number | null>(null)
   const [detail, setDetail] = useState<any>(null)
   const [detailLoading, setDetailLoading] = useState(false)
@@ -39,12 +40,9 @@ export default function GeniusSportsAdminPage() {
       const res = await fetch("/api/genius/explore")
       const json = await res.json()
       if (!json.ok) throw new Error(json.error || "Error cargando competencias")
-      // The explore endpoint returns { ok, data } where data is the raw API response
-      // Raw API: { response: { meta }, data: [...] } or just { data: [...] }
       const raw = json.data
       const comps: Competition[] = raw?.response?.data || raw?.data || (Array.isArray(raw) ? raw : [])
-      // Sort by year descending, then name
-      comps.sort((a, b) => (b.year || 0) - (a.year || 0) || a.competitionName.localeCompare(b.competitionName))
+      comps.sort((a, b) => a.competitionName.localeCompare(b.competitionName))
       setCompetitions(comps)
     } catch (e: any) {
       setError(e.message)
@@ -67,9 +65,7 @@ export default function GeniusSportsAdminPage() {
       const res = await fetch(`/api/genius/explore?path=${encodeURIComponent(path)}`)
       const json = await res.json()
       if (!json.ok) throw new Error(json.error || "Error cargando datos")
-      // Normalize: the raw API wraps arrays in { data: [...] }
       const raw = json.data
-      // Normalize: API may return { response: { data: [...] } } or { data: [...] } or just [...]
       const items = raw?.response?.data || raw?.data || (Array.isArray(raw) ? raw : [])
       setDetail({ data: Array.isArray(items) ? items : [] })
     } catch (e: any) {
@@ -79,24 +75,24 @@ export default function GeniusSportsAdminPage() {
     }
   }
 
-  const filtered = competitions.filter(c => {
-    if (!search) return true
-    const q = search.toLowerCase()
-    return c.competitionName.toLowerCase().includes(q) ||
-      c.competitionNameInternational?.toLowerCase().includes(q) ||
-      c.season?.includes(q) ||
-      String(c.year).includes(q)
-  })
+  // Get all available years
+  const availableYears = useMemo(() => {
+    const years = [...new Set(competitions.map(c => c.year || 0))].filter(y => y > 0)
+    return years.sort((a, b) => b - a)
+  }, [competitions])
 
-  // Group by year
-  const grouped = filtered.reduce((acc, c) => {
-    const year = c.year || 0
-    if (!acc[year]) acc[year] = []
-    acc[year].push(c)
-    return acc
-  }, {} as Record<number, Competition[]>)
+  // Filter by selected year + search
+  const filtered = useMemo(() => {
+    return competitions.filter(c => {
+      if (c.year !== selectedYear) return false
+      if (!search) return true
+      const q = search.toLowerCase()
+      return c.competitionName.toLowerCase().includes(q) ||
+        c.competitionNameInternational?.toLowerCase().includes(q)
+    })
+  }, [competitions, selectedYear, search])
 
-  const years = Object.keys(grouped).map(Number).sort((a, b) => b - a)
+  const selectedCompData = competitions.find(c => c.competitionId === selectedComp)
 
   const genderBadge = (g: string) => {
     if (g === "MALE") return <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-700">M</span>
@@ -118,6 +114,7 @@ export default function GeniusSportsAdminPage() {
 
   return (
     <div className="max-w-5xl">
+      {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Genius Sports API</h1>
@@ -133,60 +130,73 @@ export default function GeniusSportsAdminPage() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4 text-sm text-red-700">{error}</div>
       )}
 
-      {/* Search */}
-      <div className="relative mb-4">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Buscar competencia... (ej: LNB, U19, 2025)"
-          className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          style={{ fontSize: "16px" }}
-        />
+      {/* Year selector + Search */}
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative">
+          <select
+            value={selectedYear}
+            onChange={e => { setSelectedYear(Number(e.target.value)); setSelectedComp(null); setDetail(null) }}
+            className="appearance-none pl-4 pr-9 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+          >
+            {availableYears.map(year => (
+              <option key={year} value={year}>Temporada {year}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+        </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar competencia... (ej: LNB, U19)"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            style={{ fontSize: "16px" }}
+          />
+        </div>
       </div>
+
+      {/* Count */}
+      {!loading && (
+        <p className="text-xs text-gray-400 mb-3">
+          {filtered.length} competencia{filtered.length !== 1 ? "s" : ""} en {selectedYear}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Competitions list */}
-        <div className="space-y-4">
+        <div className="space-y-1.5 max-h-[75vh] overflow-y-auto pr-1">
           {loading ? (
             <div className="py-12 text-center text-gray-400 flex items-center justify-center gap-2">
               <Loader2 className="h-5 w-5 animate-spin" /> Cargando competencias...
             </div>
-          ) : years.length === 0 ? (
-            <div className="py-8 text-center text-gray-400 text-sm">No se encontraron competencias</div>
-          ) : years.map(year => (
-            <div key={year}>
-              <h2 className="text-sm font-bold text-gray-900 mb-2 sticky top-0 bg-gray-50 py-1 z-10">
-                Temporada {year}
-                <span className="text-gray-400 font-normal ml-2">({grouped[year].length})</span>
-              </h2>
-              <div className="space-y-1.5">
-                {grouped[year].map(comp => (
-                  <div
-                    key={comp.competitionId}
-                    className={`bg-white rounded-lg border p-3 cursor-pointer transition-all hover:shadow-md ${selectedComp === comp.competitionId ? "border-primary ring-2 ring-primary/20" : "border-gray-100"}`}
-                    onClick={() => loadDetail(comp.competitionId, "matches")}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-sm text-gray-900 truncate">{comp.competitionName}</p>
-                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                          {genderBadge(comp.gender)}
-                          {ageBadge(comp.ageGroup)}
-                          {standardBadge(comp.standard)}
-                          <span className="text-[10px] text-gray-400">ID: {comp.competitionId}</span>
-                        </div>
-                        {comp.startDate && (
-                          <p className="text-[10px] text-gray-400 mt-1">
-                            {comp.startDate}{comp.endDate ? ` → ${comp.endDate}` : ""}
-                          </p>
-                        )}
-                      </div>
-                      <ChevronRight className="h-4 w-4 text-gray-300 shrink-0 mt-1" />
-                    </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-8 text-center text-gray-400 text-sm">
+              No se encontraron competencias en {selectedYear}
+            </div>
+          ) : filtered.map(comp => (
+            <div
+              key={comp.competitionId}
+              className={`bg-white rounded-lg border p-3 cursor-pointer transition-all hover:shadow-md ${selectedComp === comp.competitionId ? "border-primary ring-2 ring-primary/20" : "border-gray-100"}`}
+              onClick={() => loadDetail(comp.competitionId, "matches")}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm text-gray-900 truncate">{comp.competitionName}</p>
+                  <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                    {genderBadge(comp.gender)}
+                    {ageBadge(comp.ageGroup)}
+                    {standardBadge(comp.standard)}
+                    <span className="text-[10px] text-gray-400">ID: {comp.competitionId}</span>
                   </div>
-                ))}
+                  {comp.startDate && (
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      {comp.startDate}{comp.endDate ? ` → ${comp.endDate}` : ""}
+                    </p>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 text-gray-300 shrink-0 mt-1" />
               </div>
             </div>
           ))}
@@ -196,6 +206,18 @@ export default function GeniusSportsAdminPage() {
         <div className="lg:sticky lg:top-4 self-start">
           {selectedComp ? (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              {/* Selected competition header */}
+              {selectedCompData && (
+                <div className="px-4 pt-3 pb-2 border-b border-gray-50">
+                  <p className="font-bold text-sm text-gray-900">{selectedCompData.competitionName}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    {genderBadge(selectedCompData.gender)}
+                    {ageBadge(selectedCompData.ageGroup)}
+                    {standardBadge(selectedCompData.standard)}
+                  </div>
+                </div>
+              )}
+
               {/* Tabs */}
               <div className="flex border-b border-gray-100">
                 {(["matches", "standings", "teams"] as const).map(type => (
@@ -213,7 +235,7 @@ export default function GeniusSportsAdminPage() {
               </div>
 
               {/* Content */}
-              <div className="p-4 max-h-[70vh] overflow-y-auto">
+              <div className="p-4 max-h-[60vh] overflow-y-auto">
                 {detailLoading ? (
                   <div className="py-8 text-center text-gray-400 flex items-center justify-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" /> Cargando...
@@ -225,7 +247,7 @@ export default function GeniusSportsAdminPage() {
                     {/* Match list */}
                     {detailType === "matches" && detail.data && (
                       <div className="space-y-2">
-                        {detail.data.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sin partidos</p>}
+                        {detail.data.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sin partidos cargados</p>}
                         {detail.data.map((m: any) => (
                           <div key={m.matchId} className="bg-gray-50 rounded-lg p-3 text-sm">
                             <div className="flex items-center justify-between mb-1">
@@ -290,11 +312,7 @@ export default function GeniusSportsAdminPage() {
                             </tbody>
                           </table>
                         ) : (
-                          <div className="text-sm text-gray-400 text-center py-4">
-                            <pre className="text-left text-[10px] bg-gray-50 rounded p-3 overflow-auto max-h-96">
-                              {JSON.stringify(detail, null, 2)}
-                            </pre>
-                          </div>
+                          <p className="text-sm text-gray-400 text-center py-4">Sin datos de posiciones</p>
                         )}
                       </div>
                     )}
@@ -302,7 +320,7 @@ export default function GeniusSportsAdminPage() {
                     {/* Teams */}
                     {detailType === "teams" && detail.data && (
                       <div className="space-y-1.5">
-                        {detail.data.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sin equipos</p>}
+                        {detail.data.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sin equipos cargados</p>}
                         {detail.data.map((t: any) => (
                           <div key={t.teamId || t.competitorId} className="flex items-center gap-3 p-2 bg-gray-50 rounded-lg">
                             {t.images?.logo?.T1?.url ? (
