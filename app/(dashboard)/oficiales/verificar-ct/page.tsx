@@ -10,6 +10,7 @@ const rolLabels: Record<string, string> = {
   PREPARADOR_FISICO: "Preparador Físico",
   FISIO: "Fisioterapeuta",
   UTILERO: "Utilero",
+  NUTRICIONISTA: "Nutricionista",
 }
 
 export default function VerificarCTPage() {

@@ -12,6 +12,7 @@ const rolLabels: Record<string, string> = {
   PREPARADOR_FISICO: "Preparador Físico",
   FISIO: "Fisioterapeuta",
   UTILERO: "Utilero",
+  NUTRICIONISTA: "Nutricionista",
 }
 
 const estadoConfig: Record<string, { color: string; bg: string; icon: any; label: string }> = {

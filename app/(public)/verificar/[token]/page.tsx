@@ -9,6 +9,7 @@ const CT_ROL_LABELS: Record<string, string> = {
   PREPARADOR_FISICO: "Preparador Físico",
   FISIO: "Fisioterapeuta",
   UTILERO: "Utilero",
+  NUTRICIONISTA: "Nutricionista",
 }
 
 export default async function VerificarPage({

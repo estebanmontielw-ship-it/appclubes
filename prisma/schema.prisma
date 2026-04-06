@@ -499,6 +499,7 @@ enum RolCuerpoTecnico {
   PREPARADOR_FISICO
   FISIO
   UTILERO
+  NUTRICIONISTA
 }
 
 enum EstadoHabilitacion {

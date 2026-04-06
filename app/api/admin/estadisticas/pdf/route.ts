@@ -12,7 +12,7 @@ const ROL_LABELS: Record<string, string> = {
 
 const CT_ROL_LABELS: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional", ENTRENADOR_EXTRANJERO: "Entrenador Extranjero",
-  ASISTENTE: "Asistente", PREPARADOR_FISICO: "Preparador Físico", FISIO: "Fisioterapeuta", UTILERO: "Utilero",
+  ASISTENTE: "Asistente", PREPARADOR_FISICO: "Preparador Físico", FISIO: "Fisioterapeuta", UTILERO: "Utilero", NUTRICIONISTA: "Nutricionista",
 }
 
 function fmtCurrency(n: number) {

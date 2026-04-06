@@ -13,6 +13,7 @@ const ROL_LABELS: Record<string, string> = {
   PREPARADOR_FISICO: "Preparador Físico",
   FISIO: "Fisioterapeuta",
   UTILERO: "Utilero",
+  NUTRICIONISTA: "Nutricionista",
 }
 
 const ROL_COLORS: Record<string, string> = {
@@ -22,6 +23,7 @@ const ROL_COLORS: Record<string, string> = {
   PREPARADOR_FISICO: "bg-orange-500",
   FISIO: "bg-pink-500",
   UTILERO: "bg-gray-500",
+  NUTRICIONISTA: "bg-teal-500",
 }
 
 export default function CTDashboardPage() {

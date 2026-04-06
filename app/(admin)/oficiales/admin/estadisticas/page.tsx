@@ -27,6 +27,7 @@ const CT_ROL_LABELS: Record<string, string> = {
   PREPARADOR_FISICO: "Preparador Físico",
   FISIO: "Fisioterapeuta",
   UTILERO: "Utilero",
+  NUTRICIONISTA: "Nutricionista",
 }
 
 const MESES = ["", "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]

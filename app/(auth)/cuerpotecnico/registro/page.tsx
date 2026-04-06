@@ -23,6 +23,7 @@ const ROLES_CT = [
   { value: "PREPARADOR_FISICO", label: "Preparador Físico", precio: "Gs. 200.000" },
   { value: "FISIO", label: "Fisioterapeuta", precio: "Gs. 200.000" },
   { value: "UTILERO", label: "Utilero", precio: "Gs. 100.000" },
+  { value: "NUTRICIONISTA", label: "Nutricionista", precio: "Gs. 200.000" },
 ]
 
 const ROL_MAP: Record<string, string> = {
