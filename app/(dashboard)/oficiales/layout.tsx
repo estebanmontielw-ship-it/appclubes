@@ -27,15 +27,20 @@ export default function DashboardLayout({
   const [pendingPayments, setPendingPayments] = useState(0)
   const [userLoaded, setUserLoaded] = useState(false)
 
-  // Real-time notification polling (every 30s when tab is visible)
-  const { unreadCount: polledUnreadCount } = useNotifications({
-    enabled: userLoaded,
-  })
+  // Real-time polling for notifications + pending badges (every 30s)
+  const {
+    unreadCount: polledUnreadCount,
+    pendingUsers: polledPendingUsers,
+    pendingPayments: polledPendingPayments,
+  } = useNotifications({ enabled: userLoaded })
 
-  // Sync polled count to state when it changes
+  // Sync polled values to state
   useEffect(() => {
-    if (userLoaded) setUnreadCount(polledUnreadCount)
-  }, [polledUnreadCount, userLoaded])
+    if (!userLoaded) return
+    setUnreadCount(polledUnreadCount)
+    setPendingUsers(polledPendingUsers)
+    setPendingPayments(polledPendingPayments)
+  }, [polledUnreadCount, polledPendingUsers, polledPendingPayments, userLoaded])
 
   useEffect(() => {
     async function loadUser() {
