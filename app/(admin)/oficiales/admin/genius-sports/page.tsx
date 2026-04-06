@@ -77,7 +77,7 @@ export default function GeniusSportsAdminPage() {
 
   // Get all available years
   const availableYears = useMemo(() => {
-    const years = [...new Set(competitions.map(c => c.year || 0))].filter(y => y > 0)
+    const years = Array.from(new Set(competitions.map(c => c.year || 0))).filter(y => y > 0)
     return years.sort((a, b) => b - a)
   }, [competitions])
 
