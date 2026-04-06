@@ -13,6 +13,7 @@ const navLinks = [
   {
     label: "Competencias",
     children: [
+      { label: "Partidos", href: "/partidos" },
       { label: "Calendario", href: "/calendario" },
       { label: "Posiciones", href: "/posiciones" },
       { label: "Líderes", href: "/lideres" },
