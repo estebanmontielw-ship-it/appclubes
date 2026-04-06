@@ -256,6 +256,12 @@ export default function CuerpoTecnicoDetailPage() {
           {ct.comprobanteUrl && (
             <DocPreview label="Comprobante de pago" url={ct.comprobanteUrl} />
           )}
+          {!ct.comprobanteUrl && !ct.pagoAutoVerificado && (
+            <div className="col-span-full bg-red-50 border border-red-200 rounded-lg p-3 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+              <p className="text-sm text-red-700">Sin comprobante de pago — el CT no subió comprobante de transferencia</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -380,7 +386,8 @@ export default function CuerpoTecnicoDetailPage() {
             </div>
           ) : (
             <div className="flex flex-col sm:flex-row flex-wrap gap-2">
-              <button onClick={() => handleAction("habilitar")} disabled={saving}
+              <button onClick={() => handleAction("habilitar")} disabled={saving || (!ct.comprobanteUrl && !ct.pagoAutoVerificado)}
+                title={!ct.comprobanteUrl && !ct.pagoAutoVerificado ? "No se puede habilitar sin comprobante de pago" : ""}
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50">
                 <Check className="h-4 w-4" /> Habilitar
               </button>
