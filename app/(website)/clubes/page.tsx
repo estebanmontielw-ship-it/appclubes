@@ -74,7 +74,7 @@ const equipos: Equipo[] = [
   { nombre: "Club Deportivo Campo Alto", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
   { nombre: "Sol de América", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
   { nombre: "Club Deportivo Británico", federacion: "Federación Paranaense", ciudad: "Ciudad del Este", logo: "" },
-  { nombre: "Deportivo San José", federacion: "Metropolitano", ciudad: "Asunción", logo: "/logos/San_Jose_De_Concepcion.jpg" },
+  { nombre: "Deportivo San José", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
   { nombre: "Félix Pérez Cardozo", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
   { nombre: "Olimpia", federacion: "Metropolitano", ciudad: "Asunción", logo: "" },
 ]
