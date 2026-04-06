@@ -1,8 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Search, Loader2, CheckCircle, Clock, User, UserPlus } from "lucide-react"
-import Link from "next/link"
 
 const rolLabels: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional",
@@ -19,49 +18,70 @@ export default function VerificarCTPage() {
   const [registered, setRegistered] = useState<any[]>([])
   const [preVerified, setPreVerified] = useState<any[]>([])
   const [searched, setSearched] = useState(false)
+  const abortRef = useRef<AbortController | null>(null)
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    if (!query.trim() || query.trim().length < 2) return
-    setLoading(true)
-    setSearched(true)
-
-    try {
-      const res = await fetch(`/api/ct/buscar?q=${encodeURIComponent(query.trim())}`)
-      const data = await res.json()
-      setRegistered(data.registered || [])
-      setPreVerified(data.preVerified || [])
-    } catch {
+  // Debounced live search — triggers 300ms after the user stops typing
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (trimmed.length < 2) {
       setRegistered([])
       setPreVerified([])
-    } finally {
-      setLoading(false)
+      setSearched(false)
+      return
     }
-  }
+
+    setLoading(true)
+    const timer = setTimeout(() => {
+      // Cancel any in-flight request
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+
+      fetch(`/api/ct/buscar?q=${encodeURIComponent(trimmed)}`, { signal: controller.signal })
+        .then((res) => res.json())
+        .then((data) => {
+          setRegistered(data.registered || [])
+          setPreVerified(data.preVerified || [])
+          setSearched(true)
+          setLoading(false)
+        })
+        .catch((err) => {
+          if (err.name !== "AbortError") {
+            setRegistered([])
+            setPreVerified([])
+            setSearched(true)
+            setLoading(false)
+          }
+        })
+    }, 300)
+
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [query])
 
   return (
     <div className="max-w-2xl">
       <h1 className="text-2xl font-bold text-gray-900 mb-2">Verificar Cuerpo Técnico</h1>
       <p className="text-sm text-gray-500 mb-6">Buscá por nombre, apellido o número de cédula</p>
 
-      <form onSubmit={handleSearch} className="mb-6">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+      <div className="mb-6">
+        <div className="relative">
+          {loading ? (
+            <Loader2 className="absolute left-3 top-3 h-5 w-5 text-primary animate-spin" />
+          ) : (
             <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Nombre, apellido o CI..."
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-              style={{ fontSize: "16px" }}
-            />
-          </div>
-          <button type="submit" disabled={loading || query.trim().length < 2}
-            className="px-5 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 disabled:opacity-50 shrink-0">
-            {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Buscar"}
-          </button>
+          )}
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Nombre, apellido o CI..."
+            className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            style={{ fontSize: "16px" }}
+            autoFocus
+          />
         </div>
-      </form>
+      </div>
 
       {searched && !loading && (
         <div className="space-y-3">

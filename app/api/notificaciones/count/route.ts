@@ -29,24 +29,17 @@ export async function GET() {
       }),
     ])
 
-    const isAdmin = roles.some(r =>
+    const isAdmin = roles.some((r) =>
       ["SUPER_ADMIN", "INSTRUCTOR", "VERIFICADOR"].includes(r.rol)
     )
 
-    // For admins, include pending counters for sidebar badges
     if (isAdmin) {
       const [pendingUsers, pendingPayments, pendingCT] = await Promise.all([
         prisma.usuario.count({ where: { estadoVerificacion: "PENDIENTE" } }),
         prisma.pago.count({ where: { estado: "PENDIENTE_REVISION" } }),
         prisma.cuerpoTecnico.count({ where: { estadoHabilitacion: "PENDIENTE" } }),
       ])
-
-      return NextResponse.json({
-        unreadCount,
-        pendingUsers,
-        pendingPayments,
-        pendingCT,
-      })
+      return NextResponse.json({ unreadCount, pendingUsers, pendingPayments, pendingCT })
     }
 
     return NextResponse.json({ unreadCount })

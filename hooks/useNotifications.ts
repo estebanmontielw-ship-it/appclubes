@@ -41,9 +41,9 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
       if (res.ok) {
         const data = await res.json()
         setUnreadCount(data.unreadCount ?? 0)
-        if (data.pendingUsers !== undefined) setPendingUsers(data.pendingUsers)
-        if (data.pendingPayments !== undefined) setPendingPayments(data.pendingPayments)
-        if (data.pendingCT !== undefined) setPendingCT(data.pendingCT)
+        setPendingUsers(data.pendingUsers ?? 0)
+        setPendingPayments(data.pendingPayments ?? 0)
+        setPendingCT(data.pendingCT ?? 0)
       }
     } catch {
       // Network error — silently skip this cycle
