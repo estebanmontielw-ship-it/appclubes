@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle, Lock, Search } from "lucide-react"
+import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle, Lock, Search, X, Sparkles } from "lucide-react"
 import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
@@ -22,8 +22,23 @@ interface DashboardData {
   unreadNotifications: number
 }
 
+const ANNOUNCEMENT_KEY = "cpb_seen_ct_search_v1"
+
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
+  const [showAnnouncement, setShowAnnouncement] = useState(false)
+
+  // Show announcement once
+  useEffect(() => {
+    if (!localStorage.getItem(ANNOUNCEMENT_KEY)) {
+      setShowAnnouncement(true)
+    }
+  }, [])
+
+  const dismissAnnouncement = () => {
+    setShowAnnouncement(false)
+    localStorage.setItem(ANNOUNCEMENT_KEY, "true")
+  }
 
   useEffect(() => {
     fetch("/api/me")
@@ -107,6 +122,81 @@ export default function DashboardPage() {
           </Badge>
         ))}
       </div>
+
+      {/* Announcement popup */}
+      {showAnnouncement && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" onClick={dismissAnnouncement}>
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+          <div
+            className="relative bg-white rounded-2xl max-w-sm w-full shadow-2xl z-10 overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header gradient */}
+            <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 px-6 pt-8 pb-10 text-center relative">
+              <button
+                onClick={dismissAnnouncement}
+                className="absolute top-3 right-3 p-1.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors"
+              >
+                <X className="h-4 w-4 text-white" />
+              </button>
+              <div className="h-16 w-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-4">
+                <Search className="h-8 w-8 text-white" />
+              </div>
+              <div className="flex items-center justify-center gap-1.5 mb-2">
+                <Sparkles className="h-4 w-4 text-yellow-300" />
+                <span className="text-yellow-300 text-xs font-bold uppercase tracking-wider">Nueva funcionalidad</span>
+                <Sparkles className="h-4 w-4 text-yellow-300" />
+              </div>
+              <h3 className="text-white text-xl font-bold">
+                Buscador de Cuerpo Tecnico
+              </h3>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 pt-5 pb-6 -mt-4 bg-white rounded-t-2xl relative">
+              <p className="text-gray-600 text-sm text-center leading-relaxed">
+                Ahora podes <strong>verificar el carnet de cualquier miembro del Cuerpo Tecnico</strong> directamente desde tu celular.
+              </p>
+              <div className="mt-4 space-y-2.5">
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+                    <Search className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-gray-700">Busca por <strong>nombre o CI</strong></span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="h-8 w-8 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+                    <CreditCard className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span className="text-gray-700">Verifica si esta <strong>habilitado</strong></span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <div className="h-8 w-8 rounded-full bg-purple-50 flex items-center justify-center shrink-0">
+                    <Users className="h-4 w-4 text-purple-600" />
+                  </div>
+                  <span className="text-gray-700">Ve su <strong>foto, rol y datos</strong></span>
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={dismissAnnouncement}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Ahora no
+                </button>
+                <Link
+                  href="/oficiales/verificar-ct"
+                  onClick={dismissAnnouncement}
+                  className="flex-1 py-2.5 rounded-xl bg-primary text-white text-sm font-semibold text-center hover:bg-primary/90 transition-colors"
+                >
+                  Ir a probar
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick access cards */}
       {!isAdmin ? (
