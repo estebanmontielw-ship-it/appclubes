@@ -42,7 +42,7 @@ export default function GeniusSportsAdminPage() {
       // The explore endpoint returns { ok, data } where data is the raw API response
       // Raw API: { response: { meta }, data: [...] } or just { data: [...] }
       const raw = json.data
-      const comps: Competition[] = raw?.data || (Array.isArray(raw) ? raw : [])
+      const comps: Competition[] = raw?.response?.data || raw?.data || (Array.isArray(raw) ? raw : [])
       // Sort by year descending, then name
       comps.sort((a, b) => (b.year || 0) - (a.year || 0) || a.competitionName.localeCompare(b.competitionName))
       setCompetitions(comps)

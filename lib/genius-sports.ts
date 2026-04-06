@@ -64,7 +64,22 @@ export async function geniusFetch(path: string, ttl: CacheTTL = "medium"): Promi
 // --- High-level helpers ---
 
 export async function getCompetitions() {
-  return geniusFetch("/competitions?limit=100", "long")
+  // Paginate through ALL competitions (API max 500 per page)
+  const allComps: any[] = []
+  let offset = 0
+  const limit = 500
+
+  while (true) {
+    const raw = await geniusFetch(`/competitions?limit=${limit}&offset=${offset}`, "long")
+    const items = raw?.response?.data || raw?.data || (Array.isArray(raw) ? raw : [])
+    if (!items.length) break
+    allComps.push(...items)
+    // If we got fewer than limit, we've reached the end
+    if (items.length < limit) break
+    offset += limit
+  }
+
+  return { response: { data: allComps } }
 }
 
 export async function getCompetition(competitionId: string | number) {
