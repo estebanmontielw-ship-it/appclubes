@@ -50,16 +50,12 @@ export async function POST(request: Request) {
       // Score: use best method
       let finalScore = Math.max(score1, score2)
 
-      // Boost if both nombre and apellido found in pre name
+      // Require BOTH apellido AND nombre to match — prevents false positives
       if (apellidoMatch && nombreMatch) {
         finalScore = Math.max(finalScore, 3)
       }
-      // Accept if apellido matches exactly and at least one nombre part
-      if (apellidoMatch && finalScore >= 1) {
-        finalScore = Math.max(finalScore, 2)
-      }
 
-      if (finalScore >= 2 && finalScore > bestScore) {
+      if (finalScore >= 3 && finalScore > bestScore) {
         bestScore = finalScore
         bestMatch = pre
       }

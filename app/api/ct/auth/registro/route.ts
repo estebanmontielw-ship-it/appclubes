@@ -99,10 +99,11 @@ export async function POST(request: Request) {
       const nombreMatch = nombreParts.some(np => preNorm.includes(np))
 
       let finalScore = Math.max(score1, score2)
+      // Require BOTH apellido AND nombre to match — prevents false positives
+      // like "Tomas Nuñez" matching "Jose Tomas Rios Zunini"
       if (apellidoMatch && nombreMatch) finalScore = Math.max(finalScore, 3)
-      if (apellidoMatch && finalScore >= 1) finalScore = Math.max(finalScore, 2)
 
-      if (finalScore >= 2 && finalScore > bestScore) {
+      if (finalScore >= 3 && finalScore > bestScore) {
         bestScore = finalScore
         matchedPre = pre
         autoVerificado = true
