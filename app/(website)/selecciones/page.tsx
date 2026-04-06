@@ -122,31 +122,6 @@ const eventos2026: Evento[] = [
   },
 ]
 
-const entrenamientos = [
-  {
-    dia: "Lunes",
-    sesiones: [
-      { equipo: "U15 Masculino", horario: "16:00 a 17:30", lugar: "Ueno Cop Arena" },
-    ],
-  },
-  {
-    dia: "Martes y Miércoles",
-    sesiones: [
-      { equipo: "3x3 Masculino – Mayores y U19 / 3x3 Femenino – Mayores y U19", horario: "12:00 a 14:00", lugar: "Ueno Cop Arena" },
-      { equipo: "U18 Femenino", horario: "14:00 a 16:00", lugar: "Ueno Cop Arena" },
-      { equipo: "U15 Masculino", horario: "16:00 a 17:30", lugar: "Ueno Cop Arena" },
-    ],
-  },
-  {
-    dia: "Jueves y Viernes",
-    sesiones: [
-      { equipo: "3x3 Masculino – Mayores y U19 / 3x3 Femenino – Mayores y U19", horario: "13:00 a 14:30", lugar: "Frente al CEO – Partido Demostración Expo COP" },
-      { equipo: "U18 Femenino", horario: "14:45 a 16:30", lugar: "Ueno Cop Arena" },
-      { equipo: "U15 Masculino", horario: "16:45 a 18:15", lugar: "Ueno Cop Arena" },
-    ],
-  },
-]
-
 function getModalidadColor(modalidad: string) {
   return modalidad === "3x3"
     ? "bg-orange-100 text-orange-700"
@@ -285,33 +260,6 @@ export default async function SeleccionesPage() {
         <div className="mt-3 flex items-center gap-4 text-xs text-gray-400">
           <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" /> Sede confirmada</span>
           <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-yellow-500 inline-block" /> Por confirmar</span>
-        </div>
-      </div>
-
-      {/* Cronograma de entrenamientos */}
-      <div className="mt-12">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Cronograma de Entrenamientos</h2>
-        <p className="text-sm text-gray-500 mb-5">Comité Olímpico Paraguayo — Ueno COP Arena</p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {entrenamientos.map((dia) => (
-            <div key={dia.dia} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-              <div className="bg-gradient-to-r from-primary to-primary/80 px-5 py-3">
-                <h3 className="text-white font-bold text-sm">{dia.dia}</h3>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {dia.sesiones.map((s, i) => (
-                  <div key={i} className="px-5 py-3">
-                    <p className="font-semibold text-gray-900 text-sm">{s.equipo}</p>
-                    <div className="flex items-center justify-between mt-1">
-                      <span className="text-xs text-primary font-medium">{s.horario}</span>
-                      <span className="text-[10px] text-gray-400">{s.lugar}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
       </div>
 
