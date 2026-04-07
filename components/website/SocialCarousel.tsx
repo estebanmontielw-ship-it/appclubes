@@ -45,7 +45,8 @@ function timeAgo(date: string | null): string {
   return `${Math.floor(days / 365)}año`
 }
 
-const AUTO_ADVANCE_MS = 5000
+// Speed in pixels per second for the continuous marquee
+const SCROLL_SPEED = 30
 
 export default function SocialCarousel() {
   const [posts, setPosts] = useState<SocialPost[]>([])
@@ -54,9 +55,14 @@ export default function SocialCarousel() {
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
   const [isPaused, setIsPaused] = useState(false)
-  const [progress, setProgress] = useState(0)
   const [entered, setEntered] = useState(false)
   const scrollerRef = useRef<HTMLDivElement>(null)
+  const rafRef = useRef<number | null>(null)
+  const lastTimeRef = useRef<number>(0)
+  const isPausedRef = useRef(false)
+
+  // Keep ref in sync so the rAF loop reads the latest value without restarting
+  useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
 
   // Fetch posts
   useEffect(() => {
@@ -88,6 +94,7 @@ export default function SocialCarousel() {
     const el = scrollerRef.current
     if (!el) return
     setCanScrollLeft(el.scrollLeft > 10)
+    // Right button visible unless we've reached the very end of the duplicated track
     setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
   }
 
@@ -103,38 +110,44 @@ export default function SocialCarousel() {
     }
   }, [posts])
 
-  // Auto-advance with progress bar
+  // Continuous smooth scroll using requestAnimationFrame
   useEffect(() => {
-    if (posts.length === 0 || isPaused) {
-      setProgress(0)
-      return
+    if (posts.length === 0) return
+
+    const tick = (time: number) => {
+      const el = scrollerRef.current
+      if (!el) {
+        rafRef.current = requestAnimationFrame(tick)
+        return
+      }
+
+      if (lastTimeRef.current === 0) {
+        lastTimeRef.current = time
+      }
+      const delta = time - lastTimeRef.current
+      lastTimeRef.current = time
+
+      if (!isPausedRef.current) {
+        // Move scroll position by (speed * deltaSeconds)
+        const move = (SCROLL_SPEED * delta) / 1000
+        const halfWidth = el.scrollWidth / 2 // we render posts twice
+        let next = el.scrollLeft + move
+        // When we've scrolled past the first set, jump back silently
+        if (next >= halfWidth) {
+          next = next - halfWidth
+        }
+        el.scrollLeft = next
+      }
+
+      rafRef.current = requestAnimationFrame(tick)
     }
 
-    const interval = 50 // update progress every 50ms
-    const total = AUTO_ADVANCE_MS
-    let elapsed = 0
-
-    const tick = setInterval(() => {
-      elapsed += interval
-      setProgress(Math.min((elapsed / total) * 100, 100))
-
-      if (elapsed >= total) {
-        elapsed = 0
-        const el = scrollerRef.current
-        if (el) {
-          const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 10
-          if (atEnd) {
-            // Loop back to start
-            el.scrollTo({ left: 0, behavior: "smooth" })
-          } else {
-            el.scrollBy({ left: 320, behavior: "smooth" })
-          }
-        }
-      }
-    }, interval)
-
-    return () => clearInterval(tick)
-  }, [posts, isPaused])
+    rafRef.current = requestAnimationFrame(tick)
+    return () => {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      lastTimeRef.current = 0
+    }
+  }, [posts])
 
   const scroll = (direction: "left" | "right") => {
     const el = scrollerRef.current
@@ -173,6 +186,9 @@ export default function SocialCarousel() {
     )
   }
 
+  // Duplicate posts so the marquee can loop seamlessly
+  const loopedPosts = [...posts, ...posts]
+
   return (
     <div
       className="relative group"
@@ -206,20 +222,22 @@ export default function SocialCarousel() {
       {/* Carousel */}
       <div
         ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-4 px-4"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none", scrollBehavior: "auto" }}
       >
-        {posts.map((post, idx) => (
+        {loopedPosts.map((post, idx) => (
           <a
-            key={post.id}
+            key={`${post.id}-${idx}`}
             href={post.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 w-72 snap-start group/card"
+            className="flex-shrink-0 w-72 group/card"
             style={{
               opacity: entered ? 1 : 0,
               transform: entered ? "translateY(0)" : "translateY(24px)",
-              transition: `opacity 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms, transform 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms`,
+              transition: idx < posts.length
+                ? `opacity 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms, transform 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms`
+                : "none",
             }}
           >
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 h-full flex flex-col">
@@ -247,11 +265,11 @@ export default function SocialCarousel() {
                 ) : null}
 
                 {/* Shine overlay on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover/card:opacity-100 pointer-events-none">
+                <div className="absolute inset-0 opacity-0 group-hover/card:opacity-100 pointer-events-none overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-full group-hover/card:translate-x-full transition-transform duration-1000 ease-out" />
                 </div>
 
-                {/* Gradient overlay at bottom (enhances on hover) */}
+                {/* Gradient overlay at bottom on hover */}
                 <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
 
                 {/* Network badge */}
@@ -296,21 +314,6 @@ export default function SocialCarousel() {
           </a>
         ))}
       </div>
-
-      {/* Progress bar */}
-      <div className="mt-2 mx-4 h-0.5 bg-gray-200 rounded-full overflow-hidden">
-        <div
-          className="h-full bg-gradient-to-r from-primary to-primary/60 transition-all ease-linear"
-          style={{
-            width: `${progress}%`,
-            transitionDuration: isPaused ? "0ms" : "50ms",
-            opacity: isPaused ? 0.3 : 1,
-          }}
-        />
-      </div>
-      <p className="text-[10px] text-gray-400 text-center mt-1">
-        {isPaused ? "Pausado" : "Auto-avance"} · Pasá el mouse para pausar
-      </p>
     </div>
   )
 }
