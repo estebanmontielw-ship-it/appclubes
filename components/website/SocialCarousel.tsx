@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, ExternalLink } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Heart, MessageCircle, ExternalLink } from "lucide-react"
 
 interface SocialPost {
   id: string | number
@@ -35,26 +35,12 @@ function timeAgo(date: string | null): string {
   return `${Math.floor(days / 365)}año`
 }
 
-// Speed in pixels per second for the continuous marquee
-const SCROLL_SPEED = 30
-
 export default function SocialCarousel() {
   const [posts, setPosts] = useState<SocialPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
-  const [canScrollLeft, setCanScrollLeft] = useState(false)
-  const [canScrollRight, setCanScrollRight] = useState(true)
-  const [isPaused, setIsPaused] = useState(false)
   const [entered, setEntered] = useState(false)
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const rafRef = useRef<number | null>(null)
-  const lastTimeRef = useRef<number>(0)
-  const isPausedRef = useRef(false)
 
-  // Keep ref in sync so the rAF loop reads the latest value without restarting
-  useEffect(() => { isPausedRef.current = isPaused }, [isPaused])
-
-  // Fetch posts
   useEffect(() => {
     let cancelled = false
     fetch("/api/curator/posts?limit=20")
@@ -72,7 +58,6 @@ export default function SocialCarousel() {
     return () => { cancelled = true }
   }, [])
 
-  // Trigger staggered entrance after posts load
   useEffect(() => {
     if (posts.length > 0) {
       const t = setTimeout(() => setEntered(true), 50)
@@ -80,79 +65,13 @@ export default function SocialCarousel() {
     }
   }, [posts])
 
-  const updateScrollButtons = () => {
-    const el = scrollerRef.current
-    if (!el) return
-    setCanScrollLeft(el.scrollLeft > 10)
-    // Right button visible unless we've reached the very end of the duplicated track
-    setCanScrollRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
-  }
-
-  useEffect(() => {
-    updateScrollButtons()
-    const el = scrollerRef.current
-    if (!el) return
-    el.addEventListener("scroll", updateScrollButtons)
-    window.addEventListener("resize", updateScrollButtons)
-    return () => {
-      el.removeEventListener("scroll", updateScrollButtons)
-      window.removeEventListener("resize", updateScrollButtons)
-    }
-  }, [posts])
-
-  // Continuous smooth scroll using requestAnimationFrame
-  useEffect(() => {
-    if (posts.length === 0) return
-
-    const tick = (time: number) => {
-      const el = scrollerRef.current
-      if (!el) {
-        rafRef.current = requestAnimationFrame(tick)
-        return
-      }
-
-      if (lastTimeRef.current === 0) {
-        lastTimeRef.current = time
-      }
-      const delta = time - lastTimeRef.current
-      lastTimeRef.current = time
-
-      if (!isPausedRef.current) {
-        // Move scroll position by (speed * deltaSeconds)
-        const move = (SCROLL_SPEED * delta) / 1000
-        const halfWidth = el.scrollWidth / 2 // we render posts twice
-        let next = el.scrollLeft + move
-        // When we've scrolled past the first set, jump back silently
-        if (next >= halfWidth) {
-          next = next - halfWidth
-        }
-        el.scrollLeft = next
-      }
-
-      rafRef.current = requestAnimationFrame(tick)
-    }
-
-    rafRef.current = requestAnimationFrame(tick)
-    return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
-      lastTimeRef.current = 0
-    }
-  }, [posts])
-
-  const scroll = (direction: "left" | "right") => {
-    const el = scrollerRef.current
-    if (!el) return
-    const cardWidth = 320
-    el.scrollBy({ left: direction === "left" ? -cardWidth * 2 : cardWidth * 2, behavior: "smooth" })
-  }
-
   if (loading) {
     return (
       <div className="flex gap-4 overflow-hidden">
         {[...Array(5)].map((_, i) => (
           <div
             key={i}
-            className="flex-shrink-0 w-72 h-96 rounded-2xl bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer"
+            className="flex-shrink-0 w-64 sm:w-72 aspect-[3/4] rounded-2xl bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer"
           />
         ))}
       </div>
@@ -176,44 +95,31 @@ export default function SocialCarousel() {
     )
   }
 
-  // Duplicate posts so the marquee can loop seamlessly
+  // Duplicate posts so the marquee can loop seamlessly (animation goes 0 → -50%)
   const loopedPosts = [...posts, ...posts]
+
+  // Animation duration scales with number of posts for consistent speed
+  // ~8 seconds per post feels slow and elegant
+  const duration = posts.length * 8
 
   return (
     <div
-      className="relative group"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      className="relative overflow-hidden"
+      style={{
+        // Fade edges so cards feel like they're emerging/disappearing
+        WebkitMaskImage:
+          "linear-gradient(to right, transparent 0, black 48px, black calc(100% - 48px), transparent 100%)",
+        maskImage:
+          "linear-gradient(to right, transparent 0, black 48px, black calc(100% - 48px), transparent 100%)",
+      }}
     >
-      {/* Left arrow */}
-      <button
-        onClick={() => scroll("left")}
-        disabled={!canScrollLeft}
-        aria-label="Anterior"
-        className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center transition-all -translate-x-1/2 ${
-          canScrollLeft ? "opacity-100 hover:scale-110" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <ChevronLeft className="h-5 w-5 text-gray-700" />
-      </button>
-
-      {/* Right arrow */}
-      <button
-        onClick={() => scroll("right")}
-        disabled={!canScrollRight}
-        aria-label="Siguiente"
-        className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white shadow-lg flex items-center justify-center transition-all translate-x-1/2 ${
-          canScrollRight ? "opacity-100 hover:scale-110" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <ChevronRight className="h-5 w-5 text-gray-700" />
-      </button>
-
-      {/* Carousel */}
       <div
-        ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto pb-4 -mx-4 px-4"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none", scrollBehavior: "auto" }}
+        className="flex gap-4 w-max marquee-track"
+        style={{
+          opacity: entered ? 1 : 0,
+          transition: "opacity 800ms ease-out",
+          animationDuration: `${duration}s`,
+        }}
       >
         {loopedPosts.map((post, idx) => (
           <a
@@ -221,14 +127,7 @@ export default function SocialCarousel() {
             href={post.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-shrink-0 w-72 group/card"
-            style={{
-              opacity: entered ? 1 : 0,
-              transform: entered ? "translateY(0)" : "translateY(24px)",
-              transition: idx < posts.length
-                ? `opacity 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms, transform 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms`
-                : "none",
-            }}
+            className="flex-shrink-0 w-64 sm:w-72 group/card"
           >
             <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 h-full flex flex-col">
               {/* Media */}

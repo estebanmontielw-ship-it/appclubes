@@ -21,7 +21,7 @@ import NewsCard from "@/components/website/NewsCard"
 import QuickLinks from "@/components/website/QuickLinks"
 import prisma from "@/lib/prisma"
 import GeniusSportsHomeWidget from "./GeniusSportsHomeWidget"
-import CuratorFeed from "@/components/website/CuratorFeed"
+import SocialCarousel from "@/components/website/SocialCarousel"
 import MatchTicker from "@/components/website/MatchTicker"
 
 export default async function HomePage() {
@@ -71,12 +71,12 @@ export default async function HomePage() {
       </section>
 
       {/* Social Media Feed */}
-      <section className="bg-gray-50 border-t border-gray-100">
+      <section className="bg-gray-50 border-t border-gray-100 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <SectionTitle title="Seguinos en Redes" subtitle="Las últimas publicaciones de la CPB" />
-          <div className="mt-6">
-            <CuratorFeed />
-          </div>
+        </div>
+        <div className="pb-12">
+          <SocialCarousel />
         </div>
       </section>
 

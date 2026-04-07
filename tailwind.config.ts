@@ -61,9 +61,14 @@ const config = {
           "0%": { backgroundPosition: "-200% 0" },
           "100%": { backgroundPosition: "200% 0" },
         },
+        marquee: {
+          "0%": { transform: "translate3d(0, 0, 0)" },
+          "100%": { transform: "translate3d(-50%, 0, 0)" },
+        },
       },
       animation: {
         shimmer: "shimmer 1.8s ease-in-out infinite",
+        marquee: "marquee linear infinite",
       },
     },
   },
