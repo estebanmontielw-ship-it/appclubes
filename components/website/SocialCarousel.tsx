@@ -45,14 +45,20 @@ function timeAgo(date: string | null): string {
   return `${Math.floor(days / 365)}año`
 }
 
+const AUTO_ADVANCE_MS = 5000
+
 export default function SocialCarousel() {
   const [posts, setPosts] = useState<SocialPost[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(true)
+  const [isPaused, setIsPaused] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const [entered, setEntered] = useState(false)
   const scrollerRef = useRef<HTMLDivElement>(null)
 
+  // Fetch posts
   useEffect(() => {
     let cancelled = false
     fetch("/api/curator/posts?limit=20")
@@ -69,6 +75,14 @@ export default function SocialCarousel() {
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [])
+
+  // Trigger staggered entrance after posts load
+  useEffect(() => {
+    if (posts.length > 0) {
+      const t = setTimeout(() => setEntered(true), 50)
+      return () => clearTimeout(t)
+    }
+  }, [posts])
 
   const updateScrollButtons = () => {
     const el = scrollerRef.current
@@ -89,6 +103,39 @@ export default function SocialCarousel() {
     }
   }, [posts])
 
+  // Auto-advance with progress bar
+  useEffect(() => {
+    if (posts.length === 0 || isPaused) {
+      setProgress(0)
+      return
+    }
+
+    const interval = 50 // update progress every 50ms
+    const total = AUTO_ADVANCE_MS
+    let elapsed = 0
+
+    const tick = setInterval(() => {
+      elapsed += interval
+      setProgress(Math.min((elapsed / total) * 100, 100))
+
+      if (elapsed >= total) {
+        elapsed = 0
+        const el = scrollerRef.current
+        if (el) {
+          const atEnd = el.scrollLeft >= el.scrollWidth - el.clientWidth - 10
+          if (atEnd) {
+            // Loop back to start
+            el.scrollTo({ left: 0, behavior: "smooth" })
+          } else {
+            el.scrollBy({ left: 320, behavior: "smooth" })
+          }
+        }
+      }
+    }, interval)
+
+    return () => clearInterval(tick)
+  }, [posts, isPaused])
+
   const scroll = (direction: "left" | "right") => {
     const el = scrollerRef.current
     if (!el) return
@@ -100,7 +147,10 @@ export default function SocialCarousel() {
     return (
       <div className="flex gap-4 overflow-hidden">
         {[...Array(5)].map((_, i) => (
-          <div key={i} className="flex-shrink-0 w-72 h-96 bg-gray-200 rounded-2xl animate-pulse" />
+          <div
+            key={i}
+            className="flex-shrink-0 w-72 h-96 rounded-2xl bg-gradient-to-br from-gray-200 via-gray-100 to-gray-200 bg-[length:200%_100%] animate-shimmer"
+          />
         ))}
       </div>
     )
@@ -124,7 +174,11 @@ export default function SocialCarousel() {
   }
 
   return (
-    <div className="relative group">
+    <div
+      className="relative group"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
       {/* Left arrow */}
       <button
         onClick={() => scroll("left")}
@@ -155,22 +209,27 @@ export default function SocialCarousel() {
         className="flex gap-4 overflow-x-auto snap-x snap-mandatory scroll-smooth pb-4 -mx-4 px-4"
         style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
       >
-        {posts.map(post => (
+        {posts.map((post, idx) => (
           <a
             key={post.id}
             href={post.url}
             target="_blank"
             rel="noopener noreferrer"
             className="flex-shrink-0 w-72 snap-start group/card"
+            style={{
+              opacity: entered ? 1 : 0,
+              transform: entered ? "translateY(0)" : "translateY(24px)",
+              transition: `opacity 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms, transform 600ms cubic-bezier(0.16, 1, 0.3, 1) ${idx * 80}ms`,
+            }}
           >
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 h-full flex flex-col">
+            <div className="relative bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 h-full flex flex-col">
               {/* Media */}
               <div className="relative aspect-square overflow-hidden bg-gray-100">
                 {post.video ? (
                   <video
                     src={post.video}
                     poster={post.image || undefined}
-                    className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700 ease-out"
                     muted
                     playsInline
                     loop
@@ -183,17 +242,25 @@ export default function SocialCarousel() {
                     src={post.image}
                     alt={post.text?.slice(0, 80) || "Post"}
                     loading="lazy"
-                    className="w-full h-full object-cover group-hover/card:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover group-hover/card:scale-110 transition-transform duration-700 ease-out"
                   />
                 ) : null}
 
+                {/* Shine overlay on hover */}
+                <div className="absolute inset-0 opacity-0 group-hover/card:opacity-100 pointer-events-none">
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent -translate-x-full group-hover/card:translate-x-full transition-transform duration-1000 ease-out" />
+                </div>
+
+                {/* Gradient overlay at bottom (enhances on hover) */}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
+
                 {/* Network badge */}
-                <div className={`absolute top-3 left-3 w-8 h-8 rounded-full bg-gradient-to-br ${networkColor(post.network)} text-white flex items-center justify-center shadow-md`}>
+                <div className={`absolute top-3 left-3 w-8 h-8 rounded-full bg-gradient-to-br ${networkColor(post.network)} text-white flex items-center justify-center shadow-md group-hover/card:scale-110 transition-transform duration-300`}>
                   {networkIcon()}
                 </div>
 
                 {/* External link indicator */}
-                <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md opacity-0 group-hover/card:opacity-100 transition-opacity">
+                <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md opacity-0 group-hover/card:opacity-100 translate-y-[-4px] group-hover/card:translate-y-0 transition-all duration-300">
                   <ExternalLink className="h-4 w-4 text-gray-700" />
                 </div>
               </div>
@@ -210,8 +277,8 @@ export default function SocialCarousel() {
                 <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-gray-100">
                   <div className="flex items-center gap-3">
                     {post.likes > 0 && (
-                      <span className="flex items-center gap-1">
-                        <Heart className="h-3.5 w-3.5" />
+                      <span className="flex items-center gap-1 group-hover/card:text-red-500 transition-colors">
+                        <Heart className="h-3.5 w-3.5 group-hover/card:fill-current" />
                         {post.likes > 999 ? `${(post.likes / 1000).toFixed(1)}k` : post.likes}
                       </span>
                     )}
@@ -229,6 +296,21 @@ export default function SocialCarousel() {
           </a>
         ))}
       </div>
+
+      {/* Progress bar */}
+      <div className="mt-2 mx-4 h-0.5 bg-gray-200 rounded-full overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-primary to-primary/60 transition-all ease-linear"
+          style={{
+            width: `${progress}%`,
+            transitionDuration: isPaused ? "0ms" : "50ms",
+            opacity: isPaused ? 0.3 : 1,
+          }}
+        />
+      </div>
+      <p className="text-[10px] text-gray-400 text-center mt-1">
+        {isPaused ? "Pausado" : "Auto-avance"} · Pasá el mouse para pausar
+      </p>
     </div>
   )
 }
