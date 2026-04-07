@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useRef } from "react"
-import { ChevronLeft, ChevronRight, Heart, MessageCircle, ExternalLink, Camera } from "lucide-react"
+import { ChevronLeft, ChevronRight, Heart, MessageCircle, ExternalLink } from "lucide-react"
 
 interface SocialPost {
   id: string | number
@@ -15,16 +15,6 @@ interface SocialPost {
   likes: number
   comments: number
   createdAt: string | null
-}
-
-const networkIcon = () => <Camera className="h-4 w-4" />
-
-const networkColor = (network: string) => {
-  const n = (network || "").toLowerCase()
-  if (n.includes("instagram")) return "from-purple-500 via-pink-500 to-orange-500"
-  if (n.includes("facebook")) return "from-blue-600 to-blue-700"
-  if (n.includes("twitter") || n.includes("x")) return "from-gray-800 to-black"
-  return "from-purple-500 via-pink-500 to-orange-500"
 }
 
 function timeAgo(date: string | null): string {
@@ -271,11 +261,6 @@ export default function SocialCarousel() {
 
                 {/* Gradient overlay at bottom on hover */}
                 <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover/card:opacity-100 transition-opacity duration-500" />
-
-                {/* Network badge */}
-                <div className={`absolute top-3 left-3 w-8 h-8 rounded-full bg-gradient-to-br ${networkColor(post.network)} text-white flex items-center justify-center shadow-md group-hover/card:scale-110 transition-transform duration-300`}>
-                  {networkIcon()}
-                </div>
 
                 {/* External link indicator */}
                 <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-md opacity-0 group-hover/card:opacity-100 translate-y-[-4px] group-hover/card:translate-y-0 transition-all duration-300">
