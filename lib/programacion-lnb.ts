@@ -41,6 +41,8 @@ export interface LnbSchedulePayload {
   updatedAt: string
 }
 
+export async function resolveLnbCompetitionIdPublic() { return resolveLnbCompetitionId() }
+
 async function resolveLnbCompetitionId(): Promise<{ id: string | null; name: string | null }> {
   const envId = process.env.GENIUS_LNB_COMPETITION_ID
   if (envId) return { id: envId, name: null }

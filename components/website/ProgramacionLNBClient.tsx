@@ -179,6 +179,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
   }
 
   // Filtered list based on current view
+  const selectedTeam = teams.find((t) => String(t.id) === String(selectedTeamId))
   const filteredMatches = useMemo(() => {
     if (view === "general") return scheduledMatches
     if (view === "fecha") {
@@ -202,10 +203,9 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
       if (clubSide === "away") return isAway
       return isHome || isAway
     })
-  }, [view, selectedRound, selectedTeamId, clubSide, scheduledMatches])
+  }, [view, selectedRound, selectedTeamId, clubSide, scheduledMatches, selectedTeam])
 
   const dateGroups = useMemo(() => groupByDate(filteredMatches), [filteredMatches])
-  const selectedTeam = teams.find((t) => String(t.id) === String(selectedTeamId))
 
   const updatedLabel = useMemo(() => {
     try {
