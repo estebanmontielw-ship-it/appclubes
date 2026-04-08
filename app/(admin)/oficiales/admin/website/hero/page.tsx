@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, Trash2, Monitor, Smartphone, Save, Check } from "lucide-react"
+import { Plus, Trash2, Monitor, Smartphone, Save, Check, Pencil } from "lucide-react"
 import ImageUploader from "@/components/website/ImageUploader"
 import FocalPointPicker from "@/components/admin/FocalPointPicker"
 import { parseFocalPoint } from "@/lib/image"
@@ -34,6 +34,8 @@ export default function AdminHeroPage() {
 
   // Per-image save state (for focal point edits)
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set())
+  // Per-image edit/expand state — start collapsed, only expand when user clicks "Editar"
+  const [editingIds, setEditingIds] = useState<Set<string>>(new Set())
 
   async function load() {
     setLoading(true)
@@ -151,6 +153,12 @@ export default function AdminHeroPage() {
       }),
     })
     if (res.ok) {
+      // Collapse the card back to the compact view after a successful save
+      setEditingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(img.id)
+        return next
+      })
       setSavedIds((prev) => new Set(prev).add(img.id))
       setTimeout(() => {
         setSavedIds((prev) => {
@@ -158,8 +166,17 @@ export default function AdminHeroPage() {
           next.delete(img.id)
           return next
         })
-      }, 2000)
+      }, 2500)
     }
+  }
+
+  function toggleEdit(id: string) {
+    setEditingIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
   const canAddMore = images.length < MAX_HERO_IMAGES
@@ -195,73 +212,115 @@ export default function AdminHeroPage() {
             <p className="text-gray-400 text-sm">No hay imágenes todavía. Subí la primera abajo.</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {images.map((img, idx) => (
-              <div key={img.id} className="bg-white rounded-xl border border-gray-100 p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
-                      {idx + 1}
-                    </span>
-                    <span className="text-sm font-medium text-gray-700">Imagen #{idx + 1}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {savedIds.has(img.id) && (
-                      <span className="inline-flex items-center gap-1 text-xs text-green-600">
-                        <Check className="h-3.5 w-3.5" /> Guardado
+          <div className="space-y-3">
+            {images.map((img, idx) => {
+              const isEditing = editingIds.has(img.id)
+              return (
+                <div key={img.id} className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+                  {/* Header — always visible */}
+                  <div className="flex items-center justify-between gap-3 p-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center">
+                        {idx + 1}
                       </span>
-                    )}
-                    <button
-                      onClick={() => handleSaveFocal(img)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"
-                    >
-                      <Save className="h-3.5 w-3.5" />
-                      Guardar enfoque
-                    </button>
-                    <button
-                      onClick={() => handleDelete(img.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Eliminar
-                    </button>
+                      {/* Compact thumbnail with the desktop focal point applied */}
+                      <div className="relative w-20 h-12 rounded-md overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={img.imageUrl}
+                          alt=""
+                          className="absolute inset-0 w-full h-full object-cover"
+                          style={{ objectPosition: `${img.focalDesktopX}% ${img.focalDesktopY}%` }}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628]/80 via-[#0a1628]/40 to-transparent" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900">Imagen #{idx + 1}</p>
+                        <p className="text-[11px] text-gray-400 truncate">
+                          Desktop {Math.round(img.focalDesktopX)}%·{Math.round(img.focalDesktopY)}% · Mobile {Math.round(img.focalMobileX)}%·{Math.round(img.focalMobileY)}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {savedIds.has(img.id) && (
+                        <span className="inline-flex items-center gap-1 text-xs text-green-600">
+                          <Check className="h-3.5 w-3.5" /> Guardado
+                        </span>
+                      )}
+                      {!isEditing && (
+                        <button
+                          onClick={() => toggleEdit(img.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(img.id)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100"
+                        title="Eliminar"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Monitor className="h-3.5 w-3.5 text-gray-500" />
-                      <span className="text-xs font-semibold text-gray-700">Desktop (16:9)</span>
+                  {/* Expanded editor */}
+                  {isEditing && (
+                    <div className="border-t border-gray-100 p-5">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Monitor className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="text-xs font-semibold text-gray-700">Desktop (16:9)</span>
+                          </div>
+                          <FocalPointPicker
+                            src={img.imageUrl}
+                            x={img.focalDesktopX}
+                            y={img.focalDesktopY}
+                            aspect={16 / 9}
+                            onChange={(x, y) =>
+                              updateLocal(img.id, { focalDesktopX: x, focalDesktopY: y })
+                            }
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Smartphone className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="text-xs font-semibold text-gray-700">Mobile (9:16)</span>
+                          </div>
+                          <FocalPointPicker
+                            src={img.imageUrl}
+                            x={img.focalMobileX}
+                            y={img.focalMobileY}
+                            aspect={9 / 16}
+                            onChange={(x, y) =>
+                              updateLocal(img.id, { focalMobileX: x, focalMobileY: y })
+                            }
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4 flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => toggleEdit(img.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 text-xs font-semibold hover:bg-gray-200"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => handleSaveFocal(img)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-white text-xs font-semibold hover:bg-primary/90"
+                        >
+                          <Save className="h-3.5 w-3.5" />
+                          Guardar enfoque
+                        </button>
+                      </div>
                     </div>
-                    <FocalPointPicker
-                      src={img.imageUrl}
-                      x={img.focalDesktopX}
-                      y={img.focalDesktopY}
-                      aspect={16 / 9}
-                      onChange={(x, y) =>
-                        updateLocal(img.id, { focalDesktopX: x, focalDesktopY: y })
-                      }
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5 mb-1.5">
-                      <Smartphone className="h-3.5 w-3.5 text-gray-500" />
-                      <span className="text-xs font-semibold text-gray-700">Mobile (9:16)</span>
-                    </div>
-                    <FocalPointPicker
-                      src={img.imageUrl}
-                      x={img.focalMobileX}
-                      y={img.focalMobileY}
-                      aspect={9 / 16}
-                      onChange={(x, y) =>
-                        updateLocal(img.id, { focalMobileX: x, focalMobileY: y })
-                      }
-                    />
-                  </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
