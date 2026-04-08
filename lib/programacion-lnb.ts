@@ -464,7 +464,7 @@ export async function getLnbScheduleContext(): Promise<string> {
     const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
     const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 
-    function fmtDate(dateStr: string | null, timeStr: string | null): string {
+    const fmtDate = (dateStr: string | null, timeStr: string | null): string => {
       if (!dateStr) return "Sin fecha"
       const d = new Date(dateStr + "T00:00:00Z")
       const label = `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
