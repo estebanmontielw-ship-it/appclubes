@@ -52,7 +52,7 @@ export default function PublicNavbar() {
                 return (
                   <div
                     key={link.label}
-                    className="relative"
+                    className="relative pb-2"
                     onMouseEnter={() => setDropdownOpen(true)}
                     onMouseLeave={() => setDropdownOpen(false)}
                   >
@@ -66,7 +66,7 @@ export default function PublicNavbar() {
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                     {dropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
+                      <div className="absolute top-full left-0 mt-0 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
                         {link.children.map((child) => (
                           <Link
                             key={child.href}

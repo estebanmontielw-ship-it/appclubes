@@ -62,7 +62,7 @@ export default function LNBMatchCards({
           {/* Jornada header */}
           <div className="flex items-center gap-3 mb-3">
             <span className="text-xs font-black uppercase tracking-wider text-[#0a1628]">
-              {round === "sin-jornada" ? "Sin jornada" : `Jornada ${round}`}
+              {round === "sin-jornada" ? "Sin fecha" : (roundMatches[0]?.roundLabel ?? `Fecha ${round}`)}
             </span>
             <span className="text-[10px] font-bold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">
               {fmtDate(roundMatches[0]?.date ?? null)}
