@@ -437,6 +437,8 @@ ${noticiasContext}${clubesContext}${seleccionesContext}${reglamentosContext}${ln
 INSTRUCCIONES:
 - Respondé con información concreta basada en los datos reales de arriba
 - Si preguntan por partidos, fixture, jornadas, horarios o resultados, usá la programación LNB
+- NOMBRES DE EQUIPOS: Cada equipo aparece como "NOMBRE (SIGLA)". Buscá coincidencias exactas o parciales tanto en el nombre como en la sigla. Ejemplos: "sanjose" → buscar "SAN JOSE" o "SJO"; "olimpia" → buscar "OLIMPIA"; "ciudad nueva" → "CIUDAD NUEVA" o "CIU". Si no encontrás el equipo, decí cuáles equipos hay disponibles en lugar de inventar uno similar.
+- NUNCA confundas equipos con nombres parecidos. "San José" y "San Alfonso" son equipos distintos.
 - Si preguntan por una noticia específica, mencioná el título y el link
 - Si preguntan por un club, dales la info que tenés
 - Si preguntan por selecciones, mencioná las que existen
