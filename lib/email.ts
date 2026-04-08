@@ -14,15 +14,15 @@ interface SendEmailParams {
   nombre?: string
   ctaText?: string
   ctaUrl?: string
-  type?: "success" | "error" | "info"
+  type?: "success" | "error" | "info" | "warning"
 }
 
 function buildHtml({ body, nombre, ctaText, ctaUrl, type = "info" }: Omit<SendEmailParams, "to" | "subject">) {
   const greeting = nombre ? `Hola ${nombre},` : "Hola,"
 
-  const accentColor = type === "success" ? "#16a34a" : type === "error" ? "#dc2626" : "#1e40af"
-  const accentBg = type === "success" ? "#f0fdf4" : type === "error" ? "#fef2f2" : "#eff6ff"
-  const accentBorder = type === "success" ? "#bbf7d0" : type === "error" ? "#fecaca" : "#bfdbfe"
+  const accentColor = type === "success" ? "#16a34a" : type === "error" ? "#dc2626" : type === "warning" ? "#d97706" : "#1e40af"
+  const accentBg = type === "success" ? "#f0fdf4" : type === "error" ? "#fef2f2" : type === "warning" ? "#fffbeb" : "#eff6ff"
+  const accentBorder = type === "success" ? "#bbf7d0" : type === "error" ? "#fecaca" : type === "warning" ? "#fde68a" : "#bfdbfe"
 
   return `
 <!DOCTYPE html>
@@ -154,6 +154,26 @@ export async function emailCTRechazado(to: string, nombre: string, motivo: strin
     body: `Tu solicitud de habilitación como Cuerpo Técnico fue revisada y necesita correcciones.<br><br><strong>Motivo:</strong> ${motivo}<br><br>Podés contactarnos a cpb@cpb.com.py para más información.`,
     ctaText: "Contactar",
     ctaUrl: `${BASE_URL}/contacto`,
+  })
+}
+
+const DOC_LABELS: Record<string, string> = {
+  comprobante: "Comprobante de transferencia bancaria",
+  foto_carnet: "Foto tipo carnet",
+  foto_cedula: "Foto de cédula de identidad",
+}
+
+export async function emailCTDocumentosRequeridos(to: string, nombre: string, documentos: string[], mensaje?: string) {
+  const lista = documentos.map(d => `• ${DOC_LABELS[d] ?? d}`).join("<br>")
+  const extra = mensaje ? `<br><br><strong>Mensaje de la CPB:</strong> ${mensaje}` : ""
+  return sendEmail({
+    to,
+    subject: "Documentos requeridos — Cuerpo Técnico CPB",
+    nombre,
+    type: "warning",
+    body: `La CPB necesita que actualices los siguientes documentos en el portal:<br><br>${lista}${extra}<br><br>Al ingresar a tu cuenta verás un aviso con las instrucciones para subir cada documento. Tu solicitud no podrá avanzar hasta completarlos.`,
+    ctaText: "Ir al portal",
+    ctaUrl: `${BASE_URL}/cuerpotecnico`,
   })
 }
 

@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
-import { emailCTHabilitado, emailCTRechazado } from "@/lib/email"
+import { emailCTHabilitado, emailCTRechazado, emailCTDocumentosRequeridos } from "@/lib/email"
 import { requireRole, isAuthError } from "@/lib/api-auth"
 import { handleApiError } from "@/lib/api-errors"
 
@@ -40,7 +40,7 @@ export async function PATCH(
     }
 
     const body = await request.json()
-    const { accion, motivoRechazo, editar } = body
+    const { accion, motivoRechazo, editar, documentos, mensaje } = body
 
     // Edit mode - update any field
     if (editar) {
@@ -91,6 +91,14 @@ export async function PATCH(
       updateData = { activo: false }
     } else if (accion === "restaurar") {
       updateData = { activo: true }
+    } else if (accion === "notificar_documentos") {
+      if (!documentos?.length) {
+        return NextResponse.json({ error: "Seleccioná al menos un documento" }, { status: 400 })
+      }
+      updateData = {
+        documentosRequeridos: JSON.stringify(documentos),
+        mensajeDocumentos: mensaje || null,
+      }
     }
 
     const ct = await prisma.cuerpoTecnico.update({
@@ -103,6 +111,8 @@ export async function PATCH(
       emailCTHabilitado(ct.email, ct.nombre).catch(() => {})
     } else if (accion === "rechazar" && motivoRechazo) {
       emailCTRechazado(ct.email, ct.nombre, motivoRechazo).catch(() => {})
+    } else if (accion === "notificar_documentos") {
+      emailCTDocumentosRequeridos(ct.email, ct.nombre, documentos, mensaje).catch(() => {})
     }
 
     return NextResponse.json({ ct })

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Check, X, AlertCircle, Ban, CreditCard, FileText, ExternalLink, Upload, Camera, Loader2 } from "lucide-react"
+import { ArrowLeft, Check, X, AlertCircle, Ban, CreditCard, FileText, ExternalLink, Upload, Camera, Loader2, Bell } from "lucide-react"
 
 function DocPreview({ label, url }: { label: string; url: string }) {
   const isPdf = url.toLowerCase().includes(".pdf")
@@ -54,6 +54,10 @@ export default function CuerpoTecnicoDetailPage() {
   const [saving, setSaving] = useState(false)
   const [motivo, setMotivo] = useState("")
   const [showRechazo, setShowRechazo] = useState(false)
+  const [showNotifDocs, setShowNotifDocs] = useState(false)
+  const [docsSeleccionados, setDocsSeleccionados] = useState<string[]>([])
+  const [mensajeNotif, setMensajeNotif] = useState("")
+  const [sendingNotif, setSendingNotif] = useState(false)
   const [showCarnet, setShowCarnet] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editData, setEditData] = useState<any>({})
@@ -145,6 +149,29 @@ export default function CuerpoTecnicoDetailPage() {
         setEditing(false)
       }
     } catch {} finally { setSaving(false) }
+  }
+
+  function toggleDoc(doc: string) {
+    setDocsSeleccionados(prev => prev.includes(doc) ? prev.filter(d => d !== doc) : [...prev, doc])
+  }
+
+  async function handleNotifDocumentos() {
+    if (!docsSeleccionados.length) return
+    setSendingNotif(true)
+    try {
+      const res = await fetch(`/api/admin/cuerpotecnico/${params.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accion: "notificar_documentos", documentos: docsSeleccionados, mensaje: mensajeNotif || undefined }),
+      })
+      if (res.ok) {
+        const { ct: updated } = await res.json()
+        setCt(updated)
+        setShowNotifDocs(false)
+        setDocsSeleccionados([])
+        setMensajeNotif("")
+      }
+    } catch {} finally { setSendingNotif(false) }
   }
 
   async function handleAction(accion: string) {
@@ -430,6 +457,10 @@ export default function CuerpoTecnicoDetailPage() {
                   <Check className="h-4 w-4" /> Verificar pago
                 </button>
               )}
+              <button onClick={() => setShowNotifDocs(true)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-amber-100 text-amber-800 text-sm font-semibold hover:bg-amber-200">
+                <Bell className="h-4 w-4" /> Solicitar documentos
+              </button>
               <button onClick={() => setShowRechazo(true)}
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-red-100 text-red-700 text-sm font-semibold hover:bg-red-200">
                 <X className="h-4 w-4" /> Rechazar
@@ -441,11 +472,66 @@ export default function CuerpoTecnicoDetailPage() {
 
       {ct.estadoHabilitacion === "HABILITADO" && (
         <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button onClick={() => handleAction("suspender")} disabled={saving}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-300 disabled:opacity-50">
               <Ban className="h-4 w-4" /> Suspender habilitación
             </button>
+            <button onClick={() => setShowNotifDocs(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-amber-100 text-amber-800 text-sm font-semibold hover:bg-amber-200">
+              <Bell className="h-4 w-4" /> Solicitar documentos
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Notificar falta de documentos */}
+      {showNotifDocs && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-gray-900 text-lg">Solicitar documentos</h2>
+              <button onClick={() => setShowNotifDocs(false)} className="text-gray-400 hover:text-gray-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <p className="text-sm text-gray-500">Seleccioná los documentos que el CT debe volver a subir. Se le enviará un email y verá un aviso bloqueante al ingresar.</p>
+
+            <div className="space-y-2">
+              {[
+                { key: "comprobante", label: `Comprobante de pago (${Number(ct.montoHabilitacion).toLocaleString("es-PY")} Gs.)` },
+                { key: "foto_carnet", label: "Foto tipo carnet" },
+                { key: "foto_cedula", label: "Foto de cédula de identidad" },
+              ].map(({ key, label }) => (
+                <label key={key} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${docsSeleccionados.includes(key) ? "border-amber-400 bg-amber-50" : "border-gray-200 hover:bg-gray-50"}`}>
+                  <input type="checkbox" checked={docsSeleccionados.includes(key)} onChange={() => toggleDoc(key)} className="w-4 h-4 accent-amber-600" />
+                  <span className="text-sm font-medium text-gray-800">{label}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-gray-600">Mensaje adicional (opcional)</label>
+              <textarea
+                value={mensajeNotif}
+                onChange={e => setMensajeNotif(e.target.value)}
+                rows={3}
+                placeholder="Ej: El comprobante subido no es legible, por favor subí uno más claro."
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-300"
+              />
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button onClick={handleNotifDocumentos} disabled={sendingNotif || !docsSeleccionados.length}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 disabled:opacity-50">
+                {sendingNotif ? <Loader2 className="h-4 w-4 animate-spin" /> : <Bell className="h-4 w-4" />}
+                {sendingNotif ? "Enviando..." : "Enviar notificación"}
+              </button>
+              <button onClick={() => setShowNotifDocs(false)}
+                className="px-4 py-3 rounded-xl bg-gray-100 text-gray-700 text-sm font-semibold hover:bg-gray-200">
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
