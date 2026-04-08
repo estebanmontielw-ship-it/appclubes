@@ -17,10 +17,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate file size (10MB max to allow for HEIC which are larger)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size (30MB max to fit DSLR photos up to 18 MB and HEIC).
+    // In practice the frontend downscales to <1 MB before hitting this route,
+    // so this is just a defense-in-depth cap for direct API callers.
+    if (file.size > 30 * 1024 * 1024) {
       return NextResponse.json(
-        { error: "El archivo no puede superar 10MB" },
+        { error: "El archivo no puede superar 30MB" },
         { status: 400 }
       )
     }

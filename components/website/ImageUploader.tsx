@@ -100,8 +100,10 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setError("La imagen no puede superar 10MB")
+    // Browser limit is generous — we always downscale before uploading, so the
+    // server receives <1 MB even for huge DSLR photos (12-18 MB typical).
+    if (file.size > 30 * 1024 * 1024) {
+      setError("La imagen no puede superar 30MB")
       return
     }
 
@@ -478,7 +480,7 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
             <div className="flex flex-col items-center gap-2">
               <ImageIcon className="h-8 w-8 text-gray-300" />
               <p className="text-sm text-gray-500">Click para subir imagen</p>
-              <p className="text-xs text-gray-400">JPG, PNG, WEBP — Máx 10MB — Se recorta 16:9</p>
+              <p className="text-xs text-gray-400">JPG, PNG, WEBP — Máx 30MB — Se recorta 16:9</p>
             </div>
           )}
         </div>
