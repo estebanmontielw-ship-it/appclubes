@@ -267,9 +267,12 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       dateStr = date
       if (time) timeStr = time // ISO datetime embedded in date field
     }
-    if (rawTime && !timeStr) {
-      const { time } = splitIso(rawTime)
-      timeStr = time
+    if (rawTime) {
+      const { date: tDate, time: tTime } = splitIso(rawTime)
+      // If matchTime holds a full ISO datetime (e.g. "2026-04-13T20:30:00"),
+      // grab both parts — the date part fills dateStr if still empty
+      if (tTime && !timeStr) timeStr = tTime
+      if (tDate && !dateStr) dateStr = tDate
     }
 
     const iso = dateStr ? (timeStr ? `${dateStr}T${timeStr}:00` : dateStr) : null
