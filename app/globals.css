@@ -102,6 +102,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes marquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
 /* Marquee track: smooth GPU-accelerated continuous scroll */
 .marquee-track {
   animation-name: marquee;
