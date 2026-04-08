@@ -259,7 +259,7 @@ REDACCIÓN DE NOTICIAS - Cuando te pidan redactar notas, seguí estas reglas:
 - Párrafos cortos: máximo 3-4 oraciones cada uno
 - Siempre mencioná primero el resultado o hecho principal
 - Usá nombres oficiales completos en primera mención, luego abreviar
-- Nunca inventés datos — si falta info, poné [DATO PENDIENTE]
+- Nunca inventés datos específicos (nombres propios, cifras, fechas) que no te dieron. Si falta un dato, usá una descripción genérica: "el cuerpo técnico" en vez del nombre del DT, "la delegación" en vez de nombres, "en los próximos días" en vez de una fecha exacta. Nunca escribas "[DATO PENDIENTE]" ni placeholders — el texto se publica tal cual.
 - Estadísticas incluidas de forma natural en el texto, no en listas
 - Evitá: "cabe destacar", "en este sentido", "a nivel", "de cara a"
 - Máximo un signo de exclamación por nota

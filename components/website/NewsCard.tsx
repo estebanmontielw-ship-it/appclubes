@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { parseFocalPoint } from "@/lib/image"
 
 interface NewsCardProps {
   titulo: string
@@ -23,15 +24,18 @@ export default function NewsCard({ titulo, slug, extracto, imagenUrl, categoria,
     ? new Date(publicadaEn).toLocaleDateString("es-PY", { day: "numeric", month: "long", year: "numeric" })
     : null
 
+  const cover = parseFocalPoint(imagenUrl)
+
   return (
     <Link href={`/noticias/${slug}`} className="group block">
       <article className="card-soft overflow-hidden h-full">
-        {imagenUrl && (
+        {cover.src && (
           <div className="aspect-video overflow-hidden bg-gray-100">
             <img
-              src={imagenUrl}
+              src={cover.src}
               alt={titulo}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              style={{ objectPosition: cover.objectPosition }}
             />
           </div>
         )}

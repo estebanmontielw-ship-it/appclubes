@@ -1,9 +1,10 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
-import { Upload, X, Loader2, Sparkles, Image as ImageIcon, Crop, Monitor, Smartphone, Check } from "lucide-react"
+import { useState, useRef, useEffect } from "react"
+import { X, Loader2, Sparkles, Image as ImageIcon, Crop, Monitor, Smartphone, Check, Move } from "lucide-react"
 import ReactCrop, { type Crop as CropType, centerCrop, makeAspectCrop } from "react-image-crop"
 import "react-image-crop/dist/ReactCrop.css"
+import { parseFocalPoint, withFocalPoint } from "@/lib/image"
 
 interface ImageUploaderProps {
   value: string
@@ -31,6 +32,59 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
   const [crop, setCrop] = useState<CropType>()
   const [cropFile, setCropFile] = useState<File | null>(null)
   const imgRef = useRef<HTMLImageElement>(null)
+
+  // Focal point editor state
+  const parsed = parseFocalPoint(value)
+  const cleanSrc = parsed.src
+  const [focal, setFocal] = useState<{ x: number; y: number }>(parsed.focal ?? { x: 50, y: 50 })
+  const [focalDragging, setFocalDragging] = useState(false)
+  const focalRef = useRef<HTMLDivElement>(null)
+
+  // When the URL changes from outside (e.g. after upload or from form reset),
+  // sync the local focal state from whatever the URL says.
+  useEffect(() => {
+    const p = parseFocalPoint(value)
+    setFocal(p.focal ?? { x: 50, y: 50 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cleanSrc])
+
+  function updateFocal(nextX: number, nextY: number) {
+    const x = Math.max(0, Math.min(100, nextX))
+    const y = Math.max(0, Math.min(100, nextY))
+    setFocal({ x, y })
+    if (cleanSrc) onChange(withFocalPoint(cleanSrc, { x, y }))
+  }
+
+  function handleFocalPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!focalRef.current) return
+    setFocalDragging(true)
+    ;(e.target as HTMLElement).setPointerCapture?.(e.pointerId)
+    applyFocalFromEvent(e)
+  }
+
+  function handleFocalPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!focalDragging) return
+    applyFocalFromEvent(e)
+  }
+
+  function handleFocalPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    setFocalDragging(false)
+    ;(e.target as HTMLElement).releasePointerCapture?.(e.pointerId)
+  }
+
+  function applyFocalFromEvent(e: React.PointerEvent<HTMLDivElement>) {
+    if (!focalRef.current) return
+    const rect = focalRef.current.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    updateFocal(x, y)
+  }
+
+  function resetFocal() {
+    updateFocal(50, 50)
+  }
+
+  const focalStyle = { objectPosition: `${focal.x}% ${focal.y}%` as const }
 
   function onImageLoad(e: React.SyntheticEvent<HTMLImageElement>) {
     const { naturalWidth, naturalHeight } = e.currentTarget
@@ -262,22 +316,59 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
 
       {value ? (
         <div className="space-y-3">
-          {/* Main preview */}
-          <div className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
-            <img src={value} alt="Portada" className="w-full h-48 object-cover" />
-            <div className="absolute top-2 right-2 flex gap-1">
+          {/* Main preview with drag-to-reposition focal point */}
+          <div
+            ref={focalRef}
+            onPointerDown={handleFocalPointerDown}
+            onPointerMove={handleFocalPointerMove}
+            onPointerUp={handleFocalPointerUp}
+            onPointerCancel={handleFocalPointerUp}
+            className="relative rounded-xl overflow-hidden border border-gray-200 bg-gray-50 select-none cursor-crosshair touch-none"
+            style={{ aspectRatio: "16 / 9" }}
+          >
+            <img
+              src={cleanSrc}
+              alt="Portada"
+              draggable={false}
+              className="absolute inset-0 w-full h-full object-cover pointer-events-none"
+              style={focalStyle}
+            />
+
+            {/* Focal point dot */}
+            <div
+              className="absolute w-8 h-8 -ml-4 -mt-4 rounded-full border-2 border-white shadow-[0_0_0_2px_rgba(0,0,0,0.4)] pointer-events-none transition-transform"
+              style={{
+                left: `${focal.x}%`,
+                top: `${focal.y}%`,
+                transform: focalDragging ? "scale(1.15)" : "scale(1)",
+                background: "rgba(59,130,246,0.35)",
+              }}
+            >
+              <div className="absolute inset-1 rounded-full bg-white/90" />
+              <div className="absolute inset-2.5 rounded-full bg-blue-500" />
+            </div>
+
+            {/* Controls */}
+            <div className="absolute top-2 right-2 flex gap-1 pointer-events-auto">
               {onAiAnalysis && (
-                <button type="button" onClick={analyzeImage} disabled={analyzing}
+                <button type="button" onClick={(e) => { e.stopPropagation(); analyzeImage() }} disabled={analyzing}
                   className="p-2 rounded-lg bg-violet-600 text-white shadow-md hover:bg-violet-700 disabled:opacity-50"
                   title="Analizar imagen con IA">
                   {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                 </button>
               )}
-              <button type="button" onClick={() => onChange("")}
+              <button type="button" onClick={(e) => { e.stopPropagation(); onChange("") }}
                 className="p-2 rounded-lg bg-red-600 text-white shadow-md hover:bg-red-700" title="Quitar imagen">
                 <X className="h-4 w-4" />
               </button>
             </div>
+
+            {/* Hint badge */}
+            <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/60 text-white text-[11px] font-medium pointer-events-none">
+              <Move className="h-3 w-3" />
+              Arrastrá el punto para centrar lo importante
+            </div>
+
             {analyzing && (
               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                 <div className="bg-white rounded-lg px-4 py-2 flex items-center gap-2 text-sm">
@@ -287,15 +378,29 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
             )}
           </div>
 
-          {/* Device previews */}
-          <div className="flex gap-3">
+          {/* Reset focal button */}
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-gray-400">
+              Punto focal: {Math.round(focal.x)}%, {Math.round(focal.y)}%
+            </p>
+            <button
+              type="button"
+              onClick={resetFocal}
+              className="text-xs text-gray-500 hover:text-primary font-medium"
+            >
+              Centrar
+            </button>
+          </div>
+
+          {/* Device previews — reflect focal point live */}
+          <div className="flex gap-3 flex-wrap">
             <div>
               <div className="flex items-center gap-1 mb-1">
                 <Monitor className="h-3 w-3 text-gray-400" />
                 <span className="text-[10px] text-gray-400">Desktop</span>
               </div>
               <div className="w-44 h-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                <img src={value} alt="" className="w-full h-full object-cover" />
+                <img src={cleanSrc} alt="" className="w-full h-full object-cover" style={focalStyle} />
               </div>
             </div>
             <div>
@@ -304,7 +409,7 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
                 <span className="text-[10px] text-gray-400">Mobile</span>
               </div>
               <div className="w-20 h-24 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                <img src={value} alt="" className="w-full h-full object-cover" />
+                <img src={cleanSrc} alt="" className="w-full h-full object-cover" style={focalStyle} />
               </div>
             </div>
             <div>
@@ -312,7 +417,7 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
                 <span className="text-[10px] text-gray-400">Card</span>
               </div>
               <div className="w-32 h-20 rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                <img src={value} alt="" className="w-full h-full object-cover" />
+                <img src={cleanSrc} alt="" className="w-full h-full object-cover" style={focalStyle} />
               </div>
             </div>
           </div>

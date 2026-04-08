@@ -50,7 +50,7 @@ export async function POST(request: Request) {
       messages: [
         {
           role: "user",
-          content: `Sos el redactor oficial de comunicados internos de la Confederación Paraguaya de Básquetbol (CPB). Escribís en español, tono institucional pero cercano. Nunca inventás datos — si falta algo dejás [DATO PENDIENTE].
+          content: `Sos el redactor oficial de comunicados internos de la Confederación Paraguaya de Básquetbol (CPB). Escribís en español, tono institucional pero cercano. Nunca inventás datos específicos (nombres propios, cifras, fechas) que no te dieron. Si falta un dato, usá una descripción genérica como "el cuerpo técnico" o "la delegación" en lugar del nombre. Nunca escribas "[DATO PENDIENTE]" ni placeholders — el texto se envía tal cual.
 
 ${dest}
 

@@ -28,7 +28,7 @@ REGLAS DE REDACCIÓN:
 - Párrafos cortos: máximo 3-4 oraciones cada uno
 - Siempre mencionás primero el resultado o el hecho principal — nada de suspenso innecesario
 - Usás los nombres oficiales completos de clubes y competencias en la primera mención, luego podés abreviar
-- Nunca inventás datos — si no te dieron un dato, dejás un marcador [DATO PENDIENTE]
+- Nunca inventás datos específicos (nombres propios, cifras, fechas) que no te dieron. Si falta un dato, usá una descripción genérica sin marcadores: por ejemplo, "el cuerpo técnico" en vez del nombre del DT, "la delegación" en vez de listar nombres, "en los próximos días" en vez de una fecha exacta. Nunca escribas "[DATO PENDIENTE]", "[NOMBRE]" ni placeholders similares — el texto final se publica tal cual salga.
 - Si hay estadísticas (puntos, rebotes, asistencias), las incluís de forma natural en el texto, no en forma de lista
 - Evitás palabras de relleno: "cabe destacar", "en este sentido", "a nivel", "de cara a"
 - No usás signos de exclamación en exceso — máximo uno por nota, si aplica
@@ -168,7 +168,9 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
   "categoria": "GENERAL"
 }
 
-Categorías válidas: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, CLUBES.`)
+Categorías válidas: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, CLUBES.
+
+IMPORTANTE: Si falta algún dato (nombres, cifras, fechas), usá descripciones genéricas ("el cuerpo técnico", "la delegación", "en los próximos días") en lugar de inventar o dejar placeholders. NO uses "[DATO PENDIENTE]" ni corchetes.`)
 
       try {
         return NextResponse.json({ result: JSON.parse(text) })
@@ -311,7 +313,9 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
 }
 
 Categorías válidas: GENERAL, TORNEOS, SELECCIONES, ARBITRAJE, INSTITUCIONAL, CLUBES.
-Eliminá hashtags y emojis del título y extracto. Podés mantenerlos en el contenido si tienen sentido.`)
+Eliminá hashtags y emojis del título y extracto. Podés mantenerlos en el contenido si tienen sentido.
+
+IMPORTANTE: Si el post no menciona algún dato (nombre del DT, resultado exacto, nombre del jugador, fecha específica), NO lo inventes y tampoco dejes placeholders. Usá descripciones genéricas: "el cuerpo técnico" en vez del nombre del DT, "la delegación" en vez de listar nombres, "en los próximos días" en vez de una fecha. NUNCA uses "[DATO PENDIENTE]", "[NOMBRE]" ni corchetes.`)
 
       try {
         return NextResponse.json({ result: JSON.parse(text) })

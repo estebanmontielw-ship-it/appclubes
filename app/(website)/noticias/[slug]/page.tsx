@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { cache } from "react"
 import prisma from "@/lib/prisma"
+import { parseFocalPoint } from "@/lib/image"
 
 // Deduplicate DB call between generateMetadata and page component
 const getNoticia = cache(async (slug: string) => {
@@ -31,8 +32,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const noticia = await getNoticia(params.slug)
   if (!noticia) return { title: "Noticia no encontrada" }
 
-  const images = noticia.imagenUrl
-    ? [{ url: noticia.imagenUrl, alt: noticia.titulo }]
+  const coverMeta = parseFocalPoint(noticia.imagenUrl)
+  const images = coverMeta.src
+    ? [{ url: coverMeta.src, alt: noticia.titulo }]
     : [{ url: "/logo-cpb.jpg", alt: "CPB - Confederación Paraguaya de Básquetbol" }]
 
   return {
@@ -50,7 +52,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       card: "summary_large_image",
       title: noticia.titulo,
       description: noticia.extracto,
-      images: noticia.imagenUrl ? [noticia.imagenUrl] : ["/logo-cpb.jpg"],
+      images: coverMeta.src ? [coverMeta.src] : ["/logo-cpb.jpg"],
     },
   }
 }
@@ -68,6 +70,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
     : null
 
   const galeria: string[] = noticia.galeria ? JSON.parse(noticia.galeria) : []
+  const cover = parseFocalPoint(noticia.imagenUrl)
 
   return (
     <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -95,12 +98,13 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
       </header>
 
       {/* Cover image */}
-      {noticia.imagenUrl && (
-        <div className="mb-8 rounded-xl overflow-hidden">
+      {cover.src && (
+        <div className="mb-8 rounded-xl overflow-hidden bg-gray-100 aspect-video max-h-[500px]">
           <img
-            src={noticia.imagenUrl}
+            src={cover.src}
             alt={noticia.titulo}
-            className="w-full h-auto object-cover max-h-[500px]"
+            className="w-full h-full object-cover"
+            style={{ objectPosition: cover.objectPosition }}
           />
         </div>
       )}
