@@ -102,13 +102,42 @@ function siglaFromName(name: string): string {
 }
 
 function extractLogo(t: any): string | null {
-  return (
+  const v =
     t?.images?.logo?.T1?.url ??
     t?.images?.logo?.url ??
     t?.logoUrl ??
     t?.logo ??
     null
-  )
+  return typeof v === "string" ? v : null
+}
+
+/** Returns a plain display string for the venue, handling both the flat
+ *  `venueName` shape and the nested `venue: { venueName, locationName, ... }`
+ *  shape that Genius Sports actually returns. */
+function extractVenue(m: any): string | null {
+  if (typeof m?.venueName === "string" && m.venueName.trim()) return m.venueName.trim()
+  if (typeof m?.venue === "string" && m.venue.trim()) return m.venue.trim()
+  if (m?.venue && typeof m.venue === "object") {
+    const name =
+      (typeof m.venue.venueName === "string" && m.venue.venueName) ||
+      (typeof m.venue.venueNickname === "string" && m.venue.venueNickname) ||
+      (typeof m.venue.name === "string" && m.venue.name) ||
+      null
+    const city =
+      (typeof m.venue.locationName === "string" && m.venue.locationName) ||
+      (typeof m.venue.suburb === "string" && m.venue.suburb) ||
+      null
+    if (name && city && name !== city) return `${name} · ${city}`
+    return name || city || null
+  }
+  return null
+}
+
+/** Safely coerce a value to a string, otherwise null. */
+function asString(v: any): string | null {
+  if (typeof v === "string") return v
+  if (typeof v === "number") return String(v)
+  return null
 }
 
 const isoWeekKey = (dateStr: string | null): string => {
@@ -152,9 +181,10 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
   const teamByName = new Map<string, NormalizedTeam>()
 
   for (const t of teamItems) {
-    const id = t.competitorId ?? t.teamId ?? t.id
-    const name = t.competitorName ?? t.teamName ?? t.name ?? "Equipo"
-    const sigla = t.competitorCode ?? t.teamCode ?? t.code ?? null
+    const id = asString(t.competitorId) ?? asString(t.teamId) ?? asString(t.id)
+    const name =
+      asString(t.competitorName) ?? asString(t.teamName) ?? asString(t.name) ?? "Equipo"
+    const sigla = asString(t.competitorCode) ?? asString(t.teamCode) ?? asString(t.code)
     const logo = extractLogo(t)
     const normalized: NormalizedTeam = {
       id: id ?? name,
@@ -167,8 +197,13 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
   }
 
   const enrich = (c: any) => {
-    const id = c?.competitorId ?? c?.teamId ?? null
-    const name = c?.competitorName ?? c?.teamName ?? "Equipo"
+    const id =
+      typeof c?.competitorId === "number" || typeof c?.competitorId === "string"
+        ? c.competitorId
+        : typeof c?.teamId === "number" || typeof c?.teamId === "string"
+          ? c.teamId
+          : null
+    const name = asString(c?.competitorName) ?? asString(c?.teamName) ?? "Equipo"
     const byId = id != null ? teamById.get(String(id)) : null
     const byName = teamByName.get(String(name).toLowerCase())
     const team = byId ?? byName ?? null
@@ -186,19 +221,25 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
     const homeInfo = enrich(home)
     const awayInfo = enrich(away)
 
-    const dateStr: string | null = m.matchDate ?? null
-    const timeStr: string | null = m.matchTime ?? null
+    const dateStr = asString(m.matchDate)
+    const timeStr = asString(m.matchTime)
     let iso: string | null = null
     if (dateStr) {
       iso = timeStr ? `${dateStr.slice(0, 10)}T${timeStr.slice(0, 5)}:00` : dateStr
     }
 
+    const matchStatus = asString(m.matchStatus) ?? "SCHEDULED"
+    const matchId =
+      typeof m.matchId === "number" || typeof m.matchId === "string"
+        ? m.matchId
+        : `${homeInfo.name}-${awayInfo.name}-${dateStr ?? ""}`
+
     return {
-      id: m.matchId ?? `${home?.competitorName}-${away?.competitorName}-${dateStr}`,
+      id: matchId,
       date: dateStr ? dateStr.slice(0, 10) : null,
       time: timeStr ? timeStr.slice(0, 5) : null,
       isoDateTime: iso,
-      status: m.matchStatus ?? "SCHEDULED",
+      status: matchStatus,
       homeId: homeInfo.id,
       homeName: homeInfo.name,
       homeSigla: homeInfo.sigla,
@@ -209,7 +250,7 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       awaySigla: awayInfo.sigla,
       awayLogo: awayInfo.logo,
       awayScore: typeof away?.score === "number" ? away.score : null,
-      venue: m.venueName ?? m.venue ?? null,
+      venue: extractVenue(m),
       _rawRound: extractRound(m),
     }
   })
