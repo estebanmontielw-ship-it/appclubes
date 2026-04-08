@@ -23,6 +23,7 @@ export interface NormalizedMatch {
   awayLogo: string | null
   awayScore: number | null
   venue: string | null
+  statsUrl: string | null
   round: number | null
   roundLabel: string
 }
@@ -40,6 +41,8 @@ export interface LnbSchedulePayload {
   matches: NormalizedMatch[]
   updatedAt: string
 }
+
+export async function resolveLnbCompetitionIdPublic() { return resolveLnbCompetitionId() }
 
 async function resolveLnbCompetitionId(): Promise<{ id: string | null; name: string | null }> {
   const envId = process.env.GENIUS_LNB_COMPETITION_ID
@@ -72,19 +75,31 @@ async function resolveLnbCompetitionId(): Promise<{ id: string | null; name: str
 }
 
 function extractRound(m: any): number | null {
+  // Only use genuine jornada/round fields — NOT matchNumber (sequential match
+  // index within the competition) as that is 1–N and would create N groups.
   const candidates = [
     m?.round,
     m?.roundNumber,
     m?.matchDayNumber,
     m?.matchday,
-    m?.matchNumber,
     m?.round?.roundNumber,
     m?.round?.number,
+    m?.jornada,
+    m?.matchRound,
   ]
   for (const v of candidates) {
     if (typeof v === "number" && Number.isFinite(v) && v > 0) return v
-    if (typeof v === "string" && /^\d+$/.test(v)) return parseInt(v, 10)
+    if (typeof v === "string" && /^\d+$/.test(v)) { const n = parseInt(v, 10); if (n > 0) return n }
   }
+  return null
+}
+
+/** Sequential match number within the competition (1, 2, 3 …). Used to
+ *  derive the jornada when no explicit round field is available. */
+function extractMatchSeqNum(m: any): number | null {
+  const v = m?.matchNumber ?? m?.number ?? m?.gameNumber ?? null
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) return v
+  if (typeof v === "string" && /^\d+$/.test(v)) { const n = parseInt(v, 10); return n > 0 ? n : null }
   return null
 }
 
@@ -131,6 +146,17 @@ function extractVenue(m: any): string | null {
     return name || city || null
   }
   return null
+}
+
+/** Parse a competitor's score from Genius Sports. The field is scoreString
+ *  (e.g. "85") for completed matches, or score (number) in some endpoints. */
+function parseScore(c: any): number | null {
+  if (c == null) return null
+  if (typeof c.score === "number") return c.score
+  const s = c.scoreString ?? c.score ?? c.points ?? null
+  if (s == null || s === "") return null
+  const n = parseInt(String(s), 10)
+  return Number.isFinite(n) ? n : null
 }
 
 /** Safely coerce a value to a string, otherwise null. */
@@ -217,16 +243,40 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
 
   const matchesFirstPass = matchItems.map((m) => {
     // ── home / away detection ──────────────────────────────────────────────
-    // Genius Sports uses competitorType / homeAway to mark each side.
-    // Fall back to positional order only if no such field is present.
+    // FIBA / Genius marks competitors with qualifier: 1 (home) / 2 (away),
+    // or string fields like competitorType/homeAway/role = "HOME"/"AWAY".
+    // Fall back to positional order only when no marker is found.
     const competitors: any[] = Array.isArray(m.competitors) ? m.competitors : []
-    const findSide = (types: string[]) =>
-      competitors.find((c) => {
-        const t = String(c?.competitorType ?? c?.homeAway ?? c?.role ?? "").toUpperCase().trim()
-        return types.some((x) => t === x)
+
+    const isHomeMarker = (c: any): boolean => {
+      // Genius Sports Warehouse: isHomeCompetitor = 1 (local) / 0 (visitante)
+      if (c?.isHomeCompetitor === 1 || c?.isHomeCompetitor === true || c?.isHomeCompetitor === "1") return true
+      // Numeric qualifier: FIBA standard 1 = home
+      const q = c?.qualifier ?? c?.position ?? null
+      if (q === 1 || q === "1") return true
+      // String fields
+      const fields = [c?.competitorType, c?.homeAway, c?.role, c?.teamQualifier]
+      return fields.some((f) => {
+        if (f == null) return false
+        const s = String(f).toUpperCase().trim()
+        return s === "HOME" || s === "H" || s === "LOCAL"
       })
-    const detectedHome = findSide(["HOME", "H", "LOCAL"])
-    const detectedAway = findSide(["AWAY", "A", "VISITOR", "VISITANTE"])
+    }
+    const isAwayMarker = (c: any): boolean => {
+      // Genius Sports Warehouse: isHomeCompetitor = 0 (visitante)
+      if (c?.isHomeCompetitor === 0 || c?.isHomeCompetitor === false || c?.isHomeCompetitor === "0") return true
+      const q = c?.qualifier ?? c?.position ?? null
+      if (q === 2 || q === "2") return true
+      const fields = [c?.competitorType, c?.homeAway, c?.role, c?.teamQualifier]
+      return fields.some((f) => {
+        if (f == null) return false
+        const s = String(f).toUpperCase().trim()
+        return s === "AWAY" || s === "A" || s === "VISITOR" || s === "VISITANTE"
+      })
+    }
+
+    const detectedHome = competitors.find(isHomeMarker)
+    const detectedAway = competitors.find(isAwayMarker)
     const home = detectedHome ?? competitors[0] ?? null
     const away = detectedAway ?? competitors[1] ?? null
     const homeInfo = enrich(home)
@@ -267,9 +317,12 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       dateStr = date
       if (time) timeStr = time // ISO datetime embedded in date field
     }
-    if (rawTime && !timeStr) {
-      const { time } = splitIso(rawTime)
-      timeStr = time
+    if (rawTime) {
+      const { date: tDate, time: tTime } = splitIso(rawTime)
+      // If matchTime holds a full ISO datetime (e.g. "2026-04-13T20:30:00"),
+      // grab both parts — the date part fills dateStr if still empty
+      if (tTime && !timeStr) timeStr = tTime
+      if (tDate && !dateStr) dateStr = tDate
     }
 
     const iso = dateStr ? (timeStr ? `${dateStr}T${timeStr}:00` : dateStr) : null
@@ -290,48 +343,76 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       homeName: homeInfo.name,
       homeSigla: homeInfo.sigla,
       homeLogo: homeInfo.logo,
-      homeScore: typeof home?.score === "number" ? home.score : null,
+      homeScore: parseScore(home),
       awayId: awayInfo.id,
       awayName: awayInfo.name,
       awaySigla: awayInfo.sigla,
       awayLogo: awayInfo.logo,
-      awayScore: typeof away?.score === "number" ? away.score : null,
+      awayScore: parseScore(away),
       venue: extractVenue(m),
+      statsUrl: m.matchId ? `https://fibalivestats.dcd.shared.geniussports.com/u/FPB/${m.matchId}/` : null,
       _rawRound: extractRound(m),
+      _seqNum: extractMatchSeqNum(m),
     }
   })
 
+  // ── jornada (round) calculation ───────────────────────────────────────────
+  // Priority 1: explicit round field from Genius (roundNumber, matchDayNumber…)
+  // Priority 2: derive from sequential match number — ceil(seqNum / teamsPerSide)
+  //             where teamsPerSide = floor(numTeams / 2). Works for round-robin.
+  // Priority 3: fall back to ISO-week grouping.
+
   const hasAllRounds =
     matchesFirstPass.length > 0 && matchesFirstPass.every((m) => m._rawRound != null)
+
+  // Number of teams in the competition (used to derive matches-per-jornada)
+  const numTeamsInComp = Math.max(teamById.size, teamByName.size, 2)
+  const matchesPerJornada = Math.max(1, Math.floor(numTeamsInComp / 2))
 
   let matches: NormalizedMatch[]
 
   if (hasAllRounds) {
     matches = matchesFirstPass.map((m) => {
-      const { _rawRound, ...rest } = m
+      const { _rawRound, _seqNum, ...rest } = m
       return {
         ...rest,
         round: _rawRound ?? null,
-        roundLabel: `Fecha ${_rawRound}`,
+        roundLabel: `Jornada ${_rawRound}`,
       } as NormalizedMatch
     })
   } else {
-    const weekKeys = Array.from(
-      new Set(matchesFirstPass.filter((m) => m.date).map((m) => isoWeekKey(m.date)))
-    ).sort()
-    const weekToRound = new Map<string, number>()
-    weekKeys.forEach((k, i) => weekToRound.set(k, i + 1))
+    // Try seq-number based jornada first (most accurate for FIBA/Genius data)
+    const hasSeqNums = matchesFirstPass.every((m) => m._seqNum != null)
 
-    matches = matchesFirstPass.map((m) => {
-      const { _rawRound, ...rest } = m
-      const key = isoWeekKey(m.date)
-      const round = weekToRound.get(key) ?? null
-      return {
-        ...rest,
-        round,
-        roundLabel: round ? `Fecha ${round}` : "Sin fecha",
-      } as NormalizedMatch
-    })
+    if (hasSeqNums) {
+      matches = matchesFirstPass.map((m) => {
+        const { _rawRound, _seqNum, ...rest } = m
+        const round = Math.ceil((_seqNum as number) / matchesPerJornada)
+        return {
+          ...rest,
+          round,
+          roundLabel: `Jornada ${round}`,
+        } as NormalizedMatch
+      })
+    } else {
+      // Last resort: ISO-week grouping
+      const weekKeys = Array.from(
+        new Set(matchesFirstPass.filter((m) => m.date).map((m) => isoWeekKey(m.date)))
+      ).sort()
+      const weekToRound = new Map<string, number>()
+      weekKeys.forEach((k, i) => weekToRound.set(k, i + 1))
+
+      matches = matchesFirstPass.map((m) => {
+        const { _rawRound, _seqNum, ...rest } = m
+        const key = isoWeekKey(m.date)
+        const round = weekToRound.get(key) ?? null
+        return {
+          ...rest,
+          round,
+          roundLabel: round ? `Jornada ${round}` : "Sin fecha",
+        } as NormalizedMatch
+      })
+    }
   }
 
   matches.sort((a, b) => {
@@ -370,5 +451,70 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
     teams,
     matches,
     updatedAt: new Date().toISOString(),
+  }
+}
+
+/** Returns a plain-text summary of the LNB schedule for AI chatbot context.
+ *  Grouped by jornada, with scores for completed matches and time/venue for upcoming. */
+export async function getLnbScheduleContext(): Promise<string> {
+  try {
+    const { competition, matches } = await loadLnbSchedule()
+    if (!matches.length) return ""
+
+    const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+    const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+    function fmtDate(dateStr: string | null, timeStr: string | null): string {
+      if (!dateStr) return "Sin fecha"
+      const d = new Date(dateStr + "T00:00:00Z")
+      const label = `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
+      return timeStr ? `${label} ${timeStr}` : label
+    }
+
+    const byRound = new Map<number, NormalizedMatch[]>()
+    const noRound: NormalizedMatch[] = []
+    for (const m of matches) {
+      if (m.round != null) {
+        const arr = byRound.get(m.round) ?? []
+        arr.push(m)
+        byRound.set(m.round, arr)
+      } else {
+        noRound.push(m)
+      }
+    }
+
+    const lines: string[] = [`PROGRAMACIÓN ${competition.name.toUpperCase()}:`]
+    const sortedRounds = Array.from(byRound.keys()).sort((a, b) => a - b)
+
+    for (const round of sortedRounds) {
+      const rMatches = byRound.get(round)!
+      lines.push(`\nJORNADA ${round}:`)
+      for (const m of rMatches) {
+        const dt = fmtDate(m.date, m.time)
+        const isLive = m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+        const isComplete = m.status === "COMPLETE"
+        let line: string
+        if (isLive) {
+          line = `• ${dt} | ${m.homeName} ${m.homeScore ?? "?"} – ${m.awayScore ?? "?"} ${m.awayName} [EN VIVO]`
+        } else if (isComplete && m.homeScore != null && m.awayScore != null) {
+          line = `• ${dt} | ${m.homeName} ${m.homeScore} – ${m.awayScore} ${m.awayName} [FINAL]`
+        } else {
+          const venue = m.venue ? ` @ ${m.venue}` : ""
+          line = `• ${dt} | ${m.homeName} (local) vs ${m.awayName}${venue}`
+        }
+        lines.push(line)
+      }
+    }
+
+    if (noRound.length > 0) {
+      lines.push("\nSIN JORNADA ASIGNADA:")
+      for (const m of noRound) {
+        lines.push(`• ${fmtDate(m.date, m.time)} | ${m.homeName} vs ${m.awayName}`)
+      }
+    }
+
+    return lines.join("\n")
+  } catch {
+    return ""
   }
 }
