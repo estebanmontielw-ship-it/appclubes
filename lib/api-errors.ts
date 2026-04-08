@@ -58,6 +58,22 @@ export function handleApiError(
           { error: "No se puede eliminar porque tiene datos relacionados" },
           { status: 400 }
         )
+      case "P2021": {
+        // Table does not exist — missing migration in this environment
+        const table = (error.meta?.table as string) || "una tabla"
+        return NextResponse.json(
+          { error: `La tabla "${table}" no existe en la base de datos. Falta correr la migración correspondiente.` },
+          { status: 500 }
+        )
+      }
+      case "P2022": {
+        // Column does not exist — schema drifted from migration
+        const column = (error.meta?.column as string) || "una columna"
+        return NextResponse.json(
+          { error: `La columna "${column}" no existe en la base de datos. Falta correr la migración correspondiente.` },
+          { status: 500 }
+        )
+      }
       default:
         Sentry.captureException(error, { tags: { context: ctx, prismaCode: error.code } })
         return NextResponse.json(

@@ -40,6 +40,19 @@ export default function AdminHeroPage() {
     try {
       const res = await fetch("/api/website/hero", { cache: "no-store" })
       const data = await res.json()
+      if (!res.ok) {
+        // Detect the "table does not exist" case and show a helpful message
+        const msg = (data?.error || "").toLowerCase()
+        if (msg.includes("hero_images") || msg.includes("does not exist") || msg.includes("relation")) {
+          setError(
+            "La tabla de fotos del hero todavía no existe en la base de datos. " +
+              "Corré el SQL de prisma/migration-hero-images.sql en Supabase (SQL Editor) para activar esta sección."
+          )
+        } else {
+          setError(data?.error || "Error cargando imágenes")
+        }
+        return
+      }
       setImages(data.images ?? [])
     } catch (e: any) {
       setError(e.message || "Error cargando imágenes")
