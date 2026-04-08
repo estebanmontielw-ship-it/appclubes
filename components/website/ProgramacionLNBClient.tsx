@@ -97,14 +97,14 @@ function MatchCard({ match }: { match: LnbMatch }) {
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 sm:px-4 py-3 sm:py-4 hover:border-gray-200 transition-colors">
-      {/* Layout: VISITANTE (izq) · centro · LOCAL (der) */}
+      {/* Layout: LOCAL (izq) · centro · VISITANTE (der) */}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
-        <TeamBadge name={match.awayName} sigla={match.awaySigla} logo={match.awayLogo} align="left" />
+        <TeamBadge name={match.homeName} sigla={match.homeSigla} logo={match.homeLogo} align="left" />
 
         <div className="flex flex-col items-center shrink-0 min-w-[80px] sm:min-w-[100px]">
           {isComplete ? (
             <div className="text-lg sm:text-xl font-black text-[#0a1628] tabular-nums">
-              {match.awayScore ?? "-"} <span className="text-gray-300 mx-1">:</span> {match.homeScore ?? "-"}
+              {match.homeScore ?? "-"} <span className="text-gray-300 mx-1">:</span> {match.awayScore ?? "-"}
             </div>
           ) : (
             <>
@@ -122,7 +122,7 @@ function MatchCard({ match }: { match: LnbMatch }) {
           <div className="text-[10px] text-gray-400 mt-1 font-medium">vs</div>
         </div>
 
-        <TeamBadge name={match.homeName} sigla={match.homeSigla} logo={match.homeLogo} align="right" />
+        <TeamBadge name={match.awayName} sigla={match.awaySigla} logo={match.awayLogo} align="right" />
       </div>
 
       {match.venue && (
