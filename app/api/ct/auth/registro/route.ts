@@ -36,7 +36,7 @@ export async function POST(request: Request) {
       nombre, apellido, cedula, fechaNacimiento, telefono, ciudad,
       genero, nacionalidad, email, password, rol,
       fotoCarnetUrl, fotoCedulaUrl, tituloEntrenadorUrl, tieneTitulo,
-      razonSocial, ruc,
+      razonSocial, ruc, comprobanteUrl,
     } = body
 
     if (!nombre || !apellido || !cedula || !email || !password) {
@@ -152,6 +152,7 @@ export async function POST(request: Request) {
         tieneTitulo: tieneTitulo || false,
         razonSocial: razonSocial || null,
         ruc: ruc || null,
+        comprobanteUrl: comprobanteUrl || null,
         montoHabilitacion: precio,
         pagoVerificado: autoVerificado,
         pagoAutoVerificado: autoVerificado,
