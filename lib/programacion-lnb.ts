@@ -23,6 +23,7 @@ export interface NormalizedMatch {
   awayLogo: string | null
   awayScore: number | null
   venue: string | null
+  statsUrl: string | null
   round: number | null
   roundLabel: string
 }
@@ -349,6 +350,7 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       awayLogo: awayInfo.logo,
       awayScore: parseScore(away),
       venue: extractVenue(m),
+      statsUrl: m.matchId ? `https://fibalivestats.dcd.shared.geniussports.com/u/FPB/${m.matchId}/` : null,
       _rawRound: extractRound(m),
       _seqNum: extractMatchSeqNum(m),
     }

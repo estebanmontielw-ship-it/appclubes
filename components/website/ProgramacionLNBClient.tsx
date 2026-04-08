@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CalendarDays, Trophy, Users, Home as HomeIcon, Plane, LayoutGrid, Clock, MapPin } from "lucide-react"
+import { CalendarDays, Trophy, Users, Home as HomeIcon, Plane, LayoutGrid, Clock, MapPin, BarChart2 } from "lucide-react"
 
 export interface LnbTeam {
   id: string | number
@@ -27,6 +27,7 @@ export interface LnbMatch {
   awayLogo: string | null
   awayScore: number | null
   venue: string | null
+  statsUrl: string | null
   round: number | null
   roundLabel: string
 }
@@ -125,10 +126,25 @@ function MatchCard({ match }: { match: LnbMatch }) {
         <TeamBadge name={match.awayName} sigla={match.awaySigla} logo={match.awayLogo} align="right" />
       </div>
 
-      {match.venue && (
-        <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center gap-2 text-xs sm:text-sm text-gray-600 font-medium">
-          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-gray-400" />
-          <span className="line-clamp-1">{match.venue}</span>
+      {(match.venue || match.statsUrl) && (
+        <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2">
+          {match.venue ? (
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 font-medium min-w-0">
+              <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-gray-400" />
+              <span className="line-clamp-1">{match.venue}</span>
+            </div>
+          ) : <div />}
+          {match.statsUrl && (
+            <a
+              href={match.statsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] sm:text-xs font-bold transition-colors"
+            >
+              <BarChart2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+              {isComplete ? "Estadísticas" : "Ver en vivo"}
+            </a>
+          )}
         </div>
       )}
     </div>
