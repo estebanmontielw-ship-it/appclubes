@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
+import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
@@ -75,6 +76,13 @@ export async function POST(request: Request) {
         creadoPor: session.user.id,
       },
     })
+
+    // Invalidate ISR cache so new noticia shows up immediately on home & listing
+    if (noticia.publicada) {
+      revalidatePath("/")
+      revalidatePath("/noticias")
+      revalidatePath(`/noticias/${noticia.slug}`)
+    }
 
     return NextResponse.json({ noticia }, { status: 201 })
   } catch (error: any) {

@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
+import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
@@ -54,6 +55,14 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       },
     })
 
+    // Invalidate ISR cache so edits show up immediately on home, listing & detail
+    revalidatePath("/")
+    revalidatePath("/noticias")
+    revalidatePath(`/noticias/${noticia.slug}`)
+    if (existing.slug && existing.slug !== noticia.slug) {
+      revalidatePath(`/noticias/${existing.slug}`)
+    }
+
     return NextResponse.json({ noticia })
   } catch (error: any) {
     if (error?.code === "P2002") {
@@ -77,7 +86,13 @@ export async function DELETE(_request: Request, { params }: { params: { id: stri
     })
     if (adminRoles.length === 0) return NextResponse.json({ error: "No autorizado" }, { status: 403 })
 
-    await prisma.noticia.delete({ where: { id: params.id } })
+    const deleted = await prisma.noticia.delete({ where: { id: params.id } })
+
+    // Invalidate ISR cache so deletion is reflected immediately
+    revalidatePath("/")
+    revalidatePath("/noticias")
+    if (deleted.slug) revalidatePath(`/noticias/${deleted.slug}`)
+
     return NextResponse.json({ ok: true })
   } catch (error) {
     return handleApiError(error, { context: "website/noticias/[id]" })
