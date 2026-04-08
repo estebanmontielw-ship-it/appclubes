@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { CalendarDays, Trophy, Users, Home as HomeIcon, Plane, LayoutGrid, Clock, MapPin, BarChart2 } from "lucide-react"
+import { CalendarDays, Trophy, Users, Home as HomeIcon, Plane, LayoutGrid, Clock, MapPin, BarChart2, Radio } from "lucide-react"
 
 export interface LnbTeam {
   id: string | number
@@ -92,20 +92,73 @@ function TeamBadge({ name, sigla, logo, align = "left" }: { name: string; sigla:
   )
 }
 
-function MatchCard({ match }: { match: LnbMatch }) {
+function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
   const isComplete = match.status === "COMPLETE"
+  const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
   const dateInfo = formatDate(match.date)
 
+  // Winner emphasis for completed matches
+  const homeWins = isComplete && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
+  const awayWins = isComplete && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
+
+  // Card style by status
+  const cardClass = isLive
+    ? "bg-white rounded-xl border border-red-200 shadow-md shadow-red-100/50 px-3 sm:px-4 py-3 sm:py-4 transition-all overflow-hidden"
+    : isComplete
+    ? "bg-gray-50/60 rounded-xl border border-gray-100 shadow-sm px-3 sm:px-4 py-3 sm:py-4 transition-all overflow-hidden"
+    : "bg-white rounded-xl border border-gray-100 shadow-sm px-3 sm:px-4 py-3 sm:py-4 hover:border-[#0a1628]/20 hover:shadow-md transition-all overflow-hidden"
+
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 sm:px-4 py-3 sm:py-4 hover:border-gray-200 transition-colors">
+    <div className={`relative ${cardClass}`}>
+      {/* Live accent strip */}
+      {isLive && (
+        <div className="absolute top-0 left-0 right-0 h-1 bg-red-500 rounded-t-xl" />
+      )}
+
+      {/* Próximo badge */}
+      {isNext && !isLive && !isComplete && (
+        <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5">
+          <span className="w-1 h-1 rounded-full bg-amber-500 inline-block" />
+          Próximo
+        </div>
+      )}
+
       {/* Layout: LOCAL (izq) · centro · VISITANTE (der) */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
+      <div className={`grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4 ${isLive ? "mt-1" : ""}`}>
         <TeamBadge name={match.homeName} sigla={match.homeSigla} logo={match.homeLogo} align="left" />
 
-        <div className="flex flex-col items-center shrink-0 min-w-[80px] sm:min-w-[100px]">
+        <div className="flex flex-col items-center shrink-0 min-w-[80px] sm:min-w-[105px]">
           {isComplete ? (
-            <div className="text-lg sm:text-xl font-black text-[#0a1628] tabular-nums">
-              {match.homeScore ?? "-"} <span className="text-gray-300 mx-1">:</span> {match.awayScore ?? "-"}
+            <div className="flex flex-col items-center gap-0.5">
+              <span className="text-[9px] font-black uppercase tracking-[0.12em] text-gray-400">Final</span>
+              <div className="flex items-center tabular-nums leading-none">
+                <span className={`text-2xl sm:text-3xl font-black ${homeWins ? "text-[#0a1628]" : "text-gray-400"}`}>
+                  {match.homeScore ?? "-"}
+                </span>
+                <span className="text-gray-200 mx-1.5 text-xl">–</span>
+                <span className={`text-2xl sm:text-3xl font-black ${awayWins ? "text-[#0a1628]" : "text-gray-400"}`}>
+                  {match.awayScore ?? "-"}
+                </span>
+              </div>
+            </div>
+          ) : isLive ? (
+            <div className="flex flex-col items-center gap-1">
+              <div className="flex items-center gap-1.5 text-red-600 text-[10px] font-black uppercase tracking-wider">
+                <Radio className="h-3 w-3 animate-pulse" />
+                En vivo
+              </div>
+              {(match.homeScore != null || match.awayScore != null) && (
+                <div className="flex items-center tabular-nums leading-none">
+                  <span className="text-2xl font-black text-red-600">{match.homeScore ?? "-"}</span>
+                  <span className="text-gray-300 mx-1.5 text-xl">–</span>
+                  <span className="text-2xl font-black text-red-600">{match.awayScore ?? "-"}</span>
+                </div>
+              )}
+              {match.time && (
+                <div className="px-2 py-0.5 rounded bg-red-500 text-white text-[10px] font-bold tabular-nums">
+                  {match.time}
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -129,7 +182,7 @@ function MatchCard({ match }: { match: LnbMatch }) {
       {(match.venue || match.statsUrl) && (
         <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center justify-between gap-2">
           {match.venue ? (
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-600 font-medium min-w-0">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 font-medium min-w-0">
               <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-gray-400" />
               <span className="line-clamp-1">{match.venue}</span>
             </div>
@@ -139,10 +192,14 @@ function MatchCard({ match }: { match: LnbMatch }) {
               href={match.statsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-[11px] sm:text-xs font-bold transition-colors"
+              className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-colors ${
+                isLive
+                  ? "bg-red-50 hover:bg-red-100 text-red-700"
+                  : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+              }`}
             >
               <BarChart2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              {isComplete ? "Estadísticas" : "Ver en vivo"}
+              {isComplete ? "Estadísticas" : isLive ? "Ver en vivo" : "Ver en vivo"}
             </a>
           )}
         </div>
@@ -151,11 +208,15 @@ function MatchCard({ match }: { match: LnbMatch }) {
   )
 }
 
-function DateHeader({ label }: { label: string }) {
+function DateHeader({ label, count }: { label: string; count: number }) {
   return (
-    <div className="flex items-center gap-3 mt-6 mb-2 first:mt-0">
-      <div className="h-px bg-gray-200 flex-1" />
-      <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 px-2">{label}</span>
+    <div className="flex items-center gap-3 mt-6 mb-3 first:mt-0">
+      <div className="flex items-center gap-2 shrink-0">
+        <span className="text-xs font-black uppercase tracking-wider text-[#0a1628]">{label}</span>
+        <span className="text-[10px] font-bold text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 leading-none">
+          {count} {count === 1 ? "partido" : "partidos"}
+        </span>
+      </div>
       <div className="h-px bg-gray-200 flex-1" />
     </div>
   )
@@ -170,7 +231,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
   // Show all matches — completed ones display the score, upcoming ones display time.
   const scheduledMatches = useMemo(() => matches, [matches])
 
-  // Rounds that actually have matches (for the "Por fecha" filter buttons)
+  // Rounds that actually have matches (for the "Por jornada" filter buttons)
   const availableRounds = useMemo(() => {
     const rounds = new Set<number>()
     for (const m of scheduledMatches) {
@@ -179,7 +240,40 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
     return Array.from(rounds).sort((a, b) => a - b)
   }, [scheduledMatches])
 
-  // When switching to "fecha" view the first time, auto-select the closest upcoming round
+  // Date range per round (for jornada buttons: "J2 · 16 Abr")
+  const roundDateRange = useMemo(() => {
+    const map = new Map<number, { from: string | null; to: string | null }>()
+    for (const m of scheduledMatches) {
+      if (m.round == null) continue
+      const cur = map.get(m.round)
+      const d = m.date
+      if (!cur) { map.set(m.round, { from: d, to: d }); continue }
+      if (d && (!cur.from || d < cur.from)) cur.from = d
+      if (d && (!cur.to || d > cur.to)) cur.to = d
+    }
+    return map
+  }, [scheduledMatches])
+
+  // Next upcoming match ID (for "Próximo" badge)
+  const nextMatchId = useMemo(() => {
+    const now = new Date().toISOString().slice(0, 16) // "YYYY-MM-DDTHH:MM"
+    const upcoming = scheduledMatches.find(
+      (m) => m.status !== "COMPLETE" && m.isoDateTime && m.isoDateTime >= now
+    )
+    return upcoming?.id ?? null
+  }, [scheduledMatches])
+
+  // Format jornada date range label: "13 Abr" or "19–20 Abr"
+  function formatJornadaRange(from: string | null, to: string | null): string {
+    if (!from) return ""
+    const f = formatDate(from)
+    if (!to || from === to) return `${parseInt(f.day)} ${f.month}`
+    const t = formatDate(to)
+    if (f.month === t.month) return `${parseInt(f.day)}–${parseInt(t.day)} ${f.month}`
+    return `${parseInt(f.day)} ${f.month}–${parseInt(t.day)} ${t.month}`
+  }
+
+  // When switching view the first time, auto-select the closest upcoming round/team
   function handleViewChange(next: ViewMode) {
     setView(next)
     if (next === "fecha" && selectedRound == null && availableRounds.length > 0) {
@@ -204,9 +298,6 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
     if (selectedTeamId == null) return []
     const selectedName = selectedTeam?.name ?? ""
     return scheduledMatches.filter((m) => {
-      // Match by ID (numeric or string) OR by name — whichever is available.
-      // awayId / homeId can be null even when the name is present, so we must
-      // check both to avoid missing visitante games.
       const isHome =
         (m.homeId != null && String(m.homeId) === String(selectedTeamId)) ||
         m.homeName === selectedName
@@ -232,7 +323,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
 
   return (
     <div>
-      {/* Brand header — this is what will look good in screenshots */}
+      {/* Brand header */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0a1628] via-[#0f2544] to-[#0a1628] text-white p-6 sm:p-8 mb-6 shadow-lg">
         <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
@@ -291,19 +382,28 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
             <p className="text-sm text-gray-400 p-2">No hay fechas programadas.</p>
           ) : (
             <div className="flex flex-wrap gap-2">
-              {availableRounds.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setSelectedRound(r)}
-                  className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
-                    selectedRound === r
-                      ? "bg-[#0a1628] text-white shadow-sm"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  Jornada {r}
-                </button>
-              ))}
+              {availableRounds.map((r) => {
+                const range = roundDateRange.get(r)
+                const rangeLabel = range ? formatJornadaRange(range.from, range.to) : ""
+                return (
+                  <button
+                    key={r}
+                    onClick={() => setSelectedRound(r)}
+                    className={`flex flex-col items-center px-3 py-2 rounded-lg font-bold transition-colors min-w-[3.5rem] ${
+                      selectedRound === r
+                        ? "bg-[#0a1628] text-white shadow-sm"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    <span className="text-sm leading-tight">J{r}</span>
+                    {rangeLabel && (
+                      <span className={`text-[9px] font-medium leading-tight mt-0.5 ${selectedRound === r ? "text-blue-200" : "text-gray-400"}`}>
+                        {rangeLabel}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -390,16 +490,20 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
       <div>
         {filteredMatches.length === 0 ? (
           <div className="bg-white rounded-xl border border-dashed border-gray-200 p-10 text-center">
-            <p className="text-gray-400 text-sm">No hay partidos programados con estos filtros.</p>
+            <p className="text-gray-400 text-sm">No hay partidos con estos filtros.</p>
           </div>
         ) : (
           <>
             {dateGroups.map((g) => (
               <div key={g.key}>
-                <DateHeader label={g.label} />
+                <DateHeader label={g.label} count={g.items.length} />
                 <div className="space-y-2.5">
                   {g.items.map((m) => (
-                    <MatchCard key={String(m.id)} match={m} />
+                    <MatchCard
+                      key={String(m.id)}
+                      match={m}
+                      isNext={nextMatchId != null && String(m.id) === String(nextMatchId)}
+                    />
                   ))}
                 </div>
               </div>
@@ -408,7 +512,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
         )}
       </div>
 
-      {/* Footer signature — nice to have in screenshots */}
+      {/* Footer */}
       <div className="mt-8 text-center text-[11px] text-gray-400 font-medium">
         cpb.com.py/programacionlnb · Datos oficiales vía Genius Sports
       </div>
