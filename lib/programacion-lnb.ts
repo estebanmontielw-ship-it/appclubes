@@ -216,17 +216,63 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
   }
 
   const matchesFirstPass = matchItems.map((m) => {
-    const home = m.competitors?.[0]
-    const away = m.competitors?.[1]
+    // ── home / away detection ──────────────────────────────────────────────
+    // Genius Sports uses competitorType / homeAway to mark each side.
+    // Fall back to positional order only if no such field is present.
+    const competitors: any[] = Array.isArray(m.competitors) ? m.competitors : []
+    const findSide = (types: string[]) =>
+      competitors.find((c) => {
+        const t = String(c?.competitorType ?? c?.homeAway ?? c?.role ?? "").toUpperCase().trim()
+        return types.some((x) => t === x)
+      })
+    const detectedHome = findSide(["HOME", "H", "LOCAL"])
+    const detectedAway = findSide(["AWAY", "A", "VISITOR", "VISITANTE"])
+    const home = detectedHome ?? competitors[0] ?? null
+    const away = detectedAway ?? competitors[1] ?? null
     const homeInfo = enrich(home)
     const awayInfo = enrich(away)
 
-    const dateStr = asString(m.matchDate)
-    const timeStr = asString(m.matchTime)
-    let iso: string | null = null
-    if (dateStr) {
-      iso = timeStr ? `${dateStr.slice(0, 10)}T${timeStr.slice(0, 5)}:00` : dateStr
+    // ── date / time parsing ───────────────────────────────────────────────
+    // Genius sometimes sends a full ISO-8601 datetime in matchDate *and/or*
+    // matchTime (e.g. "2026-04-13T20:30:00"). We must extract the right part.
+    function splitIso(v: string): { date: string | null; time: string | null } {
+      const sep = v.includes("T") ? "T" : v.includes(" ") ? " " : null
+      if (sep) {
+        const [d, t] = v.split(sep)
+        return { date: d ? d.slice(0, 10) : null, time: t ? t.slice(0, 5) : null }
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return { date: v, time: null }
+      if (/^\d{2}:\d{2}/.test(v)) return { date: null, time: v.slice(0, 5) }
+      return { date: null, time: null }
     }
+
+    const rawDate =
+      asString(m.matchDate) ??
+      asString(m.date) ??
+      asString(m.startDate) ??
+      asString(m.scheduledDate) ??
+      null
+    const rawTime =
+      asString(m.matchTime) ??
+      asString(m.time) ??
+      asString(m.startTime) ??
+      asString(m.scheduledTime) ??
+      null
+
+    let dateStr: string | null = null
+    let timeStr: string | null = null
+
+    if (rawDate) {
+      const { date, time } = splitIso(rawDate)
+      dateStr = date
+      if (time) timeStr = time // ISO datetime embedded in date field
+    }
+    if (rawTime && !timeStr) {
+      const { time } = splitIso(rawTime)
+      timeStr = time
+    }
+
+    const iso = dateStr ? (timeStr ? `${dateStr}T${timeStr}:00` : dateStr) : null
 
     const matchStatus = asString(m.matchStatus) ?? "SCHEDULED"
     const matchId =
@@ -236,8 +282,8 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
 
     return {
       id: matchId,
-      date: dateStr ? dateStr.slice(0, 10) : null,
-      time: timeStr ? timeStr.slice(0, 5) : null,
+      date: dateStr,
+      time: timeStr,
       isoDateTime: iso,
       status: matchStatus,
       homeId: homeInfo.id,

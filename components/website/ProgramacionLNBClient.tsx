@@ -93,22 +93,30 @@ function TeamBadge({ name, sigla, logo, align = "left" }: { name: string; sigla:
 
 function MatchCard({ match }: { match: LnbMatch }) {
   const isComplete = match.status === "COMPLETE"
+  const dateInfo = formatDate(match.date)
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 sm:px-4 py-3 sm:py-4 hover:border-gray-200 transition-colors">
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 sm:gap-4">
         <TeamBadge name={match.homeName} sigla={match.homeSigla} logo={match.homeLogo} align="left" />
 
-        <div className="flex flex-col items-center shrink-0 min-w-[70px] sm:min-w-[90px]">
+        <div className="flex flex-col items-center shrink-0 min-w-[80px] sm:min-w-[100px]">
           {isComplete ? (
             <div className="text-lg sm:text-xl font-black text-[#0a1628] tabular-nums">
               {match.homeScore ?? "-"} <span className="text-gray-300 mx-1">:</span> {match.awayScore ?? "-"}
             </div>
           ) : (
-            <div className="px-2.5 py-1 rounded-lg bg-[#0a1628] text-white text-xs sm:text-sm font-bold tabular-nums flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              {match.time ?? "--:--"}
-            </div>
+            <>
+              {match.date && (
+                <div className="text-[10px] text-gray-400 font-semibold mb-0.5">
+                  {dateInfo.weekday} {dateInfo.day} {dateInfo.month}
+                </div>
+              )}
+              <div className="px-3 py-1.5 rounded-lg bg-[#0a1628] text-white text-xs sm:text-sm font-bold tabular-nums flex items-center gap-1.5">
+                <Clock className="h-3 w-3" />
+                {match.time ?? "--:--"}
+              </div>
+            </>
           )}
           <div className="text-[10px] text-gray-400 mt-1 font-medium">vs</div>
         </div>
@@ -117,8 +125,8 @@ function MatchCard({ match }: { match: LnbMatch }) {
       </div>
 
       {match.venue && (
-        <div className="mt-2.5 pt-2.5 border-t border-gray-50 flex items-center gap-1.5 text-[11px] text-gray-500">
-          <MapPin className="h-3 w-3 shrink-0" />
+        <div className="mt-3 pt-2.5 border-t border-gray-100 flex items-center gap-2 text-xs sm:text-sm text-gray-600 font-medium">
+          <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-gray-400" />
           <span className="line-clamp-1">{match.venue}</span>
         </div>
       )}
