@@ -76,12 +76,6 @@ export default function HeroSection({ slides }: HeroSectionProps) {
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-transparent to-[#0a1628]/30" />
       </div>
 
-      {/* Decorative elements */}
-      <div className="absolute top-20 right-10 w-72 h-72 border border-white/5 rounded-full animate-[spin_60s_linear_infinite]" />
-      <div className="absolute top-32 right-20 w-48 h-48 border border-amber-400/10 rounded-full animate-[spin_40s_linear_infinite_reverse]" />
-      <div className="absolute bottom-20 right-40 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl" />
-
-
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
         <div className="max-w-3xl">
           {/* Badge */}
