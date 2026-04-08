@@ -6,6 +6,7 @@ import Link from "next/link"
 import { ArrowLeft, Sparkles, Loader2, Camera } from "lucide-react"
 import ImageUploader from "@/components/website/ImageUploader"
 import InstagramImportModal from "@/components/admin/InstagramImportModal"
+import RichTextEditor from "@/components/admin/RichTextEditor"
 
 const categorias = [
   { value: "GENERAL", label: "General" },
@@ -246,16 +247,13 @@ export default function CrearNoticiaPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contenido * (HTML)</label>
-          <textarea
-            name="contenido"
-            rows={10}
-            required
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contenido *</label>
+          <RichTextEditor
             value={contenido}
-            onChange={(e) => setContenido(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y"
-            placeholder="<p>Contenido de la noticia...</p>"
+            onChange={setContenido}
+            placeholder="Empezá a escribir la noticia..."
           />
+          <input type="hidden" name="contenido" value={contenido} />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

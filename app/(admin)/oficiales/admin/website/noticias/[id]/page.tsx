@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import ImageUploader from "@/components/website/ImageUploader"
+import RichTextEditor from "@/components/admin/RichTextEditor"
 
 const categorias = [
   { value: "GENERAL", label: "General" },
@@ -119,10 +120,12 @@ export default function EditarNoticiaPage() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contenido * (HTML)</label>
-          <textarea name="contenido" rows={10} required value={contenido}
-            onChange={(e) => setContenido(e.target.value)}
-            className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y" />
+          <label className="block text-sm font-medium text-gray-700 mb-1">Contenido *</label>
+          <RichTextEditor
+            value={contenido}
+            onChange={setContenido}
+            placeholder="Empezá a escribir la noticia..."
+          />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
