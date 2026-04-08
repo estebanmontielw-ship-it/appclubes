@@ -138,8 +138,13 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
         height: (crop.height / 100) * img.height * scaleY,
       }
 
-      canvas.width = pixelCrop.width
-      canvas.height = pixelCrop.height
+      // Cap output resolution so high-res DSLR photos don't hit the Vercel
+      // 4.5 MB serverless body limit. 2400x1350 is plenty for a 4K retina hero
+      // and typically yields a 300–600 KB JPEG at quality 0.85.
+      const MAX_WIDTH = 2400
+      const scaleDown = pixelCrop.width > MAX_WIDTH ? MAX_WIDTH / pixelCrop.width : 1
+      canvas.width = Math.round(pixelCrop.width * scaleDown)
+      canvas.height = Math.round(pixelCrop.height * scaleDown)
 
       const ctx = canvas.getContext("2d")
       if (!ctx) throw new Error("No canvas context")
@@ -147,12 +152,12 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
       ctx.drawImage(
         img,
         pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height,
-        0, 0, pixelCrop.width, pixelCrop.height
+        0, 0, canvas.width, canvas.height
       )
 
       // Convert to blob
       const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Failed")), "image/jpeg", 0.9)
+        canvas.toBlob((b) => b ? resolve(b) : reject(new Error("Failed")), "image/jpeg", 0.85)
       })
 
       const croppedFile = new File([blob], cropFile.name, { type: "image/jpeg" })
@@ -166,7 +171,10 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
 
       if (!res.ok) {
         const data = await res.json().catch(() => null)
-        throw new Error(data?.error || "Error al subir imagen")
+        if (res.status === 413) {
+          throw new Error("La imagen quedó muy grande después del recorte. Probá con una foto más chica.")
+        }
+        throw new Error(data?.error || `Error al subir imagen (HTTP ${res.status})`)
       }
 
       const { url } = await res.json()
@@ -191,15 +199,22 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
     setError("")
 
     try {
+      // Downscale in-browser if the file is big, so we don't hit the 4.5 MB
+      // serverless body limit with DSLR photos.
+      const uploadFile = file.size > 3 * 1024 * 1024 ? await downscaleImage(file) : file
+
       const formData = new FormData()
-      formData.append("file", file)
+      formData.append("file", uploadFile)
       formData.append("bucket", "website")
 
       const res = await fetch("/api/upload", { method: "POST", body: formData })
 
       if (!res.ok) {
         const data = await res.json().catch(() => null)
-        throw new Error(data?.error || "Error al subir imagen")
+        if (res.status === 413) {
+          throw new Error("La imagen es muy grande. Probá con una foto más chica.")
+        }
+        throw new Error(data?.error || `Error al subir imagen (HTTP ${res.status})`)
       }
 
       const { url } = await res.json()
@@ -210,6 +225,33 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
       setUploading(false)
       setCropSrc("")
       setCropFile(null)
+    }
+  }
+
+  async function downscaleImage(file: File): Promise<File> {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    try {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error("No se pudo leer la imagen"))
+        img.src = url
+      })
+      const MAX_WIDTH = 2400
+      const scale = img.naturalWidth > MAX_WIDTH ? MAX_WIDTH / img.naturalWidth : 1
+      const canvas = document.createElement("canvas")
+      canvas.width = Math.round(img.naturalWidth * scale)
+      canvas.height = Math.round(img.naturalHeight * scale)
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return file
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85)
+      )
+      if (!blob) return file
+      return new File([blob], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" })
+    } finally {
+      URL.revokeObjectURL(url)
     }
   }
 
