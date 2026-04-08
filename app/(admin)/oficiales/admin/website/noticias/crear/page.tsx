@@ -3,8 +3,9 @@
 import { useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Sparkles, Loader2 } from "lucide-react"
+import { ArrowLeft, Sparkles, Loader2, Camera } from "lucide-react"
 import ImageUploader from "@/components/website/ImageUploader"
+import InstagramImportModal from "@/components/admin/InstagramImportModal"
 
 const categorias = [
   { value: "GENERAL", label: "General" },
@@ -41,6 +42,9 @@ export default function CrearNoticiaPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [showAi, setShowAi] = useState(false)
   const [aiTipo, setAiTipo] = useState<"generar-noticia" | "generar-circular">("generar-noticia")
+
+  // Instagram import
+  const [showInstagram, setShowInstagram] = useState(false)
 
   async function generateWithAI() {
     if (!aiPrompt.trim()) return
@@ -120,16 +124,26 @@ export default function CrearNoticiaPage() {
         <ArrowLeft className="h-4 w-4" /> Volver a noticias
       </Link>
 
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
         <h1 className="text-2xl font-bold">Nueva Noticia</h1>
-        <button
-          type="button"
-          onClick={() => setShowAi(!showAi)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md"
-        >
-          <Sparkles className="h-4 w-4" />
-          Generar con IA
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowInstagram(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 text-white font-semibold text-sm hover:opacity-90 transition-all shadow-md"
+          >
+            <Camera className="h-4 w-4" />
+            Importar de Instagram
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAi(!showAi)}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md"
+          >
+            <Sparkles className="h-4 w-4" />
+            Generar con IA
+          </button>
+        </div>
       </div>
 
       {/* AI Generator Panel */}
@@ -324,6 +338,20 @@ export default function CrearNoticiaPage() {
           </Link>
         </div>
       </form>
+
+      <InstagramImportModal
+        open={showInstagram}
+        onClose={() => setShowInstagram(false)}
+        onImport={(result) => {
+          setTitulo(result.titulo)
+          setSlug(result.slug || slugify(result.titulo))
+          setAutoSlug(false)
+          setExtracto(result.extracto)
+          setContenido(result.contenido)
+          setCategoria(result.categoria)
+          if (result.imagenUrl) setImagenUrl(result.imagenUrl)
+        }}
+      />
     </div>
   )
 }
