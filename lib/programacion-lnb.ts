@@ -83,7 +83,7 @@ function extractRound(m: any): number | null {
   ]
   for (const v of candidates) {
     if (typeof v === "number" && Number.isFinite(v) && v > 0) return v
-    if (typeof v === "string" && /^\d+$/.test(v)) return parseInt(v, 10)
+    if (typeof v === "string" && /^\d+$/.test(v)) { const n = parseInt(v, 10); if (n > 0) return n }
   }
   return null
 }

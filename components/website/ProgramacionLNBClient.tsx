@@ -187,9 +187,17 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
     }
     // club view
     if (selectedTeamId == null) return []
+    const selectedName = selectedTeam?.name ?? ""
     return scheduledMatches.filter((m) => {
-      const isHome = String(m.homeId ?? m.homeName) === String(selectedTeamId)
-      const isAway = String(m.awayId ?? m.awayName) === String(selectedTeamId)
+      // Match by ID (numeric or string) OR by name — whichever is available.
+      // awayId / homeId can be null even when the name is present, so we must
+      // check both to avoid missing visitante games.
+      const isHome =
+        (m.homeId != null && String(m.homeId) === String(selectedTeamId)) ||
+        m.homeName === selectedName
+      const isAway =
+        (m.awayId != null && String(m.awayId) === String(selectedTeamId)) ||
+        m.awayName === selectedName
       if (clubSide === "home") return isHome
       if (clubSide === "away") return isAway
       return isHome || isAway
