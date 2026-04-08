@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
 import { handleApiError } from "@/lib/api-errors"
+import { getLnbScheduleContext } from "@/lib/programacion-lnb"
 
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -372,9 +373,10 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
       let clubesContext = ""
       let seleccionesContext = ""
       let reglamentosContext = ""
+      let lnbContext = ""
 
       try {
-        const [noticias, clubes, selecciones, reglamentos] = await Promise.all([
+        const [noticias, clubes, selecciones, reglamentos, lnbSchedule] = await Promise.all([
           prisma.noticia.findMany({
             where: { publicada: true },
             orderBy: { publicadaEn: "desc" },
@@ -393,6 +395,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
             where: { activo: true },
             select: { titulo: true, categoria: true },
           }),
+          getLnbScheduleContext().catch(() => ""),
         ])
 
         if (noticias.length > 0) {
@@ -407,6 +410,9 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
         }
         if (reglamentos.length > 0) {
           reglamentosContext = "\n\nREGLAMENTOS DISPONIBLES:\n" + reglamentos.map(r => `- ${r.titulo} (${r.categoria})`).join("\n")
+        }
+        if (lnbSchedule) {
+          lnbContext = "\n\n" + lnbSchedule
         }
       } catch (error) {}
 
@@ -426,10 +432,11 @@ INFORMACIÓN DEL SITIO:
 - Contacto: cpb.com.py/contacto o cpb@cpb.com.py
 - Registrarse como árbitro/oficial: cpb.com.py/oficiales/registro
 - Registrarse como cuerpo técnico: cpb.com.py/cuerpotecnico/registro
-${noticiasContext}${clubesContext}${seleccionesContext}${reglamentosContext}
+${noticiasContext}${clubesContext}${seleccionesContext}${reglamentosContext}${lnbContext}
 
 INSTRUCCIONES:
 - Respondé con información concreta basada en los datos reales de arriba
+- Si preguntan por partidos, fixture, jornadas, horarios o resultados, usá la programación LNB
 - Si preguntan por una noticia específica, mencioná el título y el link
 - Si preguntan por un club, dales la info que tenés
 - Si preguntan por selecciones, mencioná las que existen

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
 import { handleApiError } from "@/lib/api-errors"
+import { getLnbScheduleContext } from "@/lib/programacion-lnb"
 
 async function checkAdmin() {
   const cookieStore = cookies()
@@ -232,8 +233,12 @@ export async function POST(request: Request) {
       }
     }
 
-    // Get real-time system data
-    const systemData = await getSystemContext()
+    // Get real-time system data + LNB schedule
+    const [systemData, lnbSchedule] = await Promise.all([
+      getSystemContext(),
+      getLnbScheduleContext().catch(() => ""),
+    ])
+    const lnbSection = lnbSchedule ? `\n\n${lnbSchedule}` : ""
 
     const systemPrompt = `Sos CPB Bot, el asistente de inteligencia artificial del Super Admin de la Confederación Paraguaya de Básquetbol (CPB). Tu nombre es CPB Bot.
 
@@ -271,7 +276,7 @@ REDACCIÓN DE NOTICIAS - Cuando te pidan redactar notas, seguí estas reglas:
 
 IMPORTANTE: Respondé en texto plano, sin markdown. Usá saltos de línea para separar párrafos. No uses asteriscos, guiones bajos ni hashtags para formatear.
 
-${systemData}${fileContext}
+${systemData}${lnbSection}${fileContext}
 
 Fecha actual: ${new Date().toLocaleDateString("es-PY", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}`
 

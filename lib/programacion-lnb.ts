@@ -453,3 +453,68 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
     updatedAt: new Date().toISOString(),
   }
 }
+
+/** Returns a plain-text summary of the LNB schedule for AI chatbot context.
+ *  Grouped by jornada, with scores for completed matches and time/venue for upcoming. */
+export async function getLnbScheduleContext(): Promise<string> {
+  try {
+    const { competition, matches } = await loadLnbSchedule()
+    if (!matches.length) return ""
+
+    const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+    const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+    function fmtDate(dateStr: string | null, timeStr: string | null): string {
+      if (!dateStr) return "Sin fecha"
+      const d = new Date(dateStr + "T00:00:00Z")
+      const label = `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
+      return timeStr ? `${label} ${timeStr}` : label
+    }
+
+    const byRound = new Map<number, NormalizedMatch[]>()
+    const noRound: NormalizedMatch[] = []
+    for (const m of matches) {
+      if (m.round != null) {
+        const arr = byRound.get(m.round) ?? []
+        arr.push(m)
+        byRound.set(m.round, arr)
+      } else {
+        noRound.push(m)
+      }
+    }
+
+    const lines: string[] = [`PROGRAMACIÓN ${competition.name.toUpperCase()}:`]
+    const sortedRounds = Array.from(byRound.keys()).sort((a, b) => a - b)
+
+    for (const round of sortedRounds) {
+      const rMatches = byRound.get(round)!
+      lines.push(`\nJORNADA ${round}:`)
+      for (const m of rMatches) {
+        const dt = fmtDate(m.date, m.time)
+        const isLive = m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+        const isComplete = m.status === "COMPLETE"
+        let line: string
+        if (isLive) {
+          line = `• ${dt} | ${m.homeName} ${m.homeScore ?? "?"} – ${m.awayScore ?? "?"} ${m.awayName} [EN VIVO]`
+        } else if (isComplete && m.homeScore != null && m.awayScore != null) {
+          line = `• ${dt} | ${m.homeName} ${m.homeScore} – ${m.awayScore} ${m.awayName} [FINAL]`
+        } else {
+          const venue = m.venue ? ` @ ${m.venue}` : ""
+          line = `• ${dt} | ${m.homeName} (local) vs ${m.awayName}${venue}`
+        }
+        lines.push(line)
+      }
+    }
+
+    if (noRound.length > 0) {
+      lines.push("\nSIN JORNADA ASIGNADA:")
+      for (const m of noRound) {
+        lines.push(`• ${fmtDate(m.date, m.time)} | ${m.homeName} vs ${m.awayName}`)
+      }
+    }
+
+    return lines.join("\n")
+  } catch {
+    return ""
+  }
+}
