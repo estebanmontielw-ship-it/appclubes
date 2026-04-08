@@ -385,7 +385,7 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       return {
         ...rest,
         round: _rawRound ?? null,
-        roundLabel: fechaLabel(_rawRound),
+        roundLabel: _rawRound != null ? fechaLabel(_rawRound) : "Sin fecha",
       } as NormalizedMatch
     })
   } else {
