@@ -237,6 +237,8 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
     const competitors: any[] = Array.isArray(m.competitors) ? m.competitors : []
 
     const isHomeMarker = (c: any): boolean => {
+      // Genius Sports Warehouse: isHomeCompetitor = 1 (local) / 0 (visitante)
+      if (c?.isHomeCompetitor === 1 || c?.isHomeCompetitor === true || c?.isHomeCompetitor === "1") return true
       // Numeric qualifier: FIBA standard 1 = home
       const q = c?.qualifier ?? c?.position ?? null
       if (q === 1 || q === "1") return true
@@ -249,6 +251,8 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       })
     }
     const isAwayMarker = (c: any): boolean => {
+      // Genius Sports Warehouse: isHomeCompetitor = 0 (visitante)
+      if (c?.isHomeCompetitor === 0 || c?.isHomeCompetitor === false || c?.isHomeCompetitor === "0") return true
       const q = c?.qualifier ?? c?.position ?? null
       if (q === 2 || q === "2") return true
       const fields = [c?.competitorType, c?.homeAway, c?.role, c?.teamQualifier]
