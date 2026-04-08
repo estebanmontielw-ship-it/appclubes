@@ -147,6 +147,17 @@ function extractVenue(m: any): string | null {
   return null
 }
 
+/** Parse a competitor's score from Genius Sports. The field is scoreString
+ *  (e.g. "85") for completed matches, or score (number) in some endpoints. */
+function parseScore(c: any): number | null {
+  if (c == null) return null
+  if (typeof c.score === "number") return c.score
+  const s = c.scoreString ?? c.score ?? c.points ?? null
+  if (s == null || s === "") return null
+  const n = parseInt(String(s), 10)
+  return Number.isFinite(n) ? n : null
+}
+
 /** Safely coerce a value to a string, otherwise null. */
 function asString(v: any): string | null {
   if (typeof v === "string") return v
@@ -331,12 +342,12 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       homeName: homeInfo.name,
       homeSigla: homeInfo.sigla,
       homeLogo: homeInfo.logo,
-      homeScore: typeof home?.score === "number" ? home.score : null,
+      homeScore: parseScore(home),
       awayId: awayInfo.id,
       awayName: awayInfo.name,
       awaySigla: awayInfo.sigla,
       awayLogo: awayInfo.logo,
-      awayScore: typeof away?.score === "number" ? away.score : null,
+      awayScore: parseScore(away),
       venue: extractVenue(m),
       _rawRound: extractRound(m),
       _seqNum: extractMatchSeqNum(m),

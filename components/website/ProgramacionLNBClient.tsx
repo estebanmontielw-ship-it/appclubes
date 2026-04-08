@@ -151,10 +151,8 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
   const [selectedTeamId, setSelectedTeamId] = useState<string | number | null>(null)
   const [clubSide, setClubSide] = useState<ClubSide>("all")
 
-  // Only show scheduled (not finished) matches by default for a clean "upcoming" feel.
-  // Still include all matches if the user wants historical — but for a programación
-  // page, focusing on non-finished is what the user asked for.
-  const scheduledMatches = useMemo(() => matches.filter((m) => m.status !== "COMPLETE"), [matches])
+  // Show all matches — completed ones display the score, upcoming ones display time.
+  const scheduledMatches = useMemo(() => matches, [matches])
 
   // Rounds that actually have matches (for the "Por fecha" filter buttons)
   const availableRounds = useMemo(() => {
