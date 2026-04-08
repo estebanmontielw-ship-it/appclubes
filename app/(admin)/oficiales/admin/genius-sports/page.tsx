@@ -246,40 +246,114 @@ export default function GeniusSportsAdminPage() {
                   <div>
                     {/* Match list */}
                     {detailType === "matches" && detail.data && (
-                      <div className="space-y-2">
+                      <div className="space-y-1.5">
                         {detail.data.length === 0 && <p className="text-sm text-gray-400 text-center py-4">Sin partidos cargados</p>}
-                        {detail.data.map((m: any) => (
-                          <div key={m.matchId} className="bg-gray-50 rounded-lg p-3 text-sm">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[10px] text-gray-400">
-                                {m.matchDate ? new Date(m.matchDate).toLocaleDateString("es-PY", { day: "numeric", month: "short", year: "numeric" }) : "Sin fecha"}
-                                {m.matchTime ? ` · ${m.matchTime}` : ""}
-                              </span>
-                              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                                m.matchStatus === "COMPLETE" ? "bg-green-100 text-green-700" :
-                                m.matchStatus === "LIVE" ? "bg-red-100 text-red-700 animate-pulse" :
-                                "bg-gray-100 text-gray-600"
-                              }`}>
-                                {m.matchStatus === "COMPLETE" ? "Finalizado" :
-                                 m.matchStatus === "LIVE" ? "EN VIVO" :
-                                 m.matchStatus || "Programado"}
-                              </span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <div className="flex-1">
-                                <p className="font-semibold text-gray-900">{m.competitors?.[0]?.competitorName || "Equipo 1"}</p>
-                                <p className="font-semibold text-gray-900">{m.competitors?.[1]?.competitorName || "Equipo 2"}</p>
-                              </div>
-                              {m.matchStatus === "COMPLETE" && (
-                                <div className="text-right">
-                                  <p className="font-bold text-gray-900">{m.competitors?.[0]?.score ?? "-"}</p>
-                                  <p className="font-bold text-gray-900">{m.competitors?.[1]?.score ?? "-"}</p>
+                        {(() => {
+                          // Derive jornada + parse each match using Genius Sports field rules
+                          const numTeams = new Set(
+                            detail.data.flatMap((m: any) => (m.competitors || []).map((c: any) => c.competitorId))
+                          ).size || 8
+                          const matchesPerJornada = Math.max(1, Math.floor(numTeams / 2))
+
+                          return detail.data.map((m: any) => {
+                            // ── Date/time: everything is in matchTime "YYYY-MM-DD HH:MM:SS" ──
+                            const raw = m.matchTime ?? m.matchDate ?? ""
+                            const sep = raw.includes("T") ? "T" : raw.includes(" ") ? " " : null
+                            const dateStr = sep ? raw.split(sep)[0]?.slice(0, 10) : null
+                            const timeStr = sep ? raw.split(sep)[1]?.slice(0, 5) : null
+                            const dateLabel = dateStr
+                              ? new Date(dateStr + "T00:00:00Z").toLocaleDateString("es-PY", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })
+                              : "Sin fecha"
+
+                            // ── Home / Away: use isHomeCompetitor (1=local, 0=visitante) ──
+                            const competitors: any[] = m.competitors || []
+                            const home = competitors.find((c: any) => c.isHomeCompetitor === 1 || c.isHomeCompetitor === "1" || c.isHomeCompetitor === true) ?? competitors[0]
+                            const away = competitors.find((c: any) => c.isHomeCompetitor === 0 || c.isHomeCompetitor === "0" || c.isHomeCompetitor === false) ?? competitors[1]
+
+                            // ── Score: use scoreString ──
+                            const parseScore = (c: any) => {
+                              if (!c) return null
+                              const s = c.scoreString ?? c.score ?? null
+                              if (s == null || s === "") return null
+                              const n = parseInt(String(s), 10)
+                              return Number.isFinite(n) ? n : null
+                            }
+                            const homeScore = parseScore(home)
+                            const awayScore = parseScore(away)
+
+                            // ── Venue: handle both flat venueName and nested venue object ──
+                            const venue = (() => {
+                              if (typeof m.venueName === "string" && m.venueName.trim()) return m.venueName.trim()
+                              if (m.venue && typeof m.venue === "object") {
+                                const n = m.venue.venueName || m.venue.venueNickname || m.venue.name || null
+                                const city = m.venue.locationName || m.venue.suburb || null
+                                if (n && city && n !== city) return `${n} · ${city}`
+                                return n || city || null
+                              }
+                              return null
+                            })()
+
+                            // ── Jornada from matchNumber ──
+                            const seqNum = m.matchNumber ?? m.number ?? null
+                            const jornada = seqNum ? Math.ceil(seqNum / matchesPerJornada) : null
+
+                            const isComplete = m.matchStatus === "COMPLETE"
+                            const isLive = ["LIVE", "STARTED", "IN_PROGRESS"].includes(m.matchStatus)
+
+                            return (
+                              <div key={m.matchId} className={`rounded-lg p-3 text-sm border ${isLive ? "bg-red-50 border-red-200" : isComplete ? "bg-gray-50 border-gray-100" : "bg-white border-gray-100"}`}>
+                                {/* Top row */}
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    {jornada && <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">J{jornada}</span>}
+                                    <span className="text-[11px] text-gray-500">{dateLabel}{timeStr ? ` · ${timeStr}` : ""}</span>
+                                  </div>
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                    isComplete ? "bg-green-100 text-green-700" :
+                                    isLive ? "bg-red-100 text-red-700 animate-pulse" :
+                                    "bg-gray-100 text-gray-500"
+                                  }`}>
+                                    {isComplete ? "Final" : isLive ? "EN VIVO" : "Programado"}
+                                  </span>
                                 </div>
-                              )}
-                            </div>
-                            <p className="text-[10px] text-gray-400 mt-1">ID: {m.matchId} · {m.venueName || ""}</p>
-                          </div>
-                        ))}
+
+                                {/* Teams + score */}
+                                <div className="flex items-center gap-2">
+                                  {/* Home */}
+                                  <div className="flex-1 text-right">
+                                    <p className="font-bold text-gray-900 text-sm leading-tight">{home?.competitorName ?? "—"}</p>
+                                    <p className="text-[10px] text-gray-400">{home?.teamCode ?? ""} · Local</p>
+                                  </div>
+                                  {/* Score or VS */}
+                                  <div className="shrink-0 w-16 text-center">
+                                    {(isComplete || isLive) && homeScore != null && awayScore != null ? (
+                                      <div>
+                                        <p className="text-base font-black text-gray-900 leading-none">{homeScore} – {awayScore}</p>
+                                        {isComplete && <p className="text-[9px] text-gray-400 mt-0.5">FINAL</p>}
+                                        {isLive && <p className="text-[9px] text-red-500 font-bold mt-0.5 animate-pulse">LIVE</p>}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-gray-300">VS</span>
+                                    )}
+                                  </div>
+                                  {/* Away */}
+                                  <div className="flex-1">
+                                    <p className="font-bold text-gray-900 text-sm leading-tight">{away?.competitorName ?? "—"}</p>
+                                    <p className="text-[10px] text-gray-400">{away?.teamCode ?? ""} · Visitante</p>
+                                  </div>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="flex items-center justify-between mt-1.5">
+                                  {venue ? (
+                                    <p className="text-[10px] text-gray-400 truncate">{venue}</p>
+                                  ) : <span />}
+                                  <p className="text-[10px] text-gray-300 shrink-0 ml-2">ID {m.matchId}</p>
+                                </div>
+                              </div>
+                            )
+                          })
+                        })()}
                       </div>
                     )}
 
