@@ -256,7 +256,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
           }`}
         >
           <CalendarDays className="h-3.5 w-3.5" />
-          Por fecha
+          Por jornada
         </button>
         <button
           onClick={() => handleViewChange("club")}
@@ -272,7 +272,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
       {/* Secondary filters per view */}
       {view === "fecha" && (
         <div className="bg-white rounded-xl border border-gray-100 p-3 mb-4">
-          <p className="text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-2 px-1">Elegí la fecha</p>
+          <p className="text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-2 px-1">Elegí la jornada</p>
           {availableRounds.length === 0 ? (
             <p className="text-sm text-gray-400 p-2">No hay fechas programadas.</p>
           ) : (
@@ -287,7 +287,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
                       : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                   }`}
                 >
-                  Fecha {r}
+                  Jornada {r}
                 </button>
               ))}
             </div>

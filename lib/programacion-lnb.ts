@@ -72,19 +72,31 @@ async function resolveLnbCompetitionId(): Promise<{ id: string | null; name: str
 }
 
 function extractRound(m: any): number | null {
+  // Only use genuine jornada/round fields — NOT matchNumber (sequential match
+  // index within the competition) as that is 1–N and would create N groups.
   const candidates = [
     m?.round,
     m?.roundNumber,
     m?.matchDayNumber,
     m?.matchday,
-    m?.matchNumber,
     m?.round?.roundNumber,
     m?.round?.number,
+    m?.jornada,
+    m?.matchRound,
   ]
   for (const v of candidates) {
     if (typeof v === "number" && Number.isFinite(v) && v > 0) return v
     if (typeof v === "string" && /^\d+$/.test(v)) { const n = parseInt(v, 10); if (n > 0) return n }
   }
+  return null
+}
+
+/** Sequential match number within the competition (1, 2, 3 …). Used to
+ *  derive the jornada when no explicit round field is available. */
+function extractMatchSeqNum(m: any): number | null {
+  const v = m?.matchNumber ?? m?.number ?? m?.gameNumber ?? null
+  if (typeof v === "number" && Number.isFinite(v) && v > 0) return v
+  if (typeof v === "string" && /^\d+$/.test(v)) { const n = parseInt(v, 10); return n > 0 ? n : null }
   return null
 }
 
@@ -217,16 +229,36 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
 
   const matchesFirstPass = matchItems.map((m) => {
     // ── home / away detection ──────────────────────────────────────────────
-    // Genius Sports uses competitorType / homeAway to mark each side.
-    // Fall back to positional order only if no such field is present.
+    // FIBA / Genius marks competitors with qualifier: 1 (home) / 2 (away),
+    // or string fields like competitorType/homeAway/role = "HOME"/"AWAY".
+    // Fall back to positional order only when no marker is found.
     const competitors: any[] = Array.isArray(m.competitors) ? m.competitors : []
-    const findSide = (types: string[]) =>
-      competitors.find((c) => {
-        const t = String(c?.competitorType ?? c?.homeAway ?? c?.role ?? "").toUpperCase().trim()
-        return types.some((x) => t === x)
+
+    const isHomeMarker = (c: any): boolean => {
+      // Numeric qualifier: FIBA standard 1 = home
+      const q = c?.qualifier ?? c?.position ?? null
+      if (q === 1 || q === "1") return true
+      // String fields
+      const fields = [c?.competitorType, c?.homeAway, c?.role, c?.teamQualifier]
+      return fields.some((f) => {
+        if (f == null) return false
+        const s = String(f).toUpperCase().trim()
+        return s === "HOME" || s === "H" || s === "LOCAL"
       })
-    const detectedHome = findSide(["HOME", "H", "LOCAL"])
-    const detectedAway = findSide(["AWAY", "A", "VISITOR", "VISITANTE"])
+    }
+    const isAwayMarker = (c: any): boolean => {
+      const q = c?.qualifier ?? c?.position ?? null
+      if (q === 2 || q === "2") return true
+      const fields = [c?.competitorType, c?.homeAway, c?.role, c?.teamQualifier]
+      return fields.some((f) => {
+        if (f == null) return false
+        const s = String(f).toUpperCase().trim()
+        return s === "AWAY" || s === "A" || s === "VISITOR" || s === "VISITANTE"
+      })
+    }
+
+    const detectedHome = competitors.find(isHomeMarker)
+    const detectedAway = competitors.find(isAwayMarker)
     const home = detectedHome ?? competitors[0] ?? null
     const away = detectedAway ?? competitors[1] ?? null
     const homeInfo = enrich(home)
@@ -301,40 +333,67 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       awayScore: typeof away?.score === "number" ? away.score : null,
       venue: extractVenue(m),
       _rawRound: extractRound(m),
+      _seqNum: extractMatchSeqNum(m),
     }
   })
 
+  // ── jornada (round) calculation ───────────────────────────────────────────
+  // Priority 1: explicit round field from Genius (roundNumber, matchDayNumber…)
+  // Priority 2: derive from sequential match number — ceil(seqNum / teamsPerSide)
+  //             where teamsPerSide = floor(numTeams / 2). Works for round-robin.
+  // Priority 3: fall back to ISO-week grouping.
+
   const hasAllRounds =
     matchesFirstPass.length > 0 && matchesFirstPass.every((m) => m._rawRound != null)
+
+  // Number of teams in the competition (used to derive matches-per-jornada)
+  const numTeamsInComp = Math.max(teamById.size, teamByName.size, 2)
+  const matchesPerJornada = Math.max(1, Math.floor(numTeamsInComp / 2))
 
   let matches: NormalizedMatch[]
 
   if (hasAllRounds) {
     matches = matchesFirstPass.map((m) => {
-      const { _rawRound, ...rest } = m
+      const { _rawRound, _seqNum, ...rest } = m
       return {
         ...rest,
         round: _rawRound ?? null,
-        roundLabel: `Fecha ${_rawRound}`,
+        roundLabel: `Jornada ${_rawRound}`,
       } as NormalizedMatch
     })
   } else {
-    const weekKeys = Array.from(
-      new Set(matchesFirstPass.filter((m) => m.date).map((m) => isoWeekKey(m.date)))
-    ).sort()
-    const weekToRound = new Map<string, number>()
-    weekKeys.forEach((k, i) => weekToRound.set(k, i + 1))
+    // Try seq-number based jornada first (most accurate for FIBA/Genius data)
+    const hasSeqNums = matchesFirstPass.every((m) => m._seqNum != null)
 
-    matches = matchesFirstPass.map((m) => {
-      const { _rawRound, ...rest } = m
-      const key = isoWeekKey(m.date)
-      const round = weekToRound.get(key) ?? null
-      return {
-        ...rest,
-        round,
-        roundLabel: round ? `Fecha ${round}` : "Sin fecha",
-      } as NormalizedMatch
-    })
+    if (hasSeqNums) {
+      matches = matchesFirstPass.map((m) => {
+        const { _rawRound, _seqNum, ...rest } = m
+        const round = Math.ceil((_seqNum as number) / matchesPerJornada)
+        return {
+          ...rest,
+          round,
+          roundLabel: `Jornada ${round}`,
+        } as NormalizedMatch
+      })
+    } else {
+      // Last resort: ISO-week grouping
+      const weekKeys = Array.from(
+        new Set(matchesFirstPass.filter((m) => m.date).map((m) => isoWeekKey(m.date)))
+      ).sort()
+      const weekToRound = new Map<string, number>()
+      weekKeys.forEach((k, i) => weekToRound.set(k, i + 1))
+
+      matches = matchesFirstPass.map((m) => {
+        const { _rawRound, _seqNum, ...rest } = m
+        const key = isoWeekKey(m.date)
+        const round = weekToRound.get(key) ?? null
+        return {
+          ...rest,
+          round,
+          roundLabel: round ? `Jornada ${round}` : "Sin fecha",
+        } as NormalizedMatch
+      })
+    }
   }
 
   matches.sort((a, b) => {
