@@ -122,6 +122,7 @@ function getNavSections(
             label: "Sitio Web",
             icon: Globe,
             subItems: [
+              { label: "Fotos del Inicio", href: "/oficiales/admin/website/hero" },
               { label: "Noticias", href: "/oficiales/admin/website/noticias" },
               { label: "Clubes", href: "/oficiales/admin/website/clubes" },
               { label: "Selecciones", href: "/oficiales/admin/website/selecciones" },

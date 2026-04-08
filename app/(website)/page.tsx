@@ -46,10 +46,29 @@ export default async function HomePage() {
     // Table may not exist yet during development
   }
 
+  // Fetch hero rotating images
+  let heroSlides: any[] = []
+  try {
+    heroSlides = await prisma.heroImage.findMany({
+      where: { activo: true },
+      orderBy: [{ orden: "asc" }, { createdAt: "asc" }],
+      select: {
+        id: true,
+        imageUrl: true,
+        focalDesktopX: true,
+        focalDesktopY: true,
+        focalMobileX: true,
+        focalMobileY: true,
+      },
+    })
+  } catch {
+    // Table may not exist yet during development
+  }
+
   return (
     <>
       <MatchTicker />
-      <HeroSection />
+      <HeroSection slides={heroSlides} />
 
       {/* Quick Stats / Links */}
       <QuickLinks />

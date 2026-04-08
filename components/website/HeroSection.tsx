@@ -1,18 +1,77 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 
-export default function HeroSection() {
+export interface HeroSlide {
+  id: string
+  imageUrl: string
+  focalDesktopX: number
+  focalDesktopY: number
+  focalMobileX: number
+  focalMobileY: number
+}
+
+interface HeroSectionProps {
+  slides?: HeroSlide[]
+}
+
+const FALLBACK_SLIDE: HeroSlide = {
+  id: "fallback",
+  imageUrl:
+    "https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1920&q=80",
+  focalDesktopX: 50,
+  focalDesktopY: 50,
+  focalMobileX: 50,
+  focalMobileY: 50,
+}
+
+const ROTATION_MS = 5000
+
+export default function HeroSection({ slides }: HeroSectionProps) {
+  const effectiveSlides = slides && slides.length > 0 ? slides : [FALLBACK_SLIDE]
+  const [current, setCurrent] = useState(0)
+
+  useEffect(() => {
+    if (effectiveSlides.length < 2) return
+    const t = setInterval(() => {
+      setCurrent((c) => (c + 1) % effectiveSlides.length)
+    }, ROTATION_MS)
+    return () => clearInterval(t)
+  }, [effectiveSlides.length])
+
   return (
     <section className="relative bg-[#0a1628] text-white overflow-hidden min-h-[85vh] flex items-center">
-      {/* Background image */}
+      {/* Rotating background images with crossfade */}
       <div className="absolute inset-0">
-        <img
-          src="https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&w=1920&q=80"
-          alt=""
-          className="w-full h-full object-cover opacity-25"
-        />
+        {effectiveSlides.map((slide, idx) => (
+          <div
+            key={slide.id}
+            className="absolute inset-0 transition-opacity duration-1000 ease-in-out"
+            style={{ opacity: idx === current ? 1 : 0 }}
+            aria-hidden={idx !== current}
+          >
+            {/* Desktop image */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={slide.imageUrl}
+              alt=""
+              className="hidden md:block w-full h-full object-cover opacity-25"
+              style={{ objectPosition: `${slide.focalDesktopX}% ${slide.focalDesktopY}%` }}
+              loading={idx === 0 ? "eager" : "lazy"}
+            />
+            {/* Mobile image */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={slide.imageUrl}
+              alt=""
+              className="block md:hidden w-full h-full object-cover opacity-25"
+              style={{ objectPosition: `${slide.focalMobileX}% ${slide.focalMobileY}%` }}
+              loading={idx === 0 ? "eager" : "lazy"}
+            />
+          </div>
+        ))}
         <div className="absolute inset-0 bg-gradient-to-r from-[#0a1628] via-[#0a1628]/95 to-[#0a1628]/60" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a1628] via-transparent to-[#0a1628]/30" />
       </div>

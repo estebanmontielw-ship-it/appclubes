@@ -607,6 +607,21 @@ model Noticia {
   @@map("noticias")
 }
 
+model HeroImage {
+  id             String   @id @default(uuid())
+  imageUrl       String   @db.Text
+  focalDesktopX  Float    @default(50)
+  focalDesktopY  Float    @default(50)
+  focalMobileX   Float    @default(50)
+  focalMobileY   Float    @default(50)
+  orden          Int      @default(0)
+  activo         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("hero_images")
+}
+
 model Club {
   id          String   @id @default(uuid())
   nombre      String
