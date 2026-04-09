@@ -130,6 +130,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Seleccioná tu rol" }, { status: 400 })
     }
 
+    // Comprobante obligatorio para usuarios no pre-verificados
+    if (!autoVerificado && !comprobanteUrl) {
+      return NextResponse.json({ error: "Debés subir el comprobante de transferencia bancaria" }, { status: 400 })
+    }
+
     const qrToken = uuidv4()
     const precio = getPrecio(finalRol)
 
