@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
-import { syncDesignaciones } from "../route"
+import { syncDesignaciones } from "@/lib/sync-designaciones"
 import admin from "firebase-admin"
 
 export const dynamic = "force-dynamic"

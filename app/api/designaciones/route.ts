@@ -3,9 +3,22 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
-import { loadLnbSchedule } from "@/lib/genius-sports"
+import { getSchedule } from "@/lib/genius-sports"
 
 export const dynamic = "force-dynamic"
+
+const LNB_COMPETITION_ID = process.env.GENIUS_LNB_COMPETITION_ID || "48603"
+
+function extractVenueName(m: any): string | null {
+  if (!m) return null
+  if (typeof m.venueName === "string" && m.venueName) return m.venueName
+  if (m.venue && typeof m.venue === "object") return m.venue.venueName || null
+  return null
+}
+
+function parseMatches(raw: any): any[] {
+  return raw?.response?.data || raw?.data || (Array.isArray(raw) ? raw : [])
+}
 
 // GET: List GS matches for a date range, merged with DB planilla status
 export async function GET(request: Request) {
@@ -24,17 +37,18 @@ export async function GET(request: Request) {
     const fecha = searchParams.get("fecha") // YYYY-MM-DD
 
     // Load schedule from Genius Sports
-    const { matches } = await loadLnbSchedule()
+    const raw = await getSchedule(LNB_COMPETITION_ID)
+    const matches = parseMatches(raw)
 
     // Filter by date if provided
     const filtered = fecha
-      ? matches.filter(m => m.matchTime?.startsWith(fecha))
-      : matches.slice(0, 60) // default: next 60 matches
+      ? matches.filter((m: any) => (m.matchTime || "").startsWith(fecha))
+      : matches.slice(0, 60)
 
     if (filtered.length === 0) return NextResponse.json({ matches: [] })
 
     // Load existing planillas for these matches
-    const matchIds = filtered.map(m => String(m.matchId))
+    const matchIds = filtered.map((m: any) => String(m.matchId))
     const planillas = await prisma.planillaDesignacion.findMany({
       where: { matchId: { in: matchIds } },
       select: {
@@ -48,19 +62,26 @@ export async function GET(request: Request) {
 
     const planillaMap = new Map(planillas.map(p => [p.matchId, p]))
 
-    const result = filtered.map(m => {
+    const result = filtered.map((m: any) => {
       const [fechaStr, horaStr] = (m.matchTime || "").split(" ")
+
+      // Identify home/away via isHomeCompetitor
+      const competitors: any[] = m.competitors || []
+      const home = competitors.find((c: any) => c.isHomeCompetitor == 1) || competitors[0]
+      const away = competitors.find((c: any) => c.isHomeCompetitor == 0) || competitors[1]
+
       const planilla = planillaMap.get(String(m.matchId)) || null
       const asignados = planilla
         ? [planilla.ccNombre, planilla.a1Nombre, planilla.a2Nombre, planilla.apNombre, planilla.cronNombre, planilla.lanzNombre].filter(Boolean).length
         : 0
+
       return {
         matchId: String(m.matchId),
-        fecha: fechaStr,
-        hora: horaStr?.slice(0, 5) || "",
-        equipoLocal: m.homeName,
-        equipoVisit: m.awayName,
-        cancha: m.venue,
+        fecha: fechaStr || "",
+        hora: horaStr ? horaStr.slice(0, 5) : "",
+        equipoLocal: home?.competitorName || "Local",
+        equipoVisit: away?.competitorName || "Visitante",
+        cancha: extractVenueName(m),
         categoria: "LNB",
         planillaId: planilla?.id || null,
         estado: planilla?.estado || null,

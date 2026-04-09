@@ -3,17 +3,12 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
+import { syncDesignaciones } from "@/lib/sync-designaciones"
 
 export const dynamic = "force-dynamic"
 
 const CAMPOS_POSICION = ["cc", "a1", "a2", "ap", "cron", "lanz", "esta", "rela"] as const
 type CampoPos = typeof CAMPOS_POSICION[number]
-
-const CAMPO_NOMBRE: Record<CampoPos, string> = {
-  cc: "Crew Chief", a1: "Auxiliar 1", a2: "Auxiliar 2",
-  ap: "Apuntador", cron: "Cronómetro", lanz: "Lanzamiento 24s",
-  esta: "Estadístico", rela: "Relator",
-}
 
 // GET: Full planilla detail
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
@@ -118,85 +113,5 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ planilla })
   } catch (error) {
     return handleApiError(error, { context: "PUT /api/designaciones/[id]" })
-  }
-}
-
-// Helper: sync to Designacion table for officials dashboard
-export async function syncDesignaciones(planilla: any, designadorId: string, isUpdate = false) {
-  try {
-    // Find or create Partido
-    let partido = await prisma.partido.findFirst({
-      where: { descripcion: `gs:${planilla.matchId}` },
-    })
-
-    if (!partido) {
-      partido = await prisma.partido.create({
-        data: {
-          fecha: planilla.fecha,
-          hora: planilla.horaStr,
-          cancha: planilla.cancha || "Por confirmar",
-          ciudad: "",
-          categoria: "PRIMERA_DIVISION",
-          equipoLocal: planilla.equipoLocal,
-          equipoVisit: planilla.equipoVisit,
-          descripcion: `gs:${planilla.matchId}`,
-          creadoPor: designadorId,
-        },
-      })
-    } else if (isUpdate) {
-      // Update match snapshot
-      await prisma.partido.update({
-        where: { id: partido.id },
-        data: {
-          fecha: planilla.fecha,
-          hora: planilla.horaStr,
-          cancha: planilla.cancha || partido.cancha,
-          equipoLocal: planilla.equipoLocal,
-          equipoVisit: planilla.equipoVisit,
-        },
-      })
-    }
-
-    const ROL_MAP: Record<string, string> = {
-      cc: "ARBITRO_PRINCIPAL", a1: "ARBITRO_ASISTENTE_1", a2: "ARBITRO_ASISTENTE_2",
-      ap: "MESA_ANOTADOR", cron: "MESA_CRONOMETRADOR", lanz: "MESA_OPERADOR_24S",
-      esta: "ESTADISTICO", rela: "MESA_ASISTENTE",
-    }
-
-    const positions = [
-      { campo: "cc", userId: planilla.ccId },
-      { campo: "a1", userId: planilla.a1Id },
-      { campo: "a2", userId: planilla.a2Id },
-      { campo: "ap", userId: planilla.apId },
-      { campo: "cron", userId: planilla.cronId },
-      { campo: "lanz", userId: planilla.lanzId },
-      { campo: "esta", userId: planilla.estaId },
-      { campo: "rela", userId: planilla.relaId },
-    ].filter(p => p.userId)
-
-    if (isUpdate) {
-      // Remove existing and recreate
-      await prisma.designacion.deleteMany({ where: { partidoId: partido.id } })
-    }
-
-    for (const { campo, userId } of positions) {
-      if (!userId) continue
-      const exists = await prisma.usuario.findUnique({ where: { id: userId }, select: { id: true } })
-      if (!exists) continue
-
-      await prisma.designacion.upsert({
-        where: { partidoId_usuarioId: { partidoId: partido.id, usuarioId: userId } } as any,
-        update: { rol: ROL_MAP[campo] as any, asignadoPor: designadorId, estado: "CONFIRMADA" },
-        create: {
-          partidoId: partido.id, usuarioId: userId,
-          rol: ROL_MAP[campo] as any, estado: "CONFIRMADA", asignadoPor: designadorId,
-        },
-      })
-    }
-
-    return partido
-  } catch (e) {
-    console.error("syncDesignaciones error:", e)
-    return null
   }
 }
