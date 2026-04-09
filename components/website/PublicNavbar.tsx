@@ -66,7 +66,10 @@ export default function PublicNavbar() {
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
                     {dropdownOpen && (
-                      <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
+                      <>
+                        {/* Invisible bridge: fills the mt-1 gap so onMouseLeave doesn't fire */}
+                        <div className="absolute top-full left-0 right-0 h-1" />
+                        <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
                         {link.children.map((child) => (
                           <Link
                             key={child.href}
@@ -82,6 +85,7 @@ export default function PublicNavbar() {
                           </Link>
                         ))}
                       </div>
+                      </>
                     )}
                   </div>
                 )

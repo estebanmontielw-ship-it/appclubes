@@ -362,6 +362,14 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
   //             where teamsPerSide = floor(numTeams / 2). Works for round-robin.
   // Priority 3: fall back to ISO-week grouping.
 
+  const FECHA_LABELS = [
+    "", "Primera", "Segunda", "Tercera", "Cuarta", "Quinta",
+    "Sexta", "Séptima", "Octava", "Novena", "Décima",
+    "Undécima", "Duodécima",
+  ]
+  const fechaLabel = (n: number) =>
+    n >= 1 && n <= 12 ? `${FECHA_LABELS[n]} Fecha` : `Fecha ${n}`
+
   const hasAllRounds =
     matchesFirstPass.length > 0 && matchesFirstPass.every((m) => m._rawRound != null)
 
@@ -377,7 +385,7 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       return {
         ...rest,
         round: _rawRound ?? null,
-        roundLabel: `Jornada ${_rawRound}`,
+        roundLabel: _rawRound != null ? fechaLabel(_rawRound) : "Sin fecha",
       } as NormalizedMatch
     })
   } else {
@@ -391,7 +399,7 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
         return {
           ...rest,
           round,
-          roundLabel: `Jornada ${round}`,
+          roundLabel: fechaLabel(round),
         } as NormalizedMatch
       })
     } else {
@@ -409,7 +417,7 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
         return {
           ...rest,
           round,
-          roundLabel: round ? `Jornada ${round}` : "Sin fecha",
+          roundLabel: round ? fechaLabel(round) : "Sin fecha",
         } as NormalizedMatch
       })
     }

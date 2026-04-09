@@ -1,6 +1,14 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import HeroSection from "@/components/website/HeroSection"
+import SectionTitle from "@/components/website/SectionTitle"
+import NewsCard from "@/components/website/NewsCard"
+import QuickLinks from "@/components/website/QuickLinks"
+import prisma from "@/lib/prisma"
+import SocialCarousel from "@/components/website/SocialCarousel"
+import LNBMatchCards from "@/components/website/LNBMatchCards"
+import LNBMatchTicker from "@/components/website/LNBMatchTicker"
+import { loadLnbSchedule } from "@/lib/programacion-lnb"
 
 // Revalidate homepage every 5 minutes
 export const revalidate = 300
@@ -16,13 +24,6 @@ export const metadata: Metadata = {
     url: "/",
   },
 }
-import SectionTitle from "@/components/website/SectionTitle"
-import NewsCard from "@/components/website/NewsCard"
-import QuickLinks from "@/components/website/QuickLinks"
-import prisma from "@/lib/prisma"
-import GeniusSportsHomeWidget from "./GeniusSportsHomeWidget"
-import SocialCarousel from "@/components/website/SocialCarousel"
-import MatchTicker from "@/components/website/MatchTicker"
 
 export default async function HomePage() {
   // Fetch latest published news
@@ -65,27 +66,52 @@ export default async function HomePage() {
     // Table may not exist yet during development
   }
 
+  // Load LNB schedule for ticker + home cards
+  let tickerMatches: Awaited<ReturnType<typeof loadLnbSchedule>>["matches"] = []
+  let homeMatches: Awaited<ReturnType<typeof loadLnbSchedule>>["matches"] = []
+  let nextMatchId: string | number | null = null
+
+  try {
+    const { matches } = await loadLnbSchedule()
+
+    const now = new Date().toISOString()
+
+    const liveMatches = matches.filter(
+      (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+    )
+    const upcomingMatches = matches
+      .filter((m) => m.status !== "COMPLETE" && !liveMatches.includes(m))
+      .sort((a, b) => (a.isoDateTime ?? "").localeCompare(b.isoDateTime ?? ""))
+    const recentComplete = matches
+      .filter((m) => m.status === "COMPLETE")
+      .slice(-4)
+
+    // Ticker: recent results + live + next upcoming (up to 20 total)
+    tickerMatches = [...recentComplete, ...liveMatches, ...upcomingMatches].slice(0, 20)
+
+    // Home cards: live + next 8 upcoming
+    homeMatches = [...liveMatches, ...upcomingMatches.slice(0, 8)]
+
+    // Next match ID: first upcoming (by date) that is not complete
+    const next = upcomingMatches.find((m) => m.isoDateTime && m.isoDateTime >= now)
+    nextMatchId = next?.id ?? upcomingMatches[0]?.id ?? null
+  } catch {
+    // API unavailable — show empty state gracefully
+  }
+
   return (
     <>
-      <MatchTicker />
+      <LNBMatchTicker matches={tickerMatches} />
       <HeroSection slides={heroSlides} />
 
       {/* Quick Stats / Links */}
       <QuickLinks />
 
-      {/* Upcoming matches widget */}
+      {/* Upcoming matches */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <SectionTitle title="Próximos Partidos" subtitle="Calendario de competencias de la CPB" />
+        <SectionTitle title="Próximos Partidos" subtitle="Calendario LNB 2026 — Liga Nacional de Básquetbol" />
         <div className="mt-6">
-          <GeniusSportsHomeWidget />
-        </div>
-        <div className="mt-4 text-center">
-          <Link
-            href="/calendario"
-            className="inline-flex items-center text-sm font-semibold text-primary hover:underline"
-          >
-            Ver calendario completo &rarr;
-          </Link>
+          <LNBMatchCards matches={homeMatches} nextMatchId={nextMatchId} />
         </div>
       </section>
 
