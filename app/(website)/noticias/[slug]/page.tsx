@@ -32,6 +32,15 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const noticia = await getNoticia(params.slug)
   if (!noticia) return { title: "Noticia no encontrada" }
 
+  // Clean image URL (strip focal point hash — not valid in og:image)
+  const ogImage = noticia.imagenUrl
+    ? parseFocalPoint(noticia.imagenUrl).src
+    : undefined
+
+  const images = ogImage
+    ? [{ url: ogImage, width: 1200, height: 630, alt: noticia.titulo }]
+    : []
+
   return {
     title: noticia.titulo,
     description: noticia.extracto,
@@ -41,11 +50,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       description: noticia.extracto,
       url: `/noticias/${params.slug}`,
       publishedTime: noticia.publicadaEn?.toISOString(),
+      ...(images.length > 0 && { images }),
     },
     twitter: {
       card: "summary_large_image",
       title: noticia.titulo,
       description: noticia.extracto,
+      ...(ogImage && { images: [ogImage] }),
     },
   }
 }
