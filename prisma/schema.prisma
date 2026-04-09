@@ -751,3 +751,78 @@ model PushToken {
 
   @@map("push_tokens")
 }
+
+// ─── PLANILLAS DE DESIGNACIÓN (GENIUS SPORTS) ───────────
+
+model PlanillaDesignacion {
+  id            String   @id @default(uuid())
+  matchId       String   @unique  // Genius Sports matchId (string)
+
+  // Snapshot del partido (actualizado al abrir)
+  competicionId String
+  categoria     String   // "LNB", "LNBF", etc.
+  fecha         DateTime
+  horaStr       String
+  equipoLocal   String
+  equipoVisit   String
+  cancha        String?
+
+  // Estado
+  estado        String   @default("BORRADOR") // BORRADOR | CONFIRMADA
+
+  // Árbitros
+  ccId          String?
+  ccNombre      String?
+  a1Id          String?
+  a1Nombre      String?
+  a2Id          String?  // opcional
+  a2Nombre      String?
+
+  // Mesa
+  apId          String?
+  apNombre      String?
+  cronId        String?
+  cronNombre    String?
+  lanzId        String?
+  lanzNombre    String?
+  estaId        String?  // opcional
+  estaNombre    String?
+  relaId        String?  // opcional
+  relaNombre    String?
+
+  obs           String?
+
+  // Metadata
+  creadoPorId       String
+  creadoPorNombre   String
+  confirmadoPorId   String?
+  confirmadoPorNombre String?
+  confirmadaEn      DateTime?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  logs          PlanillaDesignacionLog[]
+
+  @@map("planillas_designacion")
+}
+
+model PlanillaDesignacionLog {
+  id                   String   @id @default(uuid())
+  planillaId           String
+  planilla             PlanillaDesignacion @relation(fields: [planillaId], references: [id], onDelete: Cascade)
+
+  accion               String   // "CREADA" | "MODIFICADA" | "CONFIRMADA" | "RECONFIRMADA"
+  campo                String?  // "cc" | "a1" | "a2" | "ap" | "cron" | "lanz" | "esta" | "rela" | "obs" | "estado"
+  valorAnteriorId      String?
+  valorAnteriorNombre  String?
+  valorNuevoId         String?
+  valorNuevoNombre     String?
+
+  cambiadoPorId        String
+  cambiadoPorNombre    String
+  cambiadoEn           DateTime @default(now())
+
+  @@map("planillas_designacion_logs")
+}
+

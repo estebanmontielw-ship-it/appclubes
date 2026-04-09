@@ -59,7 +59,7 @@ export default function AdminLayout({
           setPendingCT(data.pendingCT || 0)
 
           const roles = data.usuario.roles.map((r: { rol: TipoRol }) => r.rol)
-          if (roles.includes("SUPER_ADMIN") || roles.includes("INSTRUCTOR") || roles.includes("VERIFICADOR")) {
+          if (roles.includes("SUPER_ADMIN") || roles.includes("INSTRUCTOR") || roles.includes("VERIFICADOR") || roles.includes("DESIGNADOR")) {
             setAuthorized(true)
           } else {
             setAuthorized(false)
