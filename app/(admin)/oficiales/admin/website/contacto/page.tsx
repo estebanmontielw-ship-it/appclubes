@@ -21,6 +21,18 @@ export default function AdminContactoPage() {
       .finally(() => setLoading(false))
   }, [])
 
+  async function markLeido(msg: any, leido: boolean) {
+    try {
+      await fetch("/api/website/contacto", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ id: msg.id, leido }),
+      })
+      setMensajes((prev) => prev.map((m) => m.id === msg.id ? { ...m, leido } : m))
+    } catch {}
+  }
+
   async function suggestResponse(msg: any) {
     setAiLoading(true)
     setAiResponse(null)
@@ -73,7 +85,12 @@ export default function AdminContactoPage() {
             <div
               key={msg.id}
               className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:shadow-sm transition-shadow"
-              onClick={() => { setSelected(selected?.id === msg.id ? null : msg); setAiResponse(null) }}
+              onClick={() => {
+                const opening = selected?.id !== msg.id
+                setSelected(opening ? msg : null)
+                setAiResponse(null)
+                if (opening && !msg.leido) markLeido(msg, true)
+              }}
             >
               <div className="flex items-center gap-3">
                 <div className={`shrink-0 ${msg.leido ? "text-gray-300" : "text-primary"}`}>
@@ -91,6 +108,15 @@ export default function AdminContactoPage() {
                 <div className="mt-3 pt-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{msg.mensaje}</p>
                   {msg.telefono && <p className="text-xs text-gray-400 mt-2">Tel: {msg.telefono}</p>}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => markLeido(msg, !msg.leido)}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-gray-200 text-xs text-gray-500 hover:bg-gray-50 transition-colors"
+                    >
+                      {msg.leido ? <Mail className="h-3.5 w-3.5" /> : <MailOpen className="h-3.5 w-3.5" />}
+                      {msg.leido ? "Marcar como no leído" : "Marcar como leído"}
+                    </button>
+                  </div>
 
                   {/* AI Suggest Response */}
                   <div className="mt-4">
