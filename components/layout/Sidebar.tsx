@@ -262,7 +262,7 @@ function getNavSections(
     {
       label: "ACTIVIDAD",
       items: [
-        { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar, comingSoon: "Acá vas a ver todos los partidos donde fuiste designado como oficial, con fecha, hora, cancha y tu rol asignado." },
+        { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar },
         { label: "Mis honorarios", href: "/oficiales/mis-honorarios", icon: Banknote, comingSoon: "Acá vas a poder ver tus partidos trabajados, los aranceles correspondientes y el estado de tus cobros." },
       ],
     },
