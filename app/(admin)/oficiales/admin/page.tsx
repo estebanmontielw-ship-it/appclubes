@@ -109,7 +109,16 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PortalInstallPrompt portalName="CPB Admin" portalDesc="Accedé directo al panel de administración desde tu celular" />
+      <PortalInstallPrompt
+        storageKey="admin"
+        appName="CPB Admin"
+        appSubtitle="Panel de administración"
+        benefits={[
+          "Acceso rápido desde tu pantalla de inicio",
+          "Gestión de oficiales y designaciones",
+          "Notificaciones del sistema",
+        ]}
+      />
 
       {/* Header */}
       <div>

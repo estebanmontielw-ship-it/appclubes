@@ -208,7 +208,16 @@ export default function CTDashboardPage() {
         </div>
       )}
 
-      <PortalInstallPrompt portalName="CPB Cuerpo Técnico" portalDesc="Accedé directo a tu carnet y recursos desde tu celular" />
+      <PortalInstallPrompt
+        storageKey="cuerpotecnico"
+        appName="CPB Cuerpo Técnico"
+        appSubtitle="Tu portal de cuerpo técnico"
+        benefits={[
+          "Carnet digital siempre a mano, sin internet",
+          "Credencial oficial de la Confederación",
+          "Acceso rápido desde tu pantalla de inicio",
+        ]}
+      />
       <h1 className="text-2xl font-bold text-gray-900">Bienvenido, {ct.nombre}</h1>
 
       {/* Status */}

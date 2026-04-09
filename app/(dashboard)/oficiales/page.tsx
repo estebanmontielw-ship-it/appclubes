@@ -72,7 +72,16 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PortalInstallPrompt portalName="CPB Oficiales" portalDesc="Accedé directo a tu carnet, partidos y cursos desde tu celular" />
+      <PortalInstallPrompt
+        storageKey="oficiales"
+        appName="CPB Oficiales"
+        appSubtitle="Tu portal de árbitros y oficiales"
+        benefits={[
+          "Carnet digital siempre disponible, sin internet",
+          "Tus partidos asignados y notificaciones",
+          "Cursos y capacitaciones de la CPB",
+        ]}
+      />
       {/* Welcome */}
       <div>
         <h1 className="text-2xl font-bold">
