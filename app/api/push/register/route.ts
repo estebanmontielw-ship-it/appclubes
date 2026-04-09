@@ -36,12 +36,19 @@ export async function POST(request: Request) {
       }
     } catch (error) {}
 
-    // Upsert token
+    // Upsert real token
     await prisma.pushToken.upsert({
       where: { token },
       update: { userId, userType, updatedAt: new Date() },
       create: { token, userId, userType, updatedAt: new Date() },
     })
+
+    // Clean up any old fake tokens for this user
+    if (userId) {
+      await prisma.pushToken.deleteMany({
+        where: { userId, token: { startsWith: "ios-accepted-" } },
+      })
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {

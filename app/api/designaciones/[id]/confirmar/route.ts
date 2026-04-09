@@ -130,8 +130,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
                 fcmOptions: { link },
               },
             })
+            const INVALID_TOKEN_CODES = new Set([
+              "messaging/registration-token-not-registered",
+              "messaging/invalid-registration-token",
+              "messaging/invalid-argument",
+            ])
             response.responses.forEach((resp, idx) => {
-              if (!resp.success && resp.error?.code === "messaging/registration-token-not-registered") {
+              if (!resp.success && resp.error?.code && INVALID_TOKEN_CODES.has(resp.error.code)) {
                 failedTokens.push(batch[idx])
               }
             })
