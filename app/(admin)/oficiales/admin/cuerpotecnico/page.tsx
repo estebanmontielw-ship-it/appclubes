@@ -50,6 +50,17 @@ const TABS = [
   { label: "Eliminados", value: "ELIMINADOS" },
 ]
 
+const ROL_CT_TABS = [
+  { label: "Todos los roles", value: "" },
+  { label: "Entrenador Nacional", value: "ENTRENADOR_NACIONAL" },
+  { label: "Entrenador Extranjero", value: "ENTRENADOR_EXTRANJERO" },
+  { label: "Asistente", value: "ASISTENTE" },
+  { label: "Preparador Físico", value: "PREPARADOR_FISICO" },
+  { label: "Fisioterapeuta", value: "FISIO" },
+  { label: "Utilero", value: "UTILERO" },
+  { label: "Nutricionista", value: "NUTRICIONISTA" },
+]
+
 const estadoColor: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
   HABILITADO: "success", PENDIENTE: "warning", RECHAZADO: "destructive", SUSPENDIDO: "secondary",
 }
@@ -66,6 +77,7 @@ function AdminCTContent() {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [buscar, setBuscar] = useState("")
+  const [rolFiltro, setRolFiltro] = useState("")
   const [confirmDelete, setConfirmDelete] = useState<CTMember | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
 
@@ -84,6 +96,7 @@ function AdminCTContent() {
     } else if (filtro) {
       params.set("estado", filtro)
     }
+    if (rolFiltro) params.set("rol", rolFiltro)
 
     Promise.all([
       fetch(`/api/admin/cuerpotecnico?${params}`).then(r => r.json()),
@@ -94,7 +107,7 @@ function AdminCTContent() {
     }).catch(() => {}).finally(() => setLoading(false))
   }
 
-  useEffect(() => { fetchData() }, [filtro])
+  useEffect(() => { fetchData() }, [filtro, rolFiltro])
 
   const filtered = miembros.filter(m =>
     !buscar || `${m.nombre} ${m.apellido} ${m.cedula}`.toLowerCase().includes(buscar.toLowerCase())
@@ -150,7 +163,8 @@ function AdminCTContent() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        {/* Estado tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           {TABS.map(t => (
             <Button
@@ -159,6 +173,20 @@ function AdminCTContent() {
               size="sm"
               onClick={() => setFiltro(t.value)}
               className={`shrink-0 ${t.value === "ELIMINADOS" ? "border-red-200 text-red-600 hover:bg-red-50" : ""}`}
+            >
+              {t.label}
+            </Button>
+          ))}
+        </div>
+        {/* Rol tabs */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          {ROL_CT_TABS.map(t => (
+            <Button
+              key={t.value}
+              variant={rolFiltro === t.value ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setRolFiltro(t.value)}
+              className={`shrink-0 text-xs h-7 ${rolFiltro === t.value ? "font-bold" : "text-muted-foreground"}`}
             >
               {t.label}
             </Button>

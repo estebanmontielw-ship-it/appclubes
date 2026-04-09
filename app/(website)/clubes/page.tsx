@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import SectionTitle from "@/components/website/SectionTitle"
 import prisma from "@/lib/prisma"
 
@@ -19,6 +20,7 @@ interface Equipo {
   federacion: string
   ciudad: string
   logo: string
+  slug?: string
 }
 
 const equipos: Equipo[] = [
@@ -144,9 +146,13 @@ function getInitials(nombre: string): string {
     .toUpperCase()
 }
 
-function LeagueTeamCard({ equipo }: { equipo: Equipo }) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+function slugify(text: string) {
+  return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "")
+}
+
+function LeagueTeamCard({ equipo, slug }: { equipo: Equipo; slug?: string }) {
+  const inner = (
+    <div className="bg-white rounded-xl border border-gray-100 p-5 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-200 h-full">
       {equipo.logo ? (
         <img src={equipo.logo} alt={equipo.nombre} className="w-16 h-16 object-contain mx-auto mb-3" />
       ) : (
@@ -158,6 +164,8 @@ function LeagueTeamCard({ equipo }: { equipo: Equipo }) {
       <p className="text-xs text-gray-400 mt-1">{equipo.ciudad}</p>
     </div>
   )
+  const href = `/clubes/${slug ?? slugify(equipo.nombre)}`
+  return <Link href={href}>{inner}</Link>
 }
 
 export default async function ClubesPage() {
@@ -170,6 +178,7 @@ export default async function ClubesPage() {
       select: {
         id: true,
         nombre: true,
+        slug: true,
         sigla: true,
         logoUrl: true,
         ciudad: true,
@@ -189,6 +198,7 @@ export default async function ClubesPage() {
         federacion: c.sigla || "",
         ciudad: c.ciudad,
         logo: c.logoUrl || "",
+        slug: c.slug,
       }))
     : equipos
 
@@ -240,7 +250,7 @@ export default async function ClubesPage() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {eqs.map((eq) => (
-                  <div key={eq.nombre} className="bg-white rounded-xl border border-gray-100 p-4 text-center hover:shadow-md transition-shadow">
+                  <Link key={eq.nombre} href={`/clubes/${eq.slug ?? slugify(eq.nombre)}`} className="bg-white rounded-xl border border-gray-100 p-4 text-center hover:shadow-md hover:-translate-y-0.5 transition-all block">
                     {eq.logo ? (
                       <img src={eq.logo} alt={eq.nombre} className="w-14 h-14 object-contain mx-auto mb-2" />
                     ) : (
@@ -250,7 +260,7 @@ export default async function ClubesPage() {
                     )}
                     <h4 className="font-semibold text-gray-900 text-xs leading-tight">{eq.nombre}</h4>
                     <p className="text-[11px] text-gray-400 mt-0.5">{eq.ciudad}</p>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </section>

@@ -5,6 +5,8 @@ import { NextResponse } from "next/server"
 import type { EstadoVerificacion } from "@prisma/client"
 import { handleApiError } from "@/lib/api-errors"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(request: Request) {
   try {
     const cookieStore = cookies()
@@ -31,11 +33,16 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const estado = searchParams.get("estado") as EstadoVerificacion | null
     const buscar = searchParams.get("buscar")
+    const rol = searchParams.get("rol")
 
     const where: Record<string, unknown> = {}
 
     if (estado) {
       where.estadoVerificacion = estado
+    }
+
+    if (rol) {
+      where.roles = { some: { rol } }
     }
 
     if (buscar) {
