@@ -239,6 +239,7 @@ export default function PlanillaPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
+  const [desconfirmando, setDesconfirmando] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
   const [obs, setObs] = useState("")
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -308,6 +309,23 @@ export default function PlanillaPage() {
       }
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function desconfirmar() {
+    if (!confirm("¿Volver a borrador? Los oficiales ya no verán este partido en Mis Partidos hasta que confirmes de nuevo.")) return
+    setDesconfirmando(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/designaciones/${id}/desconfirmar`, { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Error al des-confirmar")
+      } else {
+        await load()
+      }
+    } finally {
+      setDesconfirmando(false)
     }
   }
 
@@ -520,40 +538,55 @@ export default function PlanillaPage() {
       )}
 
       {/* Sticky action bar */}
-      {!isConfirmada && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-60 bg-white border-t border-gray-100 p-4 z-40">
-          <div className="max-w-2xl mx-auto flex items-center gap-3">
-            {hasDirty && (
-              <button
-                onClick={guardar}
-                disabled={saving}
-                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
-              >
-                {saving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : saveSuccess ? (
-                  <Check className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Save className="h-4 w-4" />
-                )}
-                {saving ? "Guardando..." : saveSuccess ? "Guardado" : "Guardar"}
-              </button>
-            )}
+      <div className="fixed bottom-0 left-0 right-0 md:left-60 bg-white border-t border-gray-100 p-4 z-40">
+        <div className="max-w-2xl mx-auto flex items-center gap-3">
+          {isConfirmada ? (
             <button
-              onClick={confirmar}
-              disabled={confirmando || saving}
-              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors shadow-sm"
+              onClick={desconfirmar}
+              disabled={desconfirmando}
+              className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-orange-200 text-orange-600 hover:bg-orange-50 text-sm font-semibold disabled:opacity-50 transition-colors"
             >
-              {confirmando ? (
+              {desconfirmando ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <CheckCircle className="h-4 w-4" />
+                <Trash2 className="h-4 w-4" />
               )}
-              {confirmando ? "Confirmando..." : "Confirmar planilla"}
+              {desconfirmando ? "Revirtiendo..." : "Volver a borrador"}
             </button>
-          </div>
+          ) : (
+            <>
+              {hasDirty && (
+                <button
+                  onClick={guardar}
+                  disabled={saving}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                >
+                  {saving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : saveSuccess ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {saving ? "Guardando..." : saveSuccess ? "Guardado" : "Guardar"}
+                </button>
+              )}
+              <button
+                onClick={confirmar}
+                disabled={confirmando || saving}
+                className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {confirmando ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                {confirmando ? "Confirmando..." : "Confirmar planilla"}
+              </button>
+            </>
+          )}
         </div>
-      )}
+      </div>
     </div>
   )
 }
