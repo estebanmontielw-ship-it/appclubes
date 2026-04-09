@@ -76,7 +76,14 @@ export async function GET(request: Request) {
       ? matches.filter((m: any) => extractDate(m) === fecha)
       : matches.slice(0, 60)
 
-    if (filtered.length === 0) return NextResponse.json({ matches: [], competitionId })
+    // Debug info — visible in the API response to diagnose issues
+    const allDates = Array.from(new Set(matches.map((m: any) => extractDate(m)).filter(Boolean))).sort()
+
+    if (filtered.length === 0) return NextResponse.json({
+      matches: [],
+      competitionId,
+      _debug: { totalFromAPI: matches.length, availableDates: allDates.slice(0, 30) },
+    })
 
     // Load existing planillas for these matches
     const matchIds = filtered.map((m: any) => String(m.matchId))
