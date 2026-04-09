@@ -4,6 +4,8 @@ import { NextResponse } from "next/server"
 import { getNotificaciones, getUnreadCount } from "@/lib/notifications"
 import { handleApiError } from "@/lib/api-errors"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(request: Request) {
   try {
     const cookieStore = cookies()

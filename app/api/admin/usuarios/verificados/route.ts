@@ -4,6 +4,8 @@ import { requireRole, isAuthError } from "@/lib/api-auth"
 import { handleApiError } from "@/lib/api-errors"
 
 // Get verified users for designation dropdowns
+export const dynamic = "force-dynamic"
+
 export async function GET(request: Request) {
   try {
     const auth = await requireRole("SUPER_ADMIN", "INSTRUCTOR", "DESIGNADOR")

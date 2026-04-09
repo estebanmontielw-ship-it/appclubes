@@ -6,6 +6,8 @@ import { generateQRDataURL } from "@/lib/qr"
 import { ROL_LABELS } from "@/lib/constants"
 import { handleApiError } from "@/lib/api-errors"
 
+export const dynamic = "force-dynamic"
+
 export async function GET() {
   try {
     const cookieStore = cookies()
