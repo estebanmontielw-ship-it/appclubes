@@ -26,21 +26,12 @@ export const metadata: Metadata = {
     title: "CPB - Confederación Paraguaya de Básquetbol",
     description:
       "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
-    images: [
-      {
-        url: "/logo-cpb.jpg",
-        width: 800,
-        height: 600,
-        alt: "Logo CPB - Confederación Paraguaya de Básquetbol",
-      },
-    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "CPB - Confederación Paraguaya de Básquetbol",
     description:
       "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
-    images: ["/logo-cpb.jpg"],
   },
   robots: {
     index: true,
