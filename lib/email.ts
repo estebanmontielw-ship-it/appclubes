@@ -245,6 +245,86 @@ export async function emailRolVerificadorAsignado(to: string, nombre: string) {
   })
 }
 
+// ── Designaciones ────────────────────────────────────────
+
+export interface DesignacionPartido {
+  equipoLocal: string
+  equipoVisit: string
+  fecha: Date | string
+  hora: string
+  cancha: string | null
+  categoria: string
+  rol: string // "Crew Chief", "Auxiliar 1", etc.
+}
+
+export async function emailDesignacionConfirmada(
+  to: string,
+  nombre: string,
+  partidos: DesignacionPartido[]
+) {
+  const DAYS = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+  const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+  const fmtFecha = (f: Date | string) => {
+    const d = typeof f === "string" ? new Date(f) : f
+    return `${DAYS[d.getUTCDay()]} ${d.getUTCDate()} de ${MONTHS[d.getUTCMonth()]} de ${d.getUTCFullYear()}`
+  }
+
+  const esMultiple = partidos.length > 1
+  const subject = esMultiple
+    ? `Tenés ${partidos.length} designaciones confirmadas — CPB`
+    : `Designación confirmada: ${partidos[0].equipoLocal} vs ${partidos[0].equipoVisit}`
+
+  const tarjetas = partidos.map(p => `
+    <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+      <tr>
+        <td style="background:#1e3a5f;padding:10px 16px;">
+          <p style="margin:0;color:#fff;font-weight:700;font-size:15px;">${p.equipoLocal} vs ${p.equipoVisit}</p>
+          <p style="margin:4px 0 0;color:rgba(255,255,255,0.7);font-size:12px;">${p.categoria}</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:14px 16px;background:#fff;">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="padding:3px 0;width:90px;font-size:12px;color:#6b7280;">Fecha</td>
+              <td style="padding:3px 0;font-size:13px;color:#111827;font-weight:600;">${fmtFecha(p.fecha)}</td>
+            </tr>
+            <tr>
+              <td style="padding:3px 0;font-size:12px;color:#6b7280;">Hora</td>
+              <td style="padding:3px 0;font-size:13px;color:#111827;font-weight:600;">${p.hora.slice(0, 5)} hs</td>
+            </tr>
+            ${p.cancha ? `<tr>
+              <td style="padding:3px 0;font-size:12px;color:#6b7280;">Cancha</td>
+              <td style="padding:3px 0;font-size:13px;color:#111827;font-weight:600;">${p.cancha}</td>
+            </tr>` : ""}
+            <tr>
+              <td style="padding:3px 0;font-size:12px;color:#6b7280;">Tu rol</td>
+              <td style="padding:3px 0;">
+                <span style="display:inline-block;background:#eff6ff;color:#1d4ed8;font-size:12px;font-weight:700;padding:2px 10px;border-radius:999px;">${p.rol}</span>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  `).join("")
+
+  const intro = esMultiple
+    ? `Tenés <strong>${partidos.length} designaciones confirmadas</strong> por la Confederación Paraguaya de Básquetbol:`
+    : `Tu designación para el siguiente partido fue confirmada:`
+
+  return sendEmail({
+    to,
+    subject,
+    nombre,
+    type: "success",
+    body: `${intro}<br><br>${tarjetas}<br>Ingresá al portal para ver todos tus partidos asignados.`,
+    ctaText: "Ver mis partidos",
+    ctaUrl: `${BASE_URL}/oficiales/mis-partidos`,
+  })
+}
+
 export async function emailPagoRechazado(
   to: string,
   nombre: string,

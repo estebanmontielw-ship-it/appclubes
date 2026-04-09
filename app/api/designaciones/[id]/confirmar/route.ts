@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
 import { syncDesignaciones } from "@/lib/sync-designaciones"
+import { emailDesignacionConfirmada } from "@/lib/email"
 import admin from "firebase-admin"
 
 export const dynamic = "force-dynamic"
@@ -84,12 +85,18 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     // Sync to Partido + Designacion tables
     await syncDesignaciones(updated, user.id, false)
 
-    // Collect all assigned user IDs
-    const assignedIds = [
-      planilla.ccId, planilla.a1Id, planilla.a2Id,
-      planilla.apId, planilla.cronId, planilla.lanzId,
-      planilla.estaId, planilla.relaId,
-    ].filter(Boolean) as string[]
+    // Map each position to the assigned userId + role label
+    const ROL_LABEL: Record<string, string> = {
+      ccId: "Crew Chief", a1Id: "Auxiliar 1", a2Id: "Auxiliar 2",
+      apId: "Apuntador", cronId: "Cronómetro", lanzId: "Lanzamiento 24s",
+      estaId: "Estadístico", relaId: "Relator",
+    }
+    const asignaciones: { userId: string; rol: string }[] = []
+    for (const [campo, label] of Object.entries(ROL_LABEL)) {
+      const userId = (planilla as any)[campo] as string | null
+      if (userId) asignaciones.push({ userId, rol: label })
+    }
+    const assignedIds = asignaciones.map(a => a.userId)
 
     // Send push notifications to assigned officials
     if (assignedIds.length > 0) {
@@ -137,6 +144,46 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
           await prisma.pushToken.deleteMany({ where: { token: { in: failedTokens } } })
         }
       }
+    }
+
+    // Send emails — one per official, batching multiple roles for the same person
+    if (assignedIds.length > 0) {
+      const oficiales = await prisma.usuario.findMany({
+        where: { id: { in: assignedIds } },
+        select: { id: true, nombre: true, apellido: true, email: true },
+      })
+
+      // Group roles by userId (same person can have multiple roles)
+      const rolesByUser = new Map<string, string[]>()
+      for (const a of asignaciones) {
+        const roles = rolesByUser.get(a.userId) || []
+        roles.push(a.rol)
+        rolesByUser.set(a.userId, roles)
+      }
+
+      const partidoBase = {
+        equipoLocal: planilla.equipoLocal,
+        equipoVisit: planilla.equipoVisit,
+        fecha: planilla.fecha,
+        hora: planilla.horaStr,
+        cancha: planilla.cancha,
+        categoria: planilla.categoria,
+      }
+
+      await Promise.allSettled(
+        oficiales
+          .filter(o => !!o.email)
+          .map(o => {
+            const roles = rolesByUser.get(o.id) || []
+            // One entry per role (each becomes a "partido card" in the email)
+            const partidos = roles.map(rol => ({ ...partidoBase, rol }))
+            return emailDesignacionConfirmada(
+              o.email!,
+              `${o.nombre} ${o.apellido}`,
+              partidos,
+            )
+          })
+      )
     }
 
     return NextResponse.json({ planilla: updated })
