@@ -28,6 +28,7 @@ export default async function OgImage() {
             right: 0,
             height: 8,
             background: "linear-gradient(90deg, #1d4ed8, #2563eb, #3b82f6)",
+            display: "flex",
           }}
         />
 
@@ -41,22 +42,41 @@ export default async function OgImage() {
           alt="CPB"
         />
 
-        {/* Main title */}
+        {/* Main title — two lines via flex column, no <br /> */}
         <div
           style={{
-            color: "white",
-            fontSize: 58,
-            fontWeight: 900,
-            textAlign: "center",
-            textTransform: "uppercase",
-            letterSpacing: 3,
-            lineHeight: 1.1,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
             marginBottom: 20,
           }}
         >
-          Confederación Paraguaya
-          <br />
-          de Básquetbol
+          <span
+            style={{
+              color: "white",
+              fontSize: 58,
+              fontWeight: 900,
+              textAlign: "center",
+              textTransform: "uppercase",
+              letterSpacing: 3,
+              lineHeight: 1.1,
+            }}
+          >
+            Confederación Paraguaya
+          </span>
+          <span
+            style={{
+              color: "white",
+              fontSize: 58,
+              fontWeight: 900,
+              textAlign: "center",
+              textTransform: "uppercase",
+              letterSpacing: 3,
+              lineHeight: 1.1,
+            }}
+          >
+            de Básquetbol
+          </span>
         </div>
 
         {/* Divider */}
@@ -67,6 +87,7 @@ export default async function OgImage() {
             background: "#2563eb",
             borderRadius: 2,
             marginBottom: 20,
+            display: "flex",
           }}
         />
 
@@ -78,6 +99,7 @@ export default async function OgImage() {
             fontWeight: 600,
             letterSpacing: 2,
             textAlign: "center",
+            display: "flex",
           }}
         >
           Liga Nacional de Básquetbol · LNB 2026
@@ -93,6 +115,7 @@ export default async function OgImage() {
             fontSize: 18,
             fontWeight: 500,
             letterSpacing: 1,
+            display: "flex",
           }}
         >
           cpb.com.py
