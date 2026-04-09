@@ -53,7 +53,7 @@ export async function GET() {
       prisma.usuario.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
-        include: { roles: true },
+        select: { id: true, nombre: true, apellido: true, cedula: true, ciudad: true, estadoVerificacion: true, createdAt: true, fotoCarnetUrl: true, roles: { select: { rol: true } } },
       }),
       prisma.pago.findMany({
         take: 3,
@@ -77,7 +77,7 @@ export async function GET() {
         take: 5,
         where: { activo: true, estadoHabilitacion: { in: ["HABILITADO", "PENDIENTE"] } },
         orderBy: { createdAt: "desc" },
-        select: { id: true, nombre: true, apellido: true, rol: true, estadoHabilitacion: true, createdAt: true },
+        select: { id: true, nombre: true, apellido: true, rol: true, estadoHabilitacion: true, createdAt: true, fotoCarnetUrl: true },
       }),
       // Website
       prisma.noticia.count({ where: { publicada: true } }),
