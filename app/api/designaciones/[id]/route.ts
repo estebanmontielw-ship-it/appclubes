@@ -25,7 +25,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
     const planilla = await prisma.planillaDesignacion.findUnique({
       where: { id: params.id },
-      include: { logs: { orderBy: { cambiadoEn: "desc" }, take: 50 } },
+      include: {
+        logs: {
+          where: { planillaId: params.id },
+          orderBy: { cambiadoEn: "desc" },
+          take: 50,
+        },
+      },
     })
 
     if (!planilla) return NextResponse.json({ error: "No encontrado" }, { status: 404 })
