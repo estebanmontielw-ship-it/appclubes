@@ -32,11 +32,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const noticia = await getNoticia(params.slug)
   if (!noticia) return { title: "Noticia no encontrada" }
 
-  const coverMeta = parseFocalPoint(noticia.imagenUrl)
-  const images = coverMeta.src
-    ? [{ url: coverMeta.src, alt: noticia.titulo }]
-    : [{ url: "/logo-cpb.jpg", alt: "CPB - Confederación Paraguaya de Básquetbol" }]
-
   return {
     title: noticia.titulo,
     description: noticia.extracto,
@@ -45,14 +40,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: noticia.titulo,
       description: noticia.extracto,
       url: `/noticias/${params.slug}`,
-      images,
       publishedTime: noticia.publicadaEn?.toISOString(),
     },
     twitter: {
       card: "summary_large_image",
       title: noticia.titulo,
       description: noticia.extracto,
-      images: coverMeta.src ? [coverMeta.src] : ["/logo-cpb.jpg"],
     },
   }
 }
