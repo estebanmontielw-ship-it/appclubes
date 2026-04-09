@@ -27,5 +27,9 @@ export default withSentryConfig(nextConfig, {
   hideSourceMaps: true,
 
   // No ampliar el bundle si no hay DSN configurado
-  disableLogger: true,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
 })
