@@ -38,6 +38,7 @@ interface Stats {
     ciudad: string
     estadoVerificacion: string
     createdAt: string
+    fotoCarnetUrl: string | null
     roles: { rol: string }[]
   }[]
   ultimosPagos: {
@@ -338,19 +339,17 @@ export default function AdminDashboardPage() {
                 ))}
                 {/* Recent users */}
                 {stats.ultimosUsuarios.slice(0, 5).map((u) => (
-                  <div key={u.id} className="flex items-start gap-3">
-                    <div className={`p-1.5 rounded-lg mt-0.5 ${
-                      u.estadoVerificacion === "VERIFICADO" ? "bg-green-100" :
-                      u.estadoVerificacion === "PENDIENTE" ? "bg-blue-100" : "bg-red-100"
-                    }`}>
-                      {u.estadoVerificacion === "VERIFICADO" ? (
-                        <CheckCircle className="h-3.5 w-3.5 text-green-600" />
-                      ) : u.estadoVerificacion === "PENDIENTE" ? (
-                        <Users className="h-3.5 w-3.5 text-blue-600" />
-                      ) : (
-                        <XCircle className="h-3.5 w-3.5 text-red-600" />
-                      )}
-                    </div>
+                  <Link key={u.id} href={`/oficiales/admin/usuarios/${u.id}`} className="flex items-center gap-3 hover:bg-gray-50 rounded-lg p-1 -mx-1 transition-colors">
+                    {u.fotoCarnetUrl ? (
+                      <img src={u.fotoCarnetUrl} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                    ) : (
+                      <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 text-xs font-bold ${
+                        u.estadoVerificacion === "VERIFICADO" ? "bg-green-100 text-green-700" :
+                        u.estadoVerificacion === "PENDIENTE" ? "bg-blue-100 text-blue-700" : "bg-red-100 text-red-700"
+                      }`}>
+                        {u.nombre.charAt(0)}{u.apellido.charAt(0)}
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm">
                         <strong>{u.nombre} {u.apellido}</strong>{" "}
@@ -359,7 +358,7 @@ export default function AdminDashboardPage() {
                       </p>
                       <p className="text-xs text-muted-foreground">{timeAgo(u.createdAt)}</p>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             )}
@@ -394,9 +393,13 @@ export default function AdminDashboardPage() {
                   <tr key={u.id} className="border-b last:border-0 hover:bg-gray-50/50">
                     <td className="p-3">
                       <div className="flex items-center gap-2.5">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <span className="text-xs font-bold text-primary">{u.nombre.charAt(0)}{u.apellido.charAt(0)}</span>
-                        </div>
+                        {u.fotoCarnetUrl ? (
+                          <img src={u.fotoCarnetUrl} alt="" className="h-8 w-8 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-xs font-bold text-primary">{u.nombre.charAt(0)}{u.apellido.charAt(0)}</span>
+                          </div>
+                        )}
                         <div>
                           <p className="font-medium text-sm">{u.nombre} {u.apellido}</p>
                           <p className="text-xs text-muted-foreground">CI: {u.cedula}</p>
