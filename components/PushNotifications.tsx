@@ -49,12 +49,14 @@ export default function PushNotifications() {
         console.warn("FCM token error:", fcmErr)
       }
 
-      // Save token or at least record that user accepted
-      await fetch("/api/push/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: token || `ios-accepted-${Date.now()}` }),
-      })
+      // Only save real FCM tokens — fake/null tokens can't receive messages
+      if (token) {
+        await fetch("/api/push/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        })
+      }
     } catch (err) {
       console.error("Push registration error:", err)
     } finally {

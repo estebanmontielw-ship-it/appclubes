@@ -1,15 +1,42 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { CreditCard, BookOpen, FileText, Bell, Users, DollarSign, AlertCircle, Lock, Search, X, Sparkles } from "lucide-react"
+import {
+  CreditCard, BookOpen, FileText, Bell, Users, DollarSign,
+  AlertCircle, Lock, Search, X, Sparkles, Calendar, Clock,
+  MapPin, ChevronRight, BellOff, BellRing,
+} from "lucide-react"
 import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
 import PortalInstallPrompt from "@/components/PortalInstallPrompt"
+
+interface PartidoProximo {
+  id: string
+  rol: string
+  partido: {
+    fecha: string
+    hora: string
+    cancha: string | null
+    equipoLocal: string
+    equipoVisit: string
+  }
+}
+
+const ROL_LABEL_CORTO: Record<string, string> = {
+  ARBITRO_PRINCIPAL:    "Crew Chief",
+  ARBITRO_ASISTENTE_1:  "Auxiliar 1",
+  ARBITRO_ASISTENTE_2:  "Auxiliar 2",
+  MESA_ANOTADOR:        "Apuntador",
+  MESA_CRONOMETRADOR:   "Cronómetro",
+  MESA_OPERADOR_24S:    "Lanzamiento 24s",
+  MESA_ASISTENTE:       "Relator",
+  ESTADISTICO:          "Estadístico",
+}
 
 interface DashboardData {
   usuario: {
@@ -26,6 +53,9 @@ const ANNOUNCEMENT_KEY = "cpb_seen_ct_search_v1"
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
+  const [partidos, setPartidos] = useState<PartidoProximo[]>([])
+  const [pushStatus, setPushStatus] = useState<"unknown" | "granted" | "denied" | "default">("unknown")
+  const [activandoPush, setActivandoPush] = useState(false)
   const [showAnnouncement, setShowAnnouncement] = useState(false)
 
   // Show announcement once
@@ -34,6 +64,35 @@ export default function DashboardPage() {
       setShowAnnouncement(true)
     }
   }, [])
+
+  // Check push permission status
+  useEffect(() => {
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPushStatus(Notification.permission as any)
+    }
+  }, [])
+
+  async function activarPush() {
+    setActivandoPush(true)
+    try {
+      const { requestNotificationPermission } = await import("@/lib/firebase")
+      const token = await requestNotificationPermission()
+      if (token) {
+        await fetch("/api/push/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
+        })
+      }
+      if ("Notification" in window) {
+        setPushStatus(Notification.permission as any)
+      }
+    } catch (err) {
+      console.error("Push error:", err)
+    } finally {
+      setActivandoPush(false)
+    }
+  }
 
   const dismissAnnouncement = () => {
     setShowAnnouncement(false)
@@ -60,6 +119,20 @@ export default function DashboardPage() {
           })
           .catch(() => {})
       })
+
+    // Load upcoming games
+    fetch("/api/mis-partidos")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (!d?.designaciones) return
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const upcoming = d.designaciones
+          .filter((d: PartidoProximo) => new Date(d.partido.fecha) >= today)
+          .slice(0, 3)
+        setPartidos(upcoming)
+      })
+      .catch(() => {})
   }, [])
 
   if (!data || !data.usuario) {
@@ -124,13 +197,112 @@ export default function DashboardPage() {
       )}
 
       {/* Roles */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         {usuario.roles.map((r) => (
           <Badge key={r.rol} variant="secondary">
             {ROL_LABELS[r.rol] || r.rol}
           </Badge>
         ))}
       </div>
+
+      {/* Mis próximos partidos */}
+      {!isAdmin && usuario.estadoVerificacion === "VERIFICADO" && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              Mis próximos partidos
+            </h2>
+            <Link
+              href="/oficiales/mis-partidos"
+              className="text-xs font-semibold text-primary flex items-center gap-0.5 hover:underline"
+            >
+              Ver todos <ChevronRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          {partidos.length === 0 ? (
+            <div className="bg-gray-50 rounded-2xl p-5 text-center">
+              <p className="text-sm text-gray-400">No tenés partidos asignados próximamente</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {partidos.map(d => {
+                const esHoy = new Date(d.partido.fecha).toDateString() === new Date().toDateString()
+                const fechaDisplay = new Date(d.partido.fecha).toLocaleDateString("es-PY", {
+                  weekday: "short", day: "numeric", month: "short",
+                })
+                return (
+                  <Link
+                    key={d.id}
+                    href="/oficiales/mis-partidos"
+                    className="flex items-center gap-3 bg-white rounded-2xl border border-gray-100 p-3.5 hover:shadow-sm transition-shadow"
+                  >
+                    <div className={`h-10 w-10 rounded-xl flex flex-col items-center justify-center shrink-0 ${esHoy ? "bg-orange-100" : "bg-primary/10"}`}>
+                      <span className={`text-[10px] font-bold uppercase ${esHoy ? "text-orange-600" : "text-primary"}`}>
+                        {esHoy ? "HOY" : new Date(d.partido.fecha).toLocaleDateString("es-PY", { month: "short" }).replace(".", "")}
+                      </span>
+                      {!esHoy && (
+                        <span className={`text-sm font-bold ${esHoy ? "text-orange-600" : "text-primary"}`}>
+                          {new Date(d.partido.fecha).getDate()}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-gray-900 truncate">
+                        {d.partido.equipoLocal} <span className="font-normal text-gray-400">vs</span> {d.partido.equipoVisit}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2">
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {d.partido.hora?.slice(0, 5)} hs
+                        </span>
+                        {d.partido.cancha && (
+                          <span className="flex items-center gap-1 truncate">
+                            <MapPin className="h-3 w-3 shrink-0" />
+                            {d.partido.cancha}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-semibold bg-blue-50 text-blue-600 rounded-full px-2 py-0.5 shrink-0">
+                      {ROL_LABEL_CORTO[d.rol] || d.rol}
+                    </span>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Push notification activation */}
+      {!isAdmin && pushStatus === "default" && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+            <BellRing className="h-5 w-5 text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-blue-900">Activá las notificaciones</p>
+            <p className="text-xs text-blue-700 mt-0.5">
+              Te avisamos cuando te asignen un partido
+            </p>
+          </div>
+          <button
+            onClick={activarPush}
+            disabled={activandoPush}
+            className="shrink-0 px-3 py-1.5 bg-blue-600 text-white text-xs font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+          >
+            {activandoPush ? "..." : "Activar"}
+          </button>
+        </div>
+      )}
+      {!isAdmin && pushStatus === "granted" && (
+        <div className="bg-green-50 border border-green-100 rounded-2xl p-3.5 flex items-center gap-3">
+          <BellRing className="h-4 w-4 text-green-600 shrink-0" />
+          <p className="text-xs text-green-700 font-medium">Notificaciones activadas</p>
+        </div>
+      )}
 
       {/* Announcement popup */}
       {showAnnouncement && (
