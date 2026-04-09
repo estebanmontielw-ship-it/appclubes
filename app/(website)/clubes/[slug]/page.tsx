@@ -1,10 +1,9 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { Globe, Instagram, Facebook, MapPin, Phone, Mail, ExternalLink, ChevronLeft, Trophy, Calendar, CheckCircle } from "lucide-react"
+import { Globe, AtSign, Share2, MapPin, Phone, Mail, ExternalLink, ChevronLeft, Trophy, Calendar, CheckCircle } from "lucide-react"
 import prisma from "@/lib/prisma"
-import { loadLnbSchedule, resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
-import { getStandings } from "@/lib/genius-sports"
+import { loadLnbSchedule } from "@/lib/programacion-lnb"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
 
 export const revalidate = 300
@@ -393,13 +392,13 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
               )}
               {club.instagram && (
                 <a href={`https://instagram.com/${club.instagram.replace("@", "")}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-pink-600 hover:underline">
-                  <Instagram className="w-3.5 h-3.5 shrink-0" />
+                  <AtSign className="w-3.5 h-3.5 shrink-0" />
                   @{club.instagram.replace("@", "")}
                 </a>
               )}
               {club.facebook && (
                 <a href={club.facebook.startsWith("http") ? club.facebook : `https://facebook.com/${club.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-blue-700 hover:underline">
-                  <Facebook className="w-3.5 h-3.5 shrink-0" />
+                  <Share2 className="w-3.5 h-3.5 shrink-0" />
                   Facebook
                 </a>
               )}
