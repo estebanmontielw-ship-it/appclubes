@@ -240,6 +240,7 @@ export default function PlanillaPage() {
   const [saving, setSaving] = useState(false)
   const [confirmando, setConfirmando] = useState(false)
   const [desconfirmando, setDesconfirmando] = useState(false)
+  const [showDesconfirmarSheet, setShowDesconfirmarSheet] = useState(false)
   const [showLogs, setShowLogs] = useState(false)
   const [obs, setObs] = useState("")
   const [saveSuccess, setSaveSuccess] = useState(false)
@@ -312,12 +313,16 @@ export default function PlanillaPage() {
     }
   }
 
-  async function desconfirmar() {
-    if (!confirm("¿Volver a borrador? Los oficiales ya no verán este partido en Mis Partidos hasta que confirmes de nuevo.")) return
+  async function desconfirmar(limpiar: boolean) {
+    setShowDesconfirmarSheet(false)
     setDesconfirmando(true)
     setError(null)
     try {
-      const res = await fetch(`/api/designaciones/${id}/desconfirmar`, { method: "POST" })
+      const res = await fetch(`/api/designaciones/${id}/desconfirmar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ limpiar }),
+      })
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || "Error al des-confirmar")
@@ -542,7 +547,7 @@ export default function PlanillaPage() {
         <div className="max-w-2xl mx-auto flex items-center gap-3">
           {isConfirmada ? (
             <button
-              onClick={desconfirmar}
+              onClick={() => setShowDesconfirmarSheet(true)}
               disabled={desconfirmando}
               className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border border-orange-200 text-orange-600 hover:bg-orange-50 text-sm font-semibold disabled:opacity-50 transition-colors"
             >
@@ -587,6 +592,40 @@ export default function PlanillaPage() {
           )}
         </div>
       </div>
+
+      {/* Desconfirmar bottom sheet */}
+      {showDesconfirmarSheet && (
+        <div className="fixed inset-0 z-50 flex items-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowDesconfirmarSheet(false)} />
+          <div className="relative w-full bg-white rounded-t-2xl p-6 pb-10 space-y-4">
+            <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-2" />
+            <p className="text-base font-semibold text-gray-900 text-center">Volver a borrador</p>
+            <p className="text-sm text-gray-500 text-center">
+              Los oficiales dejarán de ver este partido en Mis Partidos.<br />
+              ¿Querés mantener los nombres asignados o limpiar todo?
+            </p>
+            <button
+              onClick={() => desconfirmar(false)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-orange-50 border border-orange-200 text-orange-700 font-semibold text-sm hover:bg-orange-100 transition-colors"
+            >
+              Mantener nombres y editar
+            </button>
+            <button
+              onClick={() => desconfirmar(true)}
+              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 font-semibold text-sm hover:bg-red-100 transition-colors"
+            >
+              <Trash2 className="h-4 w-4" />
+              Limpiar todos los nombres
+            </button>
+            <button
+              onClick={() => setShowDesconfirmarSheet(false)}
+              className="w-full py-3 text-sm text-gray-500 font-medium"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

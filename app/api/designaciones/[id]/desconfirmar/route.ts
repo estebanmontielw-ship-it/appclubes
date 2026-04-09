@@ -7,7 +7,8 @@ import { handleApiError } from "@/lib/api-errors"
 export const dynamic = "force-dynamic"
 
 // POST: Revert a planilla back to BORRADOR (CONFIRMADA → BORRADOR)
-export async function POST(_req: Request, { params }: { params: { id: string } }) {
+// Body: { limpiar: boolean } — if true, also clears all assigned officials
+export async function POST(req: Request, { params }: { params: { id: string } }) {
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
@@ -29,6 +30,20 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       return NextResponse.json({ error: "La planilla no está confirmada" }, { status: 400 })
     }
 
+    const body = await req.json().catch(() => ({}))
+    const limpiar = body.limpiar === true
+
+    const clearFields = limpiar ? {
+      ccId: null, ccNombre: null,
+      a1Id: null, a1Nombre: null,
+      a2Id: null, a2Nombre: null,
+      apId: null, apNombre: null,
+      cronId: null, cronNombre: null,
+      lanzId: null, lanzNombre: null,
+      estaId: null, estaNombre: null,
+      relaId: null, relaNombre: null,
+    } : {}
+
     // Revert to BORRADOR
     const updated = await prisma.planillaDesignacion.update({
       where: { id: params.id },
@@ -37,6 +52,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         confirmadoPorId: null,
         confirmadoPorNombre: null,
         confirmadaEn: null,
+        ...clearFields,
       },
     })
 
@@ -47,7 +63,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         accion: "MODIFICADA",
         campo: "estado",
         valorAnteriorNombre: "CONFIRMADA",
-        valorNuevoNombre: "BORRADOR",
+        valorNuevoNombre: limpiar ? "BORRADOR (limpiada)" : "BORRADOR",
         cambiadoPorId: user.id,
         cambiadoPorNombre: designadorNombre,
       },
