@@ -33,9 +33,11 @@ export async function GET(request: Request) {
     const buscar = searchParams.get("buscar")
     const limite = parseInt(searchParams.get("limite") || "100")
     const eliminados = searchParams.get("eliminados") === "true"
+    const rol = searchParams.get("rol")
 
     const where: Record<string, unknown> = { activo: !eliminados }
     if (estado && !eliminados) where.estadoHabilitacion = estado
+    if (rol) where.rol = rol
     if (buscar) {
       where.OR = [
         { nombre: { contains: buscar, mode: "insensitive" } },

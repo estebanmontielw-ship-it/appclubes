@@ -30,9 +30,20 @@ const TABS = [
   { label: "Rechazados", value: "RECHAZADO" },
 ]
 
+const ROL_TABS = [
+  { label: "Todos los roles", value: "" },
+  { label: "Árbitros", value: "ARBITRO" },
+  { label: "Oficiales de Mesa", value: "MESA" },
+  { label: "Designadores", value: "DESIGNADOR" },
+  { label: "Estadísticos", value: "ESTADISTICO" },
+  { label: "Instructores", value: "INSTRUCTOR" },
+  { label: "Verificadores", value: "VERIFICADOR" },
+]
+
 export default function AdminUsuariosPage() {
   const [usuarios, setUsuarios] = useState<UsuarioRow[]>([])
   const [filtro, setFiltro] = useState("")
+  const [rolFiltro, setRolFiltro] = useState("")
   const [buscar, setBuscar] = useState("")
   const [loading, setLoading] = useState(true)
 
@@ -40,6 +51,7 @@ export default function AdminUsuariosPage() {
     setLoading(true)
     const params = new URLSearchParams()
     if (filtro) params.set("estado", filtro)
+    if (rolFiltro) params.set("rol", rolFiltro)
     if (buscar) params.set("buscar", buscar)
 
     fetch(`/api/admin/usuarios?${params}`)
@@ -47,7 +59,7 @@ export default function AdminUsuariosPage() {
       .then((data) => setUsuarios(data.usuarios || []))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [filtro, buscar])
+  }, [filtro, rolFiltro, buscar])
 
   const estadoBadge: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
     VERIFICADO: "success",
@@ -61,7 +73,8 @@ export default function AdminUsuariosPage() {
       <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        {/* Estado tabs */}
         <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
           {TABS.map((tab) => (
             <Button
@@ -70,6 +83,20 @@ export default function AdminUsuariosPage() {
               size="sm"
               onClick={() => setFiltro(tab.value)}
               className="shrink-0"
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
+        {/* Rol tabs */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+          {ROL_TABS.map((tab) => (
+            <Button
+              key={tab.value}
+              variant={rolFiltro === tab.value ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setRolFiltro(tab.value)}
+              className={`shrink-0 text-xs h-7 ${rolFiltro === tab.value ? "font-bold" : "text-muted-foreground"}`}
             >
               {tab.label}
             </Button>
