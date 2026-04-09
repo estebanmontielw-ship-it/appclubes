@@ -4,6 +4,9 @@ import { revalidatePath } from "next/cache"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
+import { sendPublicPush } from "@/lib/admin-push"
+
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   try {
@@ -61,6 +64,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     revalidatePath(`/noticias/${noticia.slug}`)
     if (existing.slug && existing.slug !== noticia.slug) {
       revalidatePath(`/noticias/${existing.slug}`)
+    }
+
+    // Push notification when published for the first time
+    const justPublished = publicada === true && !existing.publicada
+    if (justPublished) {
+      sendPublicPush(
+        noticia.titulo,
+        noticia.extracto?.slice(0, 120) || "Nueva noticia en cpb.com.py",
+        `${BASE_URL}/noticias/${noticia.slug}`
+      ).catch(() => {})
     }
 
     return NextResponse.json({ noticia })
