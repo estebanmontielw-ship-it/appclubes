@@ -162,14 +162,15 @@ function OfficialPicker({
 
       {/* Dropdown modal */}
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-14 px-3 pb-3" onClick={() => setOpen(false)}>
           <div className="fixed inset-0 bg-black/30 backdrop-blur-sm" />
           <div
-            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[70vh] flex flex-col z-10"
+            className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md flex flex-col z-10"
+            style={{ maxHeight: "min(75dvh, 75vh)" }}
             onClick={e => e.stopPropagation()}
           >
-            <div className="p-4 border-b border-gray-100 flex items-center gap-3">
-              <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2">
+            <div className="p-3 border-b border-gray-100 flex items-center gap-2">
+              <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl px-3 py-2.5">
                 <Search className="h-4 w-4 text-gray-400 shrink-0" />
                 <input
                   ref={inputRef}
@@ -177,10 +178,18 @@ function OfficialPicker({
                   onChange={e => setQ(e.target.value)}
                   placeholder={`Buscar ${label.toLowerCase()}...`}
                   className="flex-1 bg-transparent text-sm outline-none placeholder-gray-400"
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                 />
                 {searching && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400 shrink-0" />}
+                {q.length > 0 && !searching && (
+                  <button onClick={() => setQ("")} className="text-gray-300 hover:text-gray-500">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
               </div>
-              <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
+              <button onClick={() => setOpen(false)} className="p-1.5 rounded-lg hover:bg-gray-100 shrink-0">
                 <X className="h-4 w-4 text-gray-400" />
               </button>
             </div>
