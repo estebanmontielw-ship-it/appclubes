@@ -20,6 +20,7 @@ interface PlanillaExport {
   equipoLocal: string
   equipoVisit: string
   cancha: string | null
+  categoria: string
   estado: string
   obs: string | null
   posiciones: Posicion[]
@@ -134,6 +135,7 @@ function HojaImpresion({ planillas, fecha }: { planillas: PlanillaExport[], fech
             <th style={{ ...th, textAlign: "left" }}>LOCAL</th>
             <th style={{ ...th, textAlign: "left" }}>VISITANTE</th>
             <th style={th}>CANCHA</th>
+            <th style={{ ...th, backgroundColor: "#1e3a5f" }}>CAT</th>
             <th style={{ ...th, backgroundColor: "#2d3a6b" }}>CC</th>
             <th style={{ ...th, backgroundColor: "#2d3a6b" }}>A1</th>
             <th style={{ ...th, backgroundColor: "#2d3a6b" }}>A2</th>
@@ -152,6 +154,7 @@ function HojaImpresion({ planillas, fecha }: { planillas: PlanillaExport[], fech
               <td style={{ ...td, fontWeight: "bold" }}>{p.equipoLocal}</td>
               <td style={td}>{p.equipoVisit}</td>
               <td style={{ ...td, textAlign: "center", fontSize: 8, color: "#555" }}>{p.cancha || "—"}</td>
+              <td style={{ ...td, textAlign: "center", fontWeight: "bold", fontSize: 8, backgroundColor: "#eef2ff", color: "#1e3a5f" }}>{p.categoria}</td>
               <td style={{ ...td, textAlign: "center", fontWeight: "bold" }}>{abreviarNombre(getPosicion(p, "cc"))}</td>
               <td style={{ ...td, textAlign: "center" }}>{abreviarNombre(getPosicion(p, "a1"))}</td>
               <td style={{ ...td, textAlign: "center", color: getPosicion(p, "a2") ? "#222" : "#bbb" }}>{abreviarNombre(getPosicion(p, "a2"))}</td>

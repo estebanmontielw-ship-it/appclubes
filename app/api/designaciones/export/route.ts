@@ -47,6 +47,7 @@ export async function GET(request: Request) {
       equipoLocal: p.equipoLocal,
       equipoVisit: p.equipoVisit,
       cancha: p.cancha,
+      categoria: p.categoria,
       estado: p.estado,
       obs: p.obs,
       posiciones: [
