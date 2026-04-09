@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera,
+  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -43,6 +43,7 @@ function getNavSections(
   const isSuperAdmin = roles.includes("SUPER_ADMIN")
   const isInstructor = roles.includes("INSTRUCTOR")
   const isVerificador = roles.includes("VERIFICADOR")
+  const isDesignador = roles.includes("DESIGNADOR")
 
   if (isSuperAdmin) {
     return [
@@ -85,6 +86,18 @@ function getNavSections(
               { label: "Gestionar cursos", href: "/oficiales/admin/cursos" },
               { label: "Pagos pendientes", href: "/oficiales/admin/pagos", badge: badges.pendientesPagos },
               { label: "Finanzas cursos", href: "/oficiales/admin/finanzas-cursos" },
+            ],
+          },
+        ],
+      },
+      {
+        label: "DESIGNACIONES",
+        items: [
+          {
+            label: "Designaciones",
+            icon: ClipboardList,
+            subItems: [
+              { label: "Planillas LNB", href: "/oficiales/admin/designaciones" },
             ],
           },
         ],
@@ -182,6 +195,29 @@ function getNavSections(
     ]
   }
 
+  if (isDesignador) {
+    return [
+      {
+        label: "MI CUENTA",
+        items: [
+          { label: "Dashboard", href: "/oficiales/admin", icon: Home },
+        ],
+      },
+      {
+        label: "DESIGNACIONES",
+        items: [
+          {
+            label: "Designaciones",
+            icon: ClipboardList,
+            subItems: [
+              { label: "Planillas LNB", href: "/oficiales/admin/designaciones" },
+            ],
+          },
+        ],
+      },
+    ]
+  }
+
   if (isInstructor) {
     return [
       {
@@ -226,7 +262,7 @@ function getNavSections(
     {
       label: "ACTIVIDAD",
       items: [
-        { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar, comingSoon: "Acá vas a ver todos los partidos donde fuiste designado como oficial, con fecha, hora, cancha y tu rol asignado." },
+        { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar },
         { label: "Mis honorarios", href: "/oficiales/mis-honorarios", icon: Banknote, comingSoon: "Acá vas a poder ver tus partidos trabajados, los aranceles correspondientes y el estado de tus cobros." },
       ],
     },

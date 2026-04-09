@@ -29,9 +29,14 @@ export async function GET(request: Request) {
       prisma.noticia.count({ where }),
     ])
 
+    // No caching for admin requests
+    const headers = admin
+      ? { "Cache-Control": "no-store" }
+      : { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" }
+
     return NextResponse.json(
       { noticias, total, pagina, totalPaginas: Math.ceil(total / limite) },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
+      { headers }
     )
   } catch (error) {
     return handleApiError(error, { context: "website/noticias" })
@@ -57,7 +62,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { titulo, slug, extracto, contenido, imagenUrl, galeria, videoUrl, categoria, destacada, publicada } = body
+    const { titulo, slug, extracto, contenido, imagenUrl, galeria, videoUrl, categoria, destacada, publicada, autorNombre } = body
 
     if (!titulo || !slug || !extracto || !contenido || !categoria) {
       return NextResponse.json({ error: "Campos requeridos faltantes" }, { status: 400 })
@@ -76,6 +81,7 @@ export async function POST(request: Request) {
         destacada: destacada ?? false,
         publicada: publicada ?? false,
         publicadaEn: publicada ? new Date() : null,
+        autorNombre: autorNombre || null,
         creadoPor: session.user.id,
       },
     })
