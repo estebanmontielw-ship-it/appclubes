@@ -234,8 +234,33 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
   // FibaLiveStats link: use first match that has a statsUrl
   const statsBaseUrl = lnbMatches.find((m) => m.statsUrl)?.statsUrl?.replace(/\/\d+\/$/, "") ?? null
 
+  const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
+  const clubSchema = {
+    "@context": "https://schema.org",
+    "@type": "SportsTeam",
+    name: club.nombre,
+    url: `${siteUrl}/clubes/${params.slug}`,
+    logo: displayLogo ?? undefined,
+    sport: "Basketball",
+    location: club.ciudad
+      ? { "@type": "Place", name: club.ciudad, address: { "@type": "PostalAddress", addressLocality: club.ciudad, addressCountry: "PY" } }
+      : undefined,
+    memberOf: {
+      "@type": "SportsOrganization",
+      name: "Confederación Paraguaya de Básquetbol",
+      url: siteUrl,
+    },
+    ...(club.email && { email: club.email }),
+    ...(club.telefono && { telephone: club.telefono }),
+    ...(club.sitioWeb && { sameAs: [club.sitioWeb] }),
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(clubSchema) }}
+      />
       {/* Back link */}
       <Link href="/clubes" className="inline-flex items-center gap-1 text-sm text-gray-400 hover:text-gray-600 mb-6 transition-colors">
         <ChevronLeft className="w-4 h-4" />

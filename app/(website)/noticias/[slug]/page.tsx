@@ -65,8 +65,35 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
   const galeria: string[] = noticia.galeria ? JSON.parse(noticia.galeria) : []
   const cover = parseFocalPoint(noticia.imagenUrl)
 
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
+  const articleSchema = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: noticia.titulo,
+    description: noticia.extracto ?? undefined,
+    url: `${baseUrl}/noticias/${noticia.slug}`,
+    datePublished: noticia.publicadaEn?.toISOString(),
+    dateModified: noticia.updatedAt?.toISOString(),
+    image: cover.src ? [cover.src] : undefined,
+    author: {
+      "@type": "Organization",
+      name: noticia.autorNombre ?? "CPB",
+      url: baseUrl,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Confederación Paraguaya de Básquetbol",
+      logo: { "@type": "ImageObject", url: `${baseUrl}/favicon-cpb.png` },
+    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": `${baseUrl}/noticias/${noticia.slug}` },
+  }
+
   return (
     <article className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
       {/* Breadcrumb */}
       <nav className="mb-6 text-sm">
         <Link href="/noticias" className="text-primary hover:underline">

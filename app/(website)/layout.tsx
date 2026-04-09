@@ -39,6 +39,27 @@ export const metadata: Metadata = {
   },
 }
 
+const organizationSchema = {
+  "@context": "https://schema.org",
+  "@type": "SportsOrganization",
+  name: "Confederación Paraguaya de Básquetbol",
+  alternateName: "CPB",
+  url: baseUrl,
+  logo: `${baseUrl}/favicon-cpb.png`,
+  description:
+    "Organismo rector del básquetbol en Paraguay. Organiza la Liga Nacional de Básquetbol (LNB) y las selecciones nacionales.",
+  address: {
+    "@type": "PostalAddress",
+    addressCountry: "PY",
+    addressLocality: "Asunción",
+  },
+  sport: "Basketball",
+  sameAs: [
+    "https://www.instagram.com/cpboficial",
+    "https://www.facebook.com/CPBoficial",
+  ],
+}
+
 export default function WebsiteLayout({
   children,
 }: {
@@ -46,6 +67,10 @@ export default function WebsiteLayout({
 }) {
   return (
     <div className="flex flex-col min-h-screen">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
+      />
       <PublicNavbar />
       <main className="flex-1">{children}</main>
       <PublicFooter />
