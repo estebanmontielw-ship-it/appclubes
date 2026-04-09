@@ -64,17 +64,26 @@ export async function syncDesignaciones(planilla: any, designadorId: string, isU
 
     for (const { campo, userId } of positions) {
       if (!userId) continue
-      const exists = await prisma.usuario.findUnique({ where: { id: userId }, select: { id: true } })
-      if (!exists) continue
+      const usuarioExiste = await prisma.usuario.findUnique({ where: { id: userId }, select: { id: true } })
+      if (!usuarioExiste) continue
 
-      await prisma.designacion.upsert({
-        where: { partidoId_usuarioId: { partidoId: partido.id, usuarioId: userId } } as any,
-        update: { rol: ROL_MAP[campo] as any, asignadoPor: designadorId, estado: "CONFIRMADA" },
-        create: {
-          partidoId: partido.id, usuarioId: userId,
-          rol: ROL_MAP[campo] as any, estado: "CONFIRMADA", asignadoPor: designadorId,
-        },
+      const existing = await prisma.designacion.findFirst({
+        where: { partidoId: partido.id, usuarioId: userId },
       })
+
+      if (existing) {
+        await prisma.designacion.update({
+          where: { id: existing.id },
+          data: { rol: ROL_MAP[campo] as any, asignadoPor: designadorId, estado: "CONFIRMADA" },
+        })
+      } else {
+        await prisma.designacion.create({
+          data: {
+            partidoId: partido.id, usuarioId: userId,
+            rol: ROL_MAP[campo] as any, estado: "CONFIRMADA", asignadoPor: designadorId,
+          },
+        })
+      }
     }
 
     return partido

@@ -6,6 +6,13 @@ import PWARegister from "@/components/PWARegister"
 import ManifestSwitcher from "@/components/ManifestSwitcher"
 import PushNotifications from "@/components/PushNotifications"
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+}
+
 export const metadata: Metadata = {
   title: {
     template: "%s | CPB",
