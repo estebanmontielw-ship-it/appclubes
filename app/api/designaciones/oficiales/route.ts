@@ -39,7 +39,7 @@ export async function GET(request: Request) {
       where: { rol: { in: rolesRequeridos as any } },
       select: { usuarioId: true },
     })
-    const idsConRol = [...new Set(usuariosConRol.map(u => u.usuarioId))]
+    const idsConRol = Array.from(new Set(usuariosConRol.map(u => u.usuarioId)))
 
     if (idsConRol.length === 0) return NextResponse.json({ oficiales: [] })
 
