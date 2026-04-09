@@ -116,14 +116,18 @@ function HojaImpresion({ planillas, fecha }: { planillas: PlanillaExport[], fech
       {/* Logo + título */}
       <div style={{ textAlign: "center", marginBottom: "6mm" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/favicon-cpb.png" alt="CPB" style={{ width: 48, height: 48, marginBottom: 4 }} />
-        <div style={{ fontSize: 9, color: "#666", letterSpacing: 1, textTransform: "uppercase" }}>
+        <img src="/favicon-cpb.png" alt="CPB" style={{ width: 36, height: 36, marginBottom: 6 }} />
+        <div style={{ fontSize: 9, color: "#888", letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>
           Confederación Paraguaya de Básquetbol
         </div>
-        <div style={{ fontSize: 13, fontWeight: "bold", textTransform: "uppercase", letterSpacing: 1, marginTop: 2 }}>
-          Designación de Árbitros y Oficiales
+        {/* Categoría — grande y destacada */}
+        <div style={{ fontSize: 18, fontWeight: "bold", textTransform: "uppercase", letterSpacing: 2, color: "#1a1a2e" }}>
+          {planillas[0]?.categoria || "LNB"} — Designación de Oficiales
         </div>
-        <div style={{ fontSize: 10, color: "#444", marginTop: 2 }}>{fechaDisplay}</div>
+        {/* Fecha — muy visible */}
+        <div style={{ fontSize: 13, fontWeight: "bold", color: "#1e3a5f", marginTop: 3, letterSpacing: 0.5 }}>
+          {fechaDisplay}
+        </div>
         <div style={{ borderBottom: "1.5px solid #222", marginTop: 5 }} />
       </div>
 
