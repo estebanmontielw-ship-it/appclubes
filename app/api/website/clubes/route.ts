@@ -4,15 +4,17 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url)
+    const isAdmin = searchParams.get("admin") === "true"
     const clubes = await prisma.club.findMany({
-      where: { activo: true },
+      where: isAdmin ? undefined : { activo: true },
       orderBy: { orden: "asc" },
     })
     return NextResponse.json(
       { clubes },
-      { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200" } }
+      { headers: isAdmin ? {} : { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200" } }
     )
   } catch (error) {
     return handleApiError(error, { context: "website/clubes" })
