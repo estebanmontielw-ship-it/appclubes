@@ -502,13 +502,15 @@ export async function getLnbScheduleContext(): Promise<string> {
         const isLive = m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
         const isComplete = m.status === "COMPLETE"
         let line: string
+        const home = m.homeSigla ? `${m.homeName} (${m.homeSigla})` : m.homeName
+        const away = m.awaySigla ? `${m.awayName} (${m.awaySigla})` : m.awayName
         if (isLive) {
-          line = `• ${dt} | ${m.homeName} ${m.homeScore ?? "?"} – ${m.awayScore ?? "?"} ${m.awayName} [EN VIVO]`
+          line = `• ${dt} | ${home} ${m.homeScore ?? "?"} – ${m.awayScore ?? "?"} ${away} [EN VIVO]`
         } else if (isComplete && m.homeScore != null && m.awayScore != null) {
-          line = `• ${dt} | ${m.homeName} ${m.homeScore} – ${m.awayScore} ${m.awayName} [FINAL]`
+          line = `• ${dt} | ${home} ${m.homeScore} – ${m.awayScore} ${away} [FINAL]`
         } else {
           const venue = m.venue ? ` @ ${m.venue}` : ""
-          line = `• ${dt} | ${m.homeName} (local) vs ${m.awayName}${venue}`
+          line = `• ${dt} | ${home} (local) vs ${away}${venue}`
         }
         lines.push(line)
       }

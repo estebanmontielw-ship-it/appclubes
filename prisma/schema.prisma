@@ -530,7 +530,9 @@ model CuerpoTecnico {
   estadoHabilitacion  EstadoHabilitacion @default(PENDIENTE)
   pagoVerificado      Boolean            @default(false)
   pagoAutoVerificado  Boolean            @default(false)
-  comprobanteUrl      String?
+  comprobanteUrl       String?
+  documentosRequeridos String?           // JSON array: ["comprobante","foto_carnet","foto_cedula"]
+  mensajeDocumentos    String?
   montoHabilitacion   Decimal            @default(0) @db.Decimal(10, 2)
   verificadoPor       String?
   verificadoEn        DateTime?

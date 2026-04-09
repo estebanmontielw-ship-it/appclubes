@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { CheckCircle, Clock, XCircle, AlertCircle, CreditCard, FileText, Bell, User, ChevronRight, Camera, Loader2, Upload } from "lucide-react"
+import { CheckCircle, Clock, XCircle, AlertCircle, CreditCard, FileText, Bell, User, ChevronRight, Camera, Loader2, Upload, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import PortalInstallPrompt from "@/components/PortalInstallPrompt"
 
@@ -30,6 +30,7 @@ export default function CTDashboardPage() {
   }, [])
 
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [uploadingDocKey, setUploadingDocKey] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>, field: "fotoCarnetUrl" | "fotoCedulaUrl" | "comprobanteUrl", bucket: string) {
@@ -55,6 +56,30 @@ export default function CTDashboardPage() {
     } catch {} finally { setUploadingPhoto(false) }
   }
 
+  async function handleUploadRequerido(e: React.ChangeEvent<HTMLInputElement>, docKey: string, field: "fotoCarnetUrl" | "fotoCedulaUrl" | "comprobanteUrl", bucket: string) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingDocKey(docKey)
+    try {
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("bucket", bucket)
+      const res = await fetch("/api/upload", { method: "POST", body: formData })
+      if (!res.ok) throw new Error()
+      const { url } = await res.json()
+
+      const updateRes = await fetch("/api/ct/perfil", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: url, clearDocRequerido: docKey }),
+      })
+      if (updateRes.ok) {
+        const data = await updateRes.json()
+        setCt(data.ct)
+      }
+    } catch {} finally { setUploadingDocKey(null) }
+  }
+
   if (!ct) return <div className="py-12 text-center text-gray-400">Cargando...</div>
 
   const estado = estadoConfig[ct.estadoHabilitacion] || estadoConfig.PENDIENTE
@@ -62,9 +87,62 @@ export default function CTDashboardPage() {
   const needsPhoto = !ct.fotoCarnetUrl
   const needsCedula = !ct.fotoCedulaUrl
   const needsComprobante = !ct.comprobanteUrl && !ct.pagoAutoVerificado
+  const docsRequeridos: string[] = ct.documentosRequeridos ? JSON.parse(ct.documentosRequeridos) : []
+
+  const DOC_CONFIG: Record<string, { label: string; sublabel: string; field: "fotoCarnetUrl" | "fotoCedulaUrl" | "comprobanteUrl"; bucket: string; icon: any }> = {
+    comprobante: { label: "Comprobante de pago", sublabel: `Transferencia bancaria de ${Number(ct.montoHabilitacion).toLocaleString("es-PY")} Gs. al BNF`, field: "comprobanteUrl", bucket: "comprobantes", icon: Upload },
+    foto_carnet: { label: "Foto tipo carnet", sublabel: "Foto de frente, fondo claro", field: "fotoCarnetUrl", bucket: "fotos-carnet", icon: Camera },
+    foto_cedula: { label: "Foto de cédula de identidad", sublabel: "Foto del frente de tu cédula", field: "fotoCedulaUrl", bucket: "fotos-cedula", icon: CreditCard },
+  }
 
   return (
     <div className="max-w-3xl space-y-4">
+      {/* Admin-requested documents — blocking modal (highest priority) */}
+      {docsRequeridos.length > 0 && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+            <div className="w-14 h-14 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+              <AlertCircle className="h-7 w-7 text-amber-600" />
+            </div>
+            <div className="text-center">
+              <h2 className="text-lg font-bold text-gray-900">La CPB solicitó documentos</h2>
+              <p className="text-sm text-gray-500 mt-1">Necesitamos que actualices los siguientes documentos para continuar.</p>
+              {ct.mensajeDocumentos && (
+                <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mt-2">{ct.mensajeDocumentos}</p>
+              )}
+            </div>
+            <div className="space-y-3">
+              {docsRequeridos.map(docKey => {
+                const cfg = DOC_CONFIG[docKey]
+                if (!cfg) return null
+                const DocIcon = cfg.icon
+                const isUploading = uploadingDocKey === docKey
+                return (
+                  <div key={docKey} className="border border-gray-200 rounded-xl p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center shrink-0">
+                        <DocIcon className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{cfg.label}</p>
+                        <p className="text-xs text-gray-500">{cfg.sublabel}</p>
+                      </div>
+                    </div>
+                    <label className="mt-2 w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 cursor-pointer">
+                      {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                      {isUploading ? "Subiendo..." : "Subir documento"}
+                      <input type="file" className="hidden" accept="image/*,.pdf" disabled={!!uploadingDocKey}
+                        onChange={(e) => handleUploadRequerido(e, docKey, cfg.field, cfg.bucket)} />
+                    </label>
+                  </div>
+                )
+              })}
+            </div>
+            <p className="text-xs text-center text-gray-400">No podés continuar hasta completar todos los documentos</p>
+          </div>
+        </div>
+      )}
+
       {/* Photo required popup */}
       {needsPhoto && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
