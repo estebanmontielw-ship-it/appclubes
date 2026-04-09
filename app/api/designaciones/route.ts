@@ -3,21 +3,46 @@ import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
-import { getSchedule } from "@/lib/genius-sports"
+import { geniusFetch } from "@/lib/genius-sports"
+import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 
 export const dynamic = "force-dynamic"
-
-const LNB_COMPETITION_ID = process.env.GENIUS_LNB_COMPETITION_ID || "48603"
 
 function extractVenueName(m: any): string | null {
   if (!m) return null
   if (typeof m.venueName === "string" && m.venueName) return m.venueName
-  if (m.venue && typeof m.venue === "object") return m.venue.venueName || null
+  if (typeof m.venue === "string" && m.venue) return m.venue
+  if (m.venue && typeof m.venue === "object") {
+    return m.venue.venueName || m.venue.venueNickname || m.venue.name || m.venue.locationName || null
+  }
   return null
 }
 
 function parseMatches(raw: any): any[] {
   return raw?.response?.data || raw?.data || (Array.isArray(raw) ? raw : [])
+}
+
+/** Extract date string from a Genius Sports matchTime/matchDate field.
+ *  Handles both "YYYY-MM-DD HH:MM:SS" and "YYYY-MM-DDTHH:MM:SS" formats. */
+function extractDate(m: any): string | null {
+  const rawTime = m.matchTime ?? m.matchDate ?? m.date ?? m.startDate ?? null
+  if (!rawTime) return null
+  const s = String(rawTime)
+  // Both space and T separators — just take first 10 chars
+  if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10)
+  return null
+}
+
+function extractTime(m: any): string | null {
+  const rawTime = m.matchTime ?? m.startTime ?? m.time ?? null
+  if (!rawTime) return null
+  const s = String(rawTime)
+  // Full datetime: "2026-04-13 20:30:00" or "2026-04-13T20:30:00"
+  if (s.includes(" ")) return s.split(" ")[1]?.slice(0, 5) ?? null
+  if (s.includes("T")) return s.split("T")[1]?.slice(0, 5) ?? null
+  // Time only: "20:30:00"
+  if (/^\d{2}:\d{2}/.test(s)) return s.slice(0, 5)
+  return null
 }
 
 // GET: List GS matches for a date range, merged with DB planilla status
@@ -36,16 +61,22 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const fecha = searchParams.get("fecha") // YYYY-MM-DD
 
-    // Load schedule from Genius Sports
-    const raw = await getSchedule(LNB_COMPETITION_ID)
+    // Resolve competition ID (uses env var or auto-detects)
+    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
+    if (!competitionId) {
+      return NextResponse.json({ matches: [], error: "No se encontró la competencia LNB" })
+    }
+
+    // Load schedule — use limit=500 to ensure we get the full season
+    const raw = await geniusFetch(`/competitions/${competitionId}/matches?limit=500`, "medium")
     const matches = parseMatches(raw)
 
     // Filter by date if provided
     const filtered = fecha
-      ? matches.filter((m: any) => (m.matchTime || "").startsWith(fecha))
+      ? matches.filter((m: any) => extractDate(m) === fecha)
       : matches.slice(0, 60)
 
-    if (filtered.length === 0) return NextResponse.json({ matches: [] })
+    if (filtered.length === 0) return NextResponse.json({ matches: [], competitionId })
 
     // Load existing planillas for these matches
     const matchIds = filtered.map((m: any) => String(m.matchId))
@@ -63,12 +94,13 @@ export async function GET(request: Request) {
     const planillaMap = new Map(planillas.map(p => [p.matchId, p]))
 
     const result = filtered.map((m: any) => {
-      const [fechaStr, horaStr] = (m.matchTime || "").split(" ")
+      const fechaStr = extractDate(m) || ""
+      const horaStr = extractTime(m) || ""
 
       // Identify home/away via isHomeCompetitor
       const competitors: any[] = m.competitors || []
-      const home = competitors.find((c: any) => c.isHomeCompetitor == 1) || competitors[0]
-      const away = competitors.find((c: any) => c.isHomeCompetitor == 0) || competitors[1]
+      const home = competitors.find((c: any) => c.isHomeCompetitor == 1 || c.isHomeCompetitor === "1" || c.isHomeCompetitor === true) || competitors[0]
+      const away = competitors.find((c: any) => c.isHomeCompetitor == 0 || c.isHomeCompetitor === "0" || c.isHomeCompetitor === false) || competitors[1]
 
       const planilla = planillaMap.get(String(m.matchId)) || null
       const asignados = planilla
@@ -77,8 +109,8 @@ export async function GET(request: Request) {
 
       return {
         matchId: String(m.matchId),
-        fecha: fechaStr || "",
-        hora: horaStr ? horaStr.slice(0, 5) : "",
+        fecha: fechaStr,
+        hora: horaStr,
         equipoLocal: home?.competitorName || "Local",
         equipoVisit: away?.competitorName || "Visitante",
         cancha: extractVenueName(m),
@@ -90,7 +122,7 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json({ matches: result })
+    return NextResponse.json({ matches: result, competitionId })
   } catch (error) {
     return handleApiError(error, { context: "GET /api/designaciones" })
   }

@@ -42,15 +42,29 @@ export default function DesignacionesPage() {
   const [fecha, setFecha] = useState<string>(todayStr())
   const [matches, setMatches] = useState<MatchRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [creando, setCreando] = useState<string | null>(null)
 
   const load = useCallback(async (f: string) => {
     setLoading(true)
+    setError(null)
     try {
       const res = await fetch(`/api/designaciones?fecha=${f}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setError(data.error || `Error ${res.status}`)
+        setMatches([])
+        return
+      }
       const data = await res.json()
+      if (data.error) {
+        setError(data.error)
+        setMatches([])
+        return
+      }
       setMatches(data.matches || [])
-    } catch {
+    } catch (e: any) {
+      setError(e.message || "Error de conexión")
       setMatches([])
     } finally {
       setLoading(false)
@@ -200,6 +214,13 @@ export default function DesignacionesPage() {
               <div className="h-3 bg-gray-100 rounded w-1/2" />
             </div>
           ))}
+        </div>
+      ) : error ? (
+        <div className="text-center py-16 text-red-400">
+          <AlertCircle className="h-12 w-12 mx-auto mb-3 text-red-200" />
+          <p className="font-medium text-red-600">Error al cargar partidos</p>
+          <p className="text-sm mt-1 text-red-400">{error}</p>
+          <button onClick={() => load(fecha)} className="mt-4 text-sm text-primary underline">Reintentar</button>
         </div>
       ) : matchesFecha.length === 0 ? (
         <div className="text-center py-16 text-gray-400">
