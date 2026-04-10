@@ -327,6 +327,7 @@ export default function PlanillaPage() {
       if (!res.ok) {
         setError(data.error || "Error al des-confirmar")
       } else {
+        router.refresh()
         await load()
       }
     } finally {
@@ -356,6 +357,7 @@ export default function PlanillaPage() {
       if (!res.ok) {
         setError(data.error || "Error al confirmar")
       } else {
+        router.refresh() // Invalidate list page cache
         await load()
       }
     } finally {
@@ -544,7 +546,7 @@ export default function PlanillaPage() {
 
       {/* Sticky action bar */}
       <div className="fixed bottom-0 left-0 right-0 md:left-60 bg-white border-t border-gray-100 p-4 z-40">
-        <div className="max-w-2xl mx-auto flex items-center gap-3">
+        <div className="max-w-2xl mx-auto flex items-center gap-3 pr-14 md:pr-0">
           {isConfirmada ? (
             <button
               onClick={() => setShowDesconfirmarSheet(true)}
