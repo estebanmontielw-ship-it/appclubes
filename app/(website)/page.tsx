@@ -108,29 +108,29 @@ export default async function HomePage() {
 
       {/* Torneo 3x3 temporary banner */}
       {showTorneo3x3 && (
-        <a
-          href="https://play.fiba3x3.com/events/1df65c77-d14f-4592-a03d-609fdc9a5a93/schedule"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block bg-[#0f2044] hover:bg-[#1a3060] transition-colors"
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🏀</span>
-              <div>
-                <p className="text-white font-black text-sm sm:text-base leading-tight">
-                  TORNEO 3x3 CPB — HOY EN EL PASEO
-                </p>
-                <p className="text-blue-200 text-xs sm:text-sm">
-                  Fixture, grupos y resultados en vivo
-                </p>
-              </div>
+        <section className="bg-[#0f2044]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-bold text-blue-300 uppercase tracking-widest mb-0.5">
+                Hoy · Paseo La Galería
+              </p>
+              <p className="text-white font-black text-lg sm:text-xl leading-tight">
+                Torneo 3x3 CPB 2026
+              </p>
+              <p className="text-blue-200 text-sm mt-0.5">
+                Fixture, grupos y resultados en tiempo real
+              </p>
             </div>
-            <span className="text-blue-200 font-semibold text-sm whitespace-nowrap flex items-center gap-1">
-              Más información <span className="text-lg">→</span>
-            </span>
+            <a
+              href="https://play.fiba3x3.com/events/1df65c77-d14f-4592-a03d-609fdc9a5a93/schedule"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-white text-[#0f2044] font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-blue-50 transition-colors whitespace-nowrap self-start sm:self-auto shrink-0"
+            >
+              Más información →
+            </a>
           </div>
-        </a>
+        </section>
       )}
 
       {/* Quick Stats / Links */}
