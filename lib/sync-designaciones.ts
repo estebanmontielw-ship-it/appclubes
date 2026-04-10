@@ -67,20 +67,23 @@ export async function syncDesignaciones(planilla: any, designadorId: string, isU
       const usuarioExiste = await prisma.usuario.findUnique({ where: { id: userId }, select: { id: true } })
       if (!usuarioExiste) continue
 
+      const rol = ROL_MAP[campo] as any
+
+      // Search by rol too — same person can have multiple roles in the same game
       const existing = await prisma.designacion.findFirst({
-        where: { partidoId: partido.id, usuarioId: userId },
+        where: { partidoId: partido.id, usuarioId: userId, rol },
       })
 
       if (existing) {
         await prisma.designacion.update({
           where: { id: existing.id },
-          data: { rol: ROL_MAP[campo] as any, asignadoPor: designadorId, estado: "CONFIRMADA" },
+          data: { asignadoPor: designadorId, estado: "CONFIRMADA" },
         })
       } else {
         await prisma.designacion.create({
           data: {
             partidoId: partido.id, usuarioId: userId,
-            rol: ROL_MAP[campo] as any, estado: "CONFIRMADA", asignadoPor: designadorId,
+            rol, estado: "CONFIRMADA", asignadoPor: designadorId,
           },
         })
       }

@@ -19,6 +19,7 @@ interface PartidoProximo {
   id: string
   rol: string
   partido: {
+    id: string
     fecha: string
     hora: string
     cancha: string | null
@@ -125,10 +126,20 @@ export default function DashboardPage() {
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (!d?.designaciones) return
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
+        // Compare date strings directly (YYYY-MM-DD) to avoid timezone issues
+        const todayStr = new Date().toISOString().slice(0, 10)
+        // Deduplicate by partidoId (same person can have multiple roles in same game)
+        const seen = new Set<string>()
         const upcoming = d.designaciones
-          .filter((d: PartidoProximo) => new Date(d.partido.fecha) >= today)
+          .filter((d: PartidoProximo) => {
+            const fechaStr = d.partido.fecha ? String(d.partido.fecha).slice(0, 10) : ""
+            return fechaStr >= todayStr
+          })
+          .filter((d: PartidoProximo) => {
+            if (seen.has(d.partido.id)) return false
+            seen.add(d.partido.id)
+            return true
+          })
           .slice(0, 3)
         setPartidos(upcoming)
       })
