@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { CheckCircle, ChevronLeft, Save, AlertCircle, User } from "lucide-react"
+import { CheckCircle, ChevronLeft, Save, AlertCircle, User, Search } from "lucide-react"
 
 interface Jugador {
   id: string
@@ -320,6 +320,7 @@ export default function Torneo3x3Page() {
   const [equiposFem, setEquiposFem] = useState<Equipo[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Equipo | null>(null)
+  const [busqueda, setBusqueda] = useState("")
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -336,7 +337,10 @@ export default function Torneo3x3Page() {
 
   useEffect(() => { loadData() }, [loadData])
 
-  const equipos = categoria === "Masculino Open" ? equiposMasc : equiposFem
+  const equiposBase = categoria === "Masculino Open" ? equiposMasc : equiposFem
+  const equipos = busqueda.trim()
+    ? equiposBase.filter(e => e.nombre.toLowerCase().includes(busqueda.toLowerCase().trim()))
+    : equiposBase
 
   function handleBack(updated: Equipo) {
     const setter = updated.categoria === "Masculino Open" ? setEquiposMasc : setEquiposFem
@@ -389,7 +393,7 @@ export default function Torneo3x3Page() {
           {(["Masculino Open", "Femenino Open"] as Categoria[]).map(cat => (
             <button
               key={cat}
-              onClick={() => setCategoria(cat)}
+              onClick={() => { setCategoria(cat); setBusqueda("") }}
               className={`flex-1 py-2.5 rounded-xl text-sm font-bold transition-all ${
                 categoria === cat
                   ? "bg-blue-600 text-white shadow-sm"
@@ -403,6 +407,19 @@ export default function Torneo3x3Page() {
               )}
             </button>
           ))}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Buscar equipo..."
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 rounded-2xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+            autoComplete="off"
+          />
         </div>
 
         {/* Team list */}
