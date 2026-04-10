@@ -17,6 +17,7 @@ const navLinks = [
       { label: "Posiciones", href: "/posiciones" },
       { label: "Líderes", href: "/lideres" },
       { label: "Estadísticas", href: "/estadisticas" },
+      { label: "3x3", href: "/3x3" },
     ],
   },
   { label: "Institucional", href: "/institucional" },
