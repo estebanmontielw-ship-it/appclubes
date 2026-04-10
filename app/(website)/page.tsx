@@ -26,6 +26,8 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
+  // Temporary 3x3 tournament banner — visible Apr 10–13 2026 (disappears Mon 9am PY time = Apr 14 13:00 UTC)
+  const showTorneo3x3 = new Date() < new Date("2026-04-14T13:00:00Z")
   // Fetch latest published news
   let noticias: any[] = []
   try {
@@ -103,6 +105,31 @@ export default async function HomePage() {
     <>
       <LNBMatchTicker matches={tickerMatches} />
       <HeroSection slides={heroSlides} />
+
+      {/* Torneo 3x3 temporary banner */}
+      {showTorneo3x3 && (
+        <Link
+          href="/torneo3x3"
+          className="block bg-orange-500 hover:bg-orange-600 transition-colors"
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🏀</span>
+              <div>
+                <p className="text-white font-black text-sm sm:text-base leading-tight">
+                  TORNEO 3x3 CPB — HOY EN EL PASEO
+                </p>
+                <p className="text-orange-100 text-xs sm:text-sm">
+                  Delegados: registrá los datos de tus jugadores antes del partido
+                </p>
+              </div>
+            </div>
+            <span className="text-white font-bold text-sm whitespace-nowrap flex items-center gap-1">
+              Ir al registro <span className="text-lg">→</span>
+            </span>
+          </div>
+        </Link>
+      )}
 
       {/* Quick Stats / Links */}
       <QuickLinks />

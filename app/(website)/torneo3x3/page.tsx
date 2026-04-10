@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useRef } from "react"
 import { CheckCircle, ChevronLeft, Save, AlertCircle, User, Search, UserPlus } from "lucide-react"
 
 interface Jugador {
@@ -398,6 +398,8 @@ export default function Torneo3x3Page() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Equipo | null>(null)
   const [busqueda, setBusqueda] = useState("")
+  const fibaRef = useRef<HTMLDivElement>(null)
+  const fibaInjected = useRef(false)
 
   const loadData = useCallback(async () => {
     setLoading(true)
@@ -413,6 +415,17 @@ export default function Torneo3x3Page() {
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  useEffect(() => {
+    if (fibaInjected.current || !fibaRef.current) return
+    fibaInjected.current = true
+    const s = document.createElement("script")
+    s.src = "https://play.fiba3x3.com/embed.js"
+    s.setAttribute("data-fiba-embedtype", "results")
+    s.setAttribute("data-fiba-eventid", "1df65c77-d14f-4592-a03d-609fdc9a5a93")
+    s.async = true
+    fibaRef.current.appendChild(s)
+  }, [])
 
   const equiposBase = categoria === "Masculino Open" ? equiposMasc : equiposFem
   const equipos = busqueda.trim()
@@ -513,6 +526,23 @@ export default function Torneo3x3Page() {
         ) : (
           <TeamList equipos={equipos} onSelect={setSelected} />
         )}
+
+        {/* FIBA 3x3 live results embed */}
+        <div className="mt-2">
+          <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+            <span className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+            Fixture y Resultados
+          </h2>
+          <div ref={fibaRef} className="min-h-[200px]" />
+          <a
+            href="https://play.fiba3x3.com/events/1df65c77-d14f-4592-a03d-609fdc9a5a93/schedule"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block text-center text-xs text-blue-500 hover:underline mt-2"
+          >
+            Ver en fiba3x3.com →
+          </a>
+        </div>
 
         <p className="text-center text-xs text-gray-400 pb-8">
           Torneo 3x3 · Confederación Paraguaya de Básquetbol
