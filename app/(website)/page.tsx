@@ -112,7 +112,7 @@ export default async function HomePage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <p className="text-[11px] font-bold text-blue-300 uppercase tracking-widest mb-0.5">
-                Hoy · Paseo La Galería
+                Sábado 11 y Domingo 12 · Paseo La Galería
               </p>
               <p className="text-white font-black text-lg sm:text-xl leading-tight">
                 Torneo 3x3 CPB 2026
