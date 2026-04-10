@@ -59,6 +59,9 @@ export default function DashboardPage() {
   const [pushStatus, setPushStatus] = useState<"unknown" | "granted" | "denied" | "default">("unknown")
   const [activandoPush, setActivandoPush] = useState(false)
   const [showAnnouncement, setShowAnnouncement] = useState(false)
+  const [localTerminos] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("cpb_terminos_v1") === "1"
+  )
 
   // Show announcement once
   useEffect(() => {
@@ -157,7 +160,7 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {!usuario.aceptoTerminosEn && (
+      {!usuario.aceptoTerminosEn && !localTerminos && (
         <AceptarTerminosModal onAceptado={() => setData(d => d ? { ...d, usuario: { ...d.usuario, aceptoTerminosEn: new Date().toISOString() } } : d)} />
       )}
       <PortalInstallPrompt

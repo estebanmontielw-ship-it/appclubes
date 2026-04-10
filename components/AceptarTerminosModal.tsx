@@ -16,10 +16,13 @@ export default function AceptarTerminosModal({ onAceptado }: Props) {
     setLoading(true)
     try {
       await fetch("/api/me/acepta-terminos", { method: "POST" })
-      onAceptado()
-    } finally {
-      setLoading(false)
+    } catch {
+      // Silently continue — localStorage fallback ensures modal won't loop
     }
+    // Always persist locally so the modal doesn't re-appear even if DB fails
+    localStorage.setItem("cpb_terminos_v1", "1")
+    onAceptado()
+    setLoading(false)
   }
 
   return (

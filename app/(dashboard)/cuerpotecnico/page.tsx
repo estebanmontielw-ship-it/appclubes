@@ -25,6 +25,9 @@ const estadoConfig: Record<string, { color: string; bg: string; icon: any; label
 
 export default function CTDashboardPage() {
   const [ct, setCt] = useState<any>(null)
+  const [localTerminos] = useState(() =>
+    typeof window !== "undefined" && localStorage.getItem("cpb_terminos_v1") === "1"
+  )
 
   useEffect(() => {
     fetch("/api/ct/me").then(r => r.json()).then(data => setCt(data.ct)).catch(() => {})
@@ -98,7 +101,7 @@ export default function CTDashboardPage() {
 
   return (
     <div className="max-w-3xl space-y-4">
-      {!ct?.aceptoTerminosEn && (
+      {!ct?.aceptoTerminosEn && !localTerminos && (
         <AceptarTerminosModal onAceptado={() => setCt((prev: any) => ({ ...prev, aceptoTerminosEn: new Date().toISOString() }))} />
       )}
       {/* Admin-requested documents — blocking modal (highest priority) */}
