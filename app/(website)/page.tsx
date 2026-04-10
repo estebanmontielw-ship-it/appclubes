@@ -108,9 +108,11 @@ export default async function HomePage() {
 
       {/* Torneo 3x3 temporary banner */}
       {showTorneo3x3 && (
-        <Link
-          href="/torneo3x3"
-          className="block bg-orange-500 hover:bg-orange-600 transition-colors"
+        <a
+          href="https://play.fiba3x3.com/events/1df65c77-d14f-4592-a03d-609fdc9a5a93/schedule"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block bg-[#0f2044] hover:bg-[#1a3060] transition-colors"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -119,16 +121,16 @@ export default async function HomePage() {
                 <p className="text-white font-black text-sm sm:text-base leading-tight">
                   TORNEO 3x3 CPB — HOY EN EL PASEO
                 </p>
-                <p className="text-orange-100 text-xs sm:text-sm">
-                  Delegados: registrá los datos de tus jugadores antes del partido
+                <p className="text-blue-200 text-xs sm:text-sm">
+                  Fixture, grupos y resultados en vivo
                 </p>
               </div>
             </div>
-            <span className="text-white font-bold text-sm whitespace-nowrap flex items-center gap-1">
-              Ir al registro <span className="text-lg">→</span>
+            <span className="text-blue-200 font-semibold text-sm whitespace-nowrap flex items-center gap-1">
+              Más información <span className="text-lg">→</span>
             </span>
           </div>
-        </Link>
+        </a>
       )}
 
       {/* Quick Stats / Links */}
