@@ -38,6 +38,28 @@ export const ROL_LABELS: Record<string, string> = {
   ESTADISTICO: "Estadístico",
 }
 
+export const CATEGORIA_LABELS: Record<string, string> = {
+  PRIMERA_DIVISION: "LNB",
+  FEMENINO:         "LNB Femenino",
+  SEGUNDA_DIVISION: "Segunda División",
+  U22:      "U22",
+  U18:      "U18",
+  U16:      "U16",
+  U14:      "U14",
+  ESPECIAL: "Especial",
+}
+
+export const ROL_PARTIDO_LABELS: Record<string, string> = {
+  ARBITRO_PRINCIPAL:   "Árbitro Principal",
+  ARBITRO_ASISTENTE_1: "Árbitro Asistente 1",
+  ARBITRO_ASISTENTE_2: "Árbitro Asistente 2",
+  MESA_ANOTADOR:       "Apuntador",
+  MESA_CRONOMETRADOR:  "Cronómetro",
+  MESA_OPERADOR_24S:   "Lanzamiento 24s",
+  MESA_ASISTENTE:      "Relator",
+  ESTADISTICO:         "Estadístico",
+}
+
 export const CIUDADES_PY = [
   "Asunción",
   "Ciudad del Este",

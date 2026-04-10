@@ -10,36 +10,43 @@ export async function GET() {
   try {
     const cookieStore = cookies()
     const supabase = createClient(cookieStore)
-    const { data: { user: _su }, error: _se } = await supabase.auth.getUser()
-    const session = _su ? { user: _su } : null
-
-    if (!session?.user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
     const honorarios = await prisma.honorario.findMany({
-      where: { usuarioId: session.user.id },
+      where: { usuarioId: user.id },
       include: {
         partido: { select: { equipoLocal: true, equipoVisit: true, fecha: true, categoria: true } },
-        designacion: { select: { rol: true } },
+        designacion: { select: { rol: true, esManual: true } },
       },
       orderBy: { createdAt: "desc" },
     })
 
-    const totalPendiente = await prisma.honorario.aggregate({
-      where: { usuarioId: session.user.id, estado: "PENDIENTE" },
-      _sum: { monto: true },
-    })
-
-    const totalPagado = await prisma.honorario.aggregate({
-      where: { usuarioId: session.user.id, estado: "PAGADO" },
-      _sum: { monto: true },
-    })
+    const [pendAggregate, pagadoAggregate, cobradoEsteAnio] = await Promise.all([
+      prisma.honorario.aggregate({
+        where: { usuarioId: user.id, estado: "PENDIENTE" },
+        _sum: { montoTotal: true },
+      }),
+      prisma.honorario.aggregate({
+        where: { usuarioId: user.id, estado: "PAGADO" },
+        _sum: { montoTotal: true },
+      }),
+      prisma.honorario.aggregate({
+        where: {
+          usuarioId: user.id,
+          cobradoEn: {
+            gte: new Date(new Date().getFullYear(), 0, 1),
+          },
+        },
+        _sum: { montoTotal: true },
+      }),
+    ])
 
     return NextResponse.json({
       honorarios,
-      totalPendiente: totalPendiente._sum.monto || 0,
-      totalPagado: totalPagado._sum.monto || 0,
+      totalPendiente: pendAggregate._sum.montoTotal || 0,
+      totalPagado: pagadoAggregate._sum.montoTotal || 0,
+      cobradoEsteAnio: cobradoEsteAnio._sum.montoTotal || 0,
     })
   } catch (error) {
     return handleApiError(error, { context: "mis-honorarios" })

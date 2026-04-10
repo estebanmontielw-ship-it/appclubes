@@ -49,6 +49,7 @@ interface DashboardData {
     roles: { rol: TipoRol }[]
   }
   unreadNotifications: number
+  honorariosPendiente: number
 }
 
 const ANNOUNCEMENT_KEY = "cpb_seen_ct_search_v1"
@@ -59,6 +60,7 @@ export default function DashboardPage() {
   const [pushStatus, setPushStatus] = useState<"unknown" | "granted" | "denied" | "default">("unknown")
   const [activandoPush, setActivandoPush] = useState(false)
   const [showAnnouncement, setShowAnnouncement] = useState(false)
+  const [honorariosPendiente, setHonorariosPendiente] = useState(0)
 
   // Show announcement once
   useEffect(() => {
@@ -121,6 +123,14 @@ export default function DashboardPage() {
           })
           .catch(() => {})
       })
+
+    // Load honorarios pendiente total
+    fetch("/api/mis-honorarios")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (d?.totalPendiente) setHonorariosPendiente(Number(d.totalPendiente))
+      })
+      .catch(() => {})
 
     // Load upcoming games
     fetch("/api/mis-partidos")
@@ -416,6 +426,14 @@ export default function DashboardPage() {
             title="Verificar CT"
             description="Buscar miembros del cuerpo técnico"
           />
+          <QuickRow
+            href="/oficiales/mis-honorarios"
+            icon={<DollarSign className="h-5 w-5" />}
+            title="Mis honorarios"
+            badge={honorariosPendiente > 0 ? `Gs. ${honorariosPendiente.toLocaleString("es-PY")}` : undefined}
+            badgeColor="yellow"
+            description={honorariosPendiente > 0 ? "Pendiente de cobro" : "Al día"}
+          />
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
@@ -435,12 +453,14 @@ function QuickRow({
   title,
   description,
   badge,
+  badgeColor = "red",
 }: {
   href: string
   icon: React.ReactNode
   title: string
   description: string
   badge?: string
+  badgeColor?: "red" | "yellow"
 }) {
   return (
     <Link href={href} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors">
@@ -451,8 +471,13 @@ function QuickRow({
         <p className="font-medium text-sm text-gray-900">{title}</p>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      {badge && (
+      {badge && badgeColor === "red" && (
         <span className="h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+          {badge}
+        </span>
+      )}
+      {badge && badgeColor === "yellow" && (
+        <span className="px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 text-[10px] font-bold flex items-center justify-center shrink-0 whitespace-nowrap">
           {badge}
         </span>
       )}
