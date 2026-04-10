@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { CheckCircle, ChevronLeft, Save, AlertCircle, User, Search } from "lucide-react"
+import { CheckCircle, ChevronLeft, Save, AlertCircle, User, Search, UserPlus } from "lucide-react"
 
 interface Jugador {
   id: string
@@ -23,22 +23,24 @@ interface Equipo {
 
 type Categoria = "Femenino Open" | "Masculino Open"
 
-function isComplete(j: Jugador) {
-  return !!(j.fechaNac && j.nroCi && j.celular && j.camiseta)
+function hasRealName(j: Jugador) {
+  return !!(j.nombre && !j.nombre.includes("sin registrar"))
 }
 
-function isSinRegistrar(j: Jugador) {
-  return j.nombre.includes("sin registrar")
+function isComplete(j: Jugador) {
+  return !!(hasRealName(j) && j.fechaNac && j.nroCi && j.celular && j.camiseta)
+}
+
+function isPlaceholder(j: Jugador) {
+  return j.nombre.includes("sin registrar") || j.id.startsWith("new-")
 }
 
 function completosCount(equipo: Equipo) {
-  const reales = equipo.jugadores.filter(j => !isSinRegistrar(j))
-  return reales.filter(isComplete).length
+  return equipo.jugadores.filter(isComplete).length
 }
 
 function statusColor(equipo: Equipo) {
   const c = completosCount(equipo)
-  const total = equipo.jugadores.filter(j => !isSinRegistrar(j)).length
   if (c >= 3) return "bg-green-500"
   if (c >= 1) return "bg-yellow-400"
   return "bg-red-400"
@@ -52,7 +54,7 @@ function EquipoView({
   equipo: Equipo
   onBack: (updated: Equipo) => void
 }) {
-  // Local state per jugador: { [id]: { fechaNac, nroCi, celular, camiseta } }
+  const [jugadoresList, setJugadoresList] = useState<Jugador[]>(equipo.jugadores)
   const [forms, setForms] = useState<Record<string, Jugador>>(() => {
     const init: Record<string, Jugador> = {}
     for (const j of equipo.jugadores) init[j.id] = { ...j }
@@ -67,32 +69,82 @@ function EquipoView({
     setSaved(false)
   }
 
+  function addJugador() {
+    const newId = `new-${Date.now()}`
+    const posicion = jugadoresList.length + 1
+    const newJ: Jugador = { id: newId, nombre: "", posicion, fechaNac: null, nroCi: null, celular: null, camiseta: null }
+    setJugadoresList(prev => [...prev, newJ])
+    setForms(f => ({ ...f, [newId]: newJ }))
+    setSaved(false)
+  }
+
   async function handleSave() {
     setSaving(true)
     setError("")
     try {
-      const updates = Object.values(forms).filter(j => !isSinRegistrar(j))
-      const results = await Promise.allSettled(
-        updates.map(j =>
-          fetch(`/api/torneo3x3/jugadores/${j.id}`, {
-            method: "PATCH",
+      type SaveResult = { oldId: string; newJugador: Jugador } | null
+
+      const operations: Promise<SaveResult>[] = jugadoresList.map(jOrig => {
+        const j = forms[jOrig.id] || jOrig
+
+        if (j.id.startsWith("new-")) {
+          if (!j.nombre?.trim()) return Promise.resolve(null)
+          return fetch(`/api/torneo3x3/equipos/${equipo.id}/jugadores`, {
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
+              nombre: j.nombre.trim(),
+              posicion: j.posicion,
               fechaNac: j.fechaNac || null,
               nroCi: j.nroCi || null,
               celular: j.celular || null,
               camiseta: j.camiseta || null,
             }),
           })
-        )
-      )
+            .then(r => r.json())
+            .then(data => ({ oldId: j.id, newJugador: data.jugador } as SaveResult))
+        } else {
+          const body: Record<string, string | null | undefined> = {
+            fechaNac: j.fechaNac || null,
+            nroCi: j.nroCi || null,
+            celular: j.celular || null,
+            camiseta: j.camiseta || null,
+          }
+          if (isPlaceholder(jOrig) && j.nombre?.trim()) {
+            body.nombre = j.nombre.trim()
+          }
+          return fetch(`/api/torneo3x3/jugadores/${j.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          }).then(() => null)
+        }
+      })
+
+      const results = await Promise.allSettled(operations)
       const failed = results.filter(r => r.status === "rejected").length
+
       if (failed > 0) {
         setError(`${failed} jugador(es) no se pudieron guardar. Intentá de nuevo.`)
       } else {
+        // Replace temp IDs with real server IDs for newly created players
+        let finalList = [...jugadoresList]
+        let finalForms = { ...forms }
+
+        for (const r of results) {
+          if (r.status === "fulfilled" && r.value?.oldId && r.value?.newJugador) {
+            const { oldId, newJugador } = r.value
+            const formData = finalForms[oldId]
+            finalList = finalList.map(j =>
+              j.id === oldId ? { ...formData, id: newJugador.id } : j
+            )
+            finalForms[newJugador.id] = { ...formData, id: newJugador.id }
+            delete finalForms[oldId]
+          }
+        }
+
         setSaved(true)
-        // Notify parent with updated equipo
-        const updatedJugadores = equipo.jugadores.map(j => forms[j.id] || j)
+        const updatedJugadores = finalList.map(j => finalForms[j.id] || j)
         onBack({ ...equipo, jugadores: updatedJugadores })
       }
     } catch {
@@ -104,8 +156,9 @@ function EquipoView({
   const inputCls = "w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 bg-white"
   const labelCls = "block text-xs font-semibold text-gray-500 mb-1"
 
-  const jugadoresReales = equipo.jugadores.filter(j => !isSinRegistrar(j))
-  const completados = jugadoresReales.filter(j => isComplete(forms[j.id] || j)).length
+  const completados = Object.values(forms).filter(isComplete).length
+  const totalReales = jugadoresList.filter(j => hasRealName(forms[j.id] || j)).length
+  const canAddMore = jugadoresList.length < 4
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -113,7 +166,10 @@ function EquipoView({
       <div className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-lg mx-auto px-4 py-3.5 flex items-center gap-3">
           <button
-            onClick={() => onBack({ ...equipo, jugadores: equipo.jugadores.map(j => forms[j.id] || j) })}
+            onClick={() => {
+              const updatedJugadores = jugadoresList.map(j => forms[j.id] || j)
+              onBack({ ...equipo, jugadores: updatedJugadores })
+            }}
             className="p-2 rounded-xl hover:bg-gray-100 transition-colors -ml-2"
           >
             <ChevronLeft className="h-5 w-5 text-gray-500" />
@@ -125,7 +181,7 @@ function EquipoView({
           <span className={`text-xs font-bold px-2.5 py-1 rounded-full text-white ${
             completados >= 3 ? "bg-green-500" : completados >= 1 ? "bg-yellow-500" : "bg-red-400"
           }`}>
-            {completados}/{jugadoresReales.length}
+            {completados}/{totalReales}
           </span>
         </div>
       </div>
@@ -135,13 +191,14 @@ function EquipoView({
           Completá los datos de cada jugador. El <strong>4to jugador es opcional</strong>. Tené a mano la cédula de identidad de cada uno.
         </p>
 
-        {jugadoresReales.map((jugOrig, idx) => {
-          const j = forms[jugOrig.id] || jugOrig
+        {jugadoresList.map((jOrig, idx) => {
+          const j = forms[jOrig.id] || jOrig
           const completo = isComplete(j)
-          const esOpcional = jugOrig.posicion === 4
+          const editable = isPlaceholder(jOrig)
+          const esOpcional = jOrig.posicion === 4
 
           return (
-            <div key={jugOrig.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div key={jOrig.id} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
               {/* Player header */}
               <div className={`px-4 py-3 flex items-center gap-3 border-b border-gray-50 ${completo ? "bg-green-50" : "bg-gray-50"}`}>
                 <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
@@ -150,7 +207,17 @@ function EquipoView({
                   {completo ? <CheckCircle className="h-4 w-4" /> : idx + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm text-gray-900 truncate">{jugOrig.nombre}</p>
+                  {editable ? (
+                    <input
+                      type="text"
+                      placeholder="Apellido, Nombre *"
+                      value={j.nombre.includes("sin registrar") ? "" : j.nombre}
+                      onChange={e => setField(jOrig.id, "nombre", e.target.value)}
+                      className="w-full text-sm font-semibold text-gray-900 bg-transparent border-0 border-b border-dashed border-gray-300 focus:outline-none focus:border-blue-500 pb-0.5 placeholder:font-normal placeholder:text-gray-400"
+                    />
+                  ) : (
+                    <p className="font-semibold text-sm text-gray-900 truncate">{jOrig.nombre}</p>
+                  )}
                   {esOpcional && (
                     <span className="text-[10px] text-gray-400 font-medium">Opcional</span>
                   )}
@@ -169,7 +236,7 @@ function EquipoView({
                   <input
                     type="date"
                     value={j.fechaNac || ""}
-                    onChange={e => setField(jugOrig.id, "fechaNac", e.target.value)}
+                    onChange={e => setField(jOrig.id, "fechaNac", e.target.value)}
                     className={inputCls}
                   />
                 </div>
@@ -179,7 +246,7 @@ function EquipoView({
                     type="text"
                     placeholder="Ej: 4523687"
                     value={j.nroCi || ""}
-                    onChange={e => setField(jugOrig.id, "nroCi", e.target.value)}
+                    onChange={e => setField(jOrig.id, "nroCi", e.target.value)}
                     className={inputCls}
                     inputMode="numeric"
                   />
@@ -190,7 +257,7 @@ function EquipoView({
                     type="number"
                     placeholder="Nro"
                     value={j.camiseta || ""}
-                    onChange={e => setField(jugOrig.id, "camiseta", e.target.value)}
+                    onChange={e => setField(jOrig.id, "camiseta", e.target.value)}
                     className={inputCls}
                     min={0}
                     max={99}
@@ -202,7 +269,7 @@ function EquipoView({
                     type="tel"
                     placeholder="Ej: 0981 234 567"
                     value={j.celular || ""}
-                    onChange={e => setField(jugOrig.id, "celular", e.target.value)}
+                    onChange={e => setField(jOrig.id, "celular", e.target.value)}
                     className={inputCls}
                     inputMode="tel"
                   />
@@ -211,6 +278,17 @@ function EquipoView({
             </div>
           )
         })}
+
+        {/* Add player button */}
+        {canAddMore && (
+          <button
+            onClick={addJugador}
+            className="w-full py-3 rounded-2xl border-2 border-dashed border-gray-200 text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors text-sm font-semibold flex items-center justify-center gap-2"
+          >
+            <UserPlus className="h-4 w-4" />
+            Agregar jugador {jugadoresList.length + 1 <= 4 ? `(${jugadoresList.length + 1}°)` : ""}
+          </button>
+        )}
 
         {error && (
           <div className="flex items-start gap-2 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
@@ -272,9 +350,8 @@ function TeamList({
   return (
     <div className="space-y-2">
       {equipos.map(e => {
-        const reales = e.jugadores.filter(j => !isSinRegistrar(j))
-        const c = reales.filter(j => isComplete(j)).length
-        const total = reales.length
+        const c = completosCount(e)
+        const total = e.jugadores.filter(hasRealName).length
         const listo = c >= 3
 
         return (
@@ -345,10 +422,6 @@ export default function Torneo3x3Page() {
   function handleBack(updated: Equipo) {
     const setter = updated.categoria === "Masculino Open" ? setEquiposMasc : setEquiposFem
     setter(prev => prev.map(e => e.id === updated.id ? updated : e))
-    if (selected?.id === updated.id) {
-      // Update selected so if user goes back and re-enters it reflects new data
-      setSelected(updated)
-    }
     setSelected(null)
   }
 

@@ -12,11 +12,12 @@ export async function PATCH(
 ) {
   try {
     const body = await request.json()
-    const { fechaNac, nroCi, celular, camiseta } = body
+    const { nombre, fechaNac, nroCi, celular, camiseta } = body
 
     const jugador = await prisma.torneo3x3Jugador.update({
       where: { id: params.id },
       data: {
+        nombre: nombre || undefined,
         fechaNac: fechaNac || undefined,
         nroCi: nroCi || undefined,
         celular: celular || undefined,
