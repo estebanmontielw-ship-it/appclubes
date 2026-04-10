@@ -92,6 +92,7 @@ export default function RegistroCTPage() {
   const [razonSocial, setRazonSocial] = useState("")
   const [ruc, setRuc] = useState("")
   const [confirmaDatos, setConfirmaDatos] = useState(false)
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
 
   const totalSteps = isPreverificado ? 2 : 3
 
@@ -558,9 +559,20 @@ export default function RegistroCTPage() {
               <Input value={ruc} onChange={e => setRuc(e.target.value)} placeholder="12345678-9" />
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox id="confirma" checked={confirmaDatos} onCheckedChange={c => setConfirmaDatos(c === true)} />
-              <label htmlFor="confirma" className="text-sm cursor-pointer">Confirmo que los datos ingresados son verídicos</label>
+            <div className="flex items-start space-x-2">
+              <Checkbox id="confirma" checked={confirmaDatos} onCheckedChange={c => setConfirmaDatos(c === true)} className="mt-0.5" />
+              <label htmlFor="confirma" className="text-sm cursor-pointer leading-snug">Confirmo que los datos ingresados son verídicos</label>
+            </div>
+
+            <div className="flex items-start space-x-2">
+              <Checkbox id="terminos" checked={aceptaTerminos} onCheckedChange={c => setAceptaTerminos(c === true)} className="mt-0.5" />
+              <label htmlFor="terminos" className="text-sm cursor-pointer leading-snug">
+                Acepto los{" "}
+                <Link href="/terminos" target="_blank" className="text-primary underline hover:opacity-80">Términos y Condiciones</Link>
+                {" "}y la{" "}
+                <Link href="/privacidad" target="_blank" className="text-primary underline hover:opacity-80">Política de Privacidad</Link>
+                <span className="text-red-500"> *</span>
+              </label>
             </div>
           </CardContent>
         )}
@@ -584,7 +596,7 @@ export default function RegistroCTPage() {
               Siguiente <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button className="flex-1" onClick={handleSubmit} disabled={loading}>
+            <Button className="flex-1" onClick={handleSubmit} disabled={loading || !aceptaTerminos}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Enviar solicitud
             </Button>

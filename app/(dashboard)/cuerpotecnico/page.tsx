@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { CheckCircle, Clock, XCircle, AlertCircle, CreditCard, FileText, Bell, User, ChevronRight, Camera, Loader2, Upload, RefreshCw } from "lucide-react"
 import Link from "next/link"
 import PortalInstallPrompt from "@/components/PortalInstallPrompt"
+import AceptarTerminosModal from "@/components/AceptarTerminosModal"
 
 const rolLabels: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional",
@@ -97,6 +98,9 @@ export default function CTDashboardPage() {
 
   return (
     <div className="max-w-3xl space-y-4">
+      {!ct?.aceptoTerminosEn && (
+        <AceptarTerminosModal onAceptado={() => setCt((prev: any) => ({ ...prev, aceptoTerminosEn: new Date().toISOString() }))} />
+      )}
       {/* Admin-requested documents — blocking modal (highest priority) */}
       {docsRequeridos.length > 0 && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">

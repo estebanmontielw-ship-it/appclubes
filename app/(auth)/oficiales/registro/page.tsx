@@ -587,6 +587,7 @@ export default function RegistroPage() {
                   <Link href="/privacidad" target="_blank" className="text-primary underline hover:opacity-80">
                     Política de Privacidad
                   </Link>
+                  <span className="text-red-500"> *</span>
                 </label>
               </div>
             </CardContent>

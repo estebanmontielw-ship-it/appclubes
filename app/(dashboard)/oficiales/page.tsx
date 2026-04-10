@@ -13,6 +13,7 @@ import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
 import type { TipoRol, EstadoVerificacion } from "@prisma/client"
 import PortalInstallPrompt from "@/components/PortalInstallPrompt"
+import AceptarTerminosModal from "@/components/AceptarTerminosModal"
 
 interface PartidoProximo {
   id: string
@@ -44,6 +45,7 @@ interface DashboardData {
     apellido: string
     estadoVerificacion: EstadoVerificacion
     motivoRechazo: string | null
+    aceptoTerminosEn: string | null
     roles: { rol: TipoRol }[]
   }
   unreadNotifications: number
@@ -155,6 +157,9 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {!usuario.aceptoTerminosEn && (
+        <AceptarTerminosModal onAceptado={() => setData(d => d ? { ...d, usuario: { ...d.usuario, aceptoTerminosEn: new Date().toISOString() } } : d)} />
+      )}
       <PortalInstallPrompt
         storageKey="oficiales"
         appName="CPB Oficiales"
