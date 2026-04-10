@@ -46,6 +46,7 @@ model Usuario {
   motivoRechazo      String?
   qrToken            String?            @unique
   aceptoTerminosEn   DateTime?
+  esEmpresa          Boolean            @default(false)  // aplica IVA 10% en honorarios
   activo             Boolean            @default(true)
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -382,7 +383,7 @@ enum CategoriaPartido {
   PRIMERA_DIVISION
   SEGUNDA_DIVISION
   FEMENINO
-  U21
+  U22
   U18
   U16
   U14
@@ -442,6 +443,7 @@ model Designacion {
   rol         RolDesignacion
   estado      EstadoDesignacion @default(PENDIENTE)
   notas       String?
+  esManual    Boolean           @default(false)  // partido cargado manualmente por el oficial
   createdAt   DateTime          @default(now())
   asignadoPor String?
 
@@ -477,9 +479,13 @@ model Honorario {
   designacionId String          @unique
   partidoId     String
   usuarioId     String
-  monto         Decimal         @db.Decimal(10, 2)
+  monto         Decimal         @db.Decimal(10, 2)  // monto neto (base del arancel)
+  aplicaIva     Boolean         @default(false)
+  montoIva      Decimal?        @db.Decimal(10, 2)  // monto * 0.10 si aplicaIva=true
+  montoTotal    Decimal         @db.Decimal(10, 2)  // monto + montoIva
   estado        EstadoHonorario @default(PENDIENTE)
   pagadoEn      DateTime?
+  cobradoEn     DateTime?       // oficial confirma que recibió el pago
   comprobante   String?
   notas         String?
   createdAt     DateTime        @default(now())

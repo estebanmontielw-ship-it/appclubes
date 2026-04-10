@@ -20,6 +20,14 @@ export async function syncDesignaciones(planilla: any, designadorId: string, isU
       where: { descripcion: `gs:${planilla.matchId}` },
     })
 
+    // Map planilla.categoria string to CategoriaPartido enum
+    const CAT_MAP: Record<string, string> = {
+      LNB: "PRIMERA_DIVISION", LNBF: "FEMENINO",
+      U22: "U22", U18: "U18", U16: "U16", U14: "U14",
+      SEGUNDA_DIVISION: "SEGUNDA_DIVISION", ESPECIAL: "ESPECIAL",
+    }
+    const categoriaEnum = (CAT_MAP[planilla.categoria] || "PRIMERA_DIVISION") as any
+
     if (!partido) {
       partido = await prisma.partido.create({
         data: {
@@ -27,7 +35,7 @@ export async function syncDesignaciones(planilla: any, designadorId: string, isU
           hora: planilla.horaStr,
           cancha: planilla.cancha || "Por confirmar",
           ciudad: "",
-          categoria: "PRIMERA_DIVISION",
+          categoria: categoriaEnum,
           equipoLocal: planilla.equipoLocal,
           equipoVisit: planilla.equipoVisit,
           descripcion: `gs:${planilla.matchId}`,

@@ -83,7 +83,61 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     })
 
     // Sync to Partido + Designacion tables
-    await syncDesignaciones(updated, user.id, false)
+    const partido = await syncDesignaciones(updated, user.id, false)
+
+    // Auto-generate honorarios for assigned officials
+    if (partido) {
+      const POSICION_ROL_MAP: [string, string][] = [
+        ["ccId",   "ARBITRO_PRINCIPAL"],
+        ["a1Id",   "ARBITRO_ASISTENTE_1"],
+        ["a2Id",   "ARBITRO_ASISTENTE_2"],
+        ["apId",   "MESA_ANOTADOR"],
+        ["cronId", "MESA_CRONOMETRADOR"],
+        ["lanzId", "MESA_OPERADOR_24S"],
+        ["estaId", "ESTADISTICO"],
+        ["relaId", "MESA_ASISTENTE"],
+      ]
+      for (const [campo, rol] of POSICION_ROL_MAP) {
+        const userId = (updated as any)[campo] as string | null
+        if (!userId) continue
+        try {
+          // Resolve categoria to enum (planilla.categoria may be a string like "LNB")
+          const catMap: Record<string, string> = {
+            LNB: "PRIMERA_DIVISION", LNBF: "FEMENINO",
+            U22: "U22", U18: "U18", U16: "U16", U14: "U14",
+          }
+          const categoriaEnum = (catMap[updated.categoria] || updated.categoria) as any
+          const arancel = await prisma.arancel.findUnique({
+            where: { categoria_rol: { categoria: categoriaEnum, rol: rol as any } },
+          })
+          if (!arancel) continue
+          const oficial = await prisma.usuario.findUnique({ where: { id: userId }, select: { esEmpresa: true } })
+          const aplicaIva = oficial?.esEmpresa ?? false
+          const montoNeto  = Number(arancel.monto)
+          const montoIva   = aplicaIva ? +(montoNeto * 0.10).toFixed(2) : 0
+          const montoTotal = +(montoNeto + montoIva).toFixed(2)
+          const desig = await prisma.designacion.findFirst({
+            where: { partidoId: partido.id, usuarioId: userId, rol: rol as any },
+          })
+          if (!desig) continue
+          await prisma.honorario.upsert({
+            where: { designacionId: desig.id },
+            create: {
+              designacionId: desig.id,
+              partidoId: partido.id,
+              usuarioId: userId,
+              monto: montoNeto,
+              aplicaIva,
+              montoIva: montoIva || null,
+              montoTotal,
+            },
+            update: {}, // don't overwrite if already exists
+          })
+        } catch (err) {
+          console.error(`[confirmar] honorario error for ${campo}:`, err)
+        }
+      }
+    }
 
     // Map each position to the assigned userId + role label
     const ROL_LABEL: Record<string, string> = {
