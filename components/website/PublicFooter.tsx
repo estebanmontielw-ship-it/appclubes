@@ -102,9 +102,15 @@ export default function PublicFooter() {
           <p className="text-xs text-gray-500">
             &copy; {new Date().getFullYear()} Confederación Paraguaya de Básquetbol. Todos los derechos reservados.
           </p>
-          <p className="text-xs text-gray-500">
-            Afiliada a FIBA
-          </p>
+          <div className="flex items-center gap-4">
+            <Link href="/terminos" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+              Términos y Condiciones
+            </Link>
+            <Link href="/privacidad" className="text-xs text-gray-500 hover:text-gray-300 transition-colors">
+              Política de Privacidad
+            </Link>
+            <p className="text-xs text-gray-500">Afiliada a FIBA</p>
+          </div>
         </div>
       </div>
     </footer>
