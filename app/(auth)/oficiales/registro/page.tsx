@@ -71,6 +71,7 @@ export default function RegistroPage() {
   const [fotoCedula, setFotoCedula] = useState<File | null>(null)
   const [fotoCarnet, setFotoCarnet] = useState<File | null>(null)
   const [confirmaDatos, setConfirmaDatos] = useState(false)
+  const [aceptaTerminos, setAceptaTerminos] = useState(false)
   // Cropper state for foto carnet
   // Barrio
   const [selectedCiudad, setSelectedCiudad] = useState("")
@@ -558,16 +559,34 @@ export default function RegistroPage() {
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex items-start space-x-2">
                 <Checkbox
                   id="confirma"
                   checked={confirmaDatos}
-                  onCheckedChange={(checked) =>
-                    setConfirmaDatos(checked === true)
-                  }
+                  onCheckedChange={(checked) => setConfirmaDatos(checked === true)}
+                  className="mt-0.5"
                 />
-                <label htmlFor="confirma" className="text-sm cursor-pointer">
+                <label htmlFor="confirma" className="text-sm cursor-pointer leading-snug">
                   Confirmo que los datos ingresados son verídicos
+                </label>
+              </div>
+
+              <div className="flex items-start space-x-2">
+                <Checkbox
+                  id="terminos"
+                  checked={aceptaTerminos}
+                  onCheckedChange={(checked) => setAceptaTerminos(checked === true)}
+                  className="mt-0.5"
+                />
+                <label htmlFor="terminos" className="text-sm cursor-pointer leading-snug">
+                  Acepto los{" "}
+                  <Link href="/terminos" target="_blank" className="text-primary underline hover:opacity-80">
+                    Términos y Condiciones
+                  </Link>{" "}
+                  y la{" "}
+                  <Link href="/privacidad" target="_blank" className="text-primary underline hover:opacity-80">
+                    Política de Privacidad
+                  </Link>
                 </label>
               </div>
             </CardContent>
@@ -583,7 +602,7 @@ export default function RegistroPage() {
               <Button
                 className="flex-1"
                 onClick={handleSubmit}
-                disabled={loading}
+                disabled={loading || !aceptaTerminos}
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Enviar solicitud
