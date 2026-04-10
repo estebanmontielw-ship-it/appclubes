@@ -203,11 +203,15 @@ export default function RegistroPage() {
       })
 
       if (!res.ok) {
-        const error = await res.json()
+        let errorMsg = "Error en el servidor"
+        try {
+          const error = await res.json()
+          errorMsg = error.error || errorMsg
+        } catch {}
         toast({
           variant: "destructive",
           title: "Error en el registro",
-          description: error.error,
+          description: errorMsg,
         })
         return
       }
@@ -218,12 +222,13 @@ export default function RegistroPage() {
       })
 
       router.push("/oficiales/login")
-    } catch {
+    } catch (err: any) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "No se pudo completar el registro",
+        description: err?.message || "No se pudo completar el registro",
       })
+      console.error("Registro error:", err)
     } finally {
       setLoading(false)
     }
