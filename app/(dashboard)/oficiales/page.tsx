@@ -2,13 +2,12 @@
 
 import { useEffect, useState, useCallback } from "react"
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
-  CreditCard, BookOpen, FileText, Bell, Users, DollarSign,
-  AlertCircle, Lock, Search, X, Sparkles, Calendar, Clock,
-  MapPin, ChevronRight, BellOff, BellRing,
+  CreditCard, BookOpen, Bell, Users, DollarSign,
+  AlertCircle, Search, X, Sparkles, Calendar, Clock,
+  MapPin, ChevronRight, BellRing,
 } from "lucide-react"
 import { PageSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS } from "@/lib/constants"
@@ -390,123 +389,69 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Quick access cards */}
+      {/* Quick access */}
       {!isAdmin ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <QuickCard
+        <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
+          <QuickRow
             href="/oficiales/carnet"
-            icon={<CreditCard className="h-6 w-6" />}
+            icon={<CreditCard className="h-5 w-5" />}
             title="Mi carnet"
-            description={
-              usuario.estadoVerificacion === "VERIFICADO"
-                ? "Ver carnet digital"
-                : "Pendiente de verificación"
-            }
+            description={usuario.estadoVerificacion === "VERIFICADO" ? "Ver carnet digital" : "Pendiente de verificación"}
           />
-          <ComingSoonCard
-            icon={<BookOpen className="h-6 w-6" />}
-            title="Mis cursos"
-            description="Próximamente"
-          />
-          <ComingSoonCard
-            icon={<FileText className="h-6 w-6" />}
-            title="Recursos"
-            description="Próximamente"
-          />
-          <QuickCard
+          <QuickRow
             href="/oficiales/notificaciones"
-            icon={<Bell className="h-6 w-6" />}
+            icon={<Bell className="h-5 w-5" />}
             title="Notificaciones"
-            description={
-              unreadNotifications > 0
-                ? `${unreadNotifications} sin leer`
-                : "Al día"
-            }
+            badge={unreadNotifications > 0 ? String(unreadNotifications) : undefined}
+            description={unreadNotifications > 0 ? `${unreadNotifications} sin leer` : "Al día"}
           />
-          <QuickCard
+          <QuickRow
             href="/oficiales/verificar-ct"
-            icon={<Search className="h-6 w-6" />}
+            icon={<Search className="h-5 w-5" />}
             title="Verificar CT"
-            description="Buscar cuerpo técnico"
+            description="Buscar miembros del cuerpo técnico"
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <QuickCard
-            href="/oficiales/admin/usuarios"
-            icon={<Users className="h-6 w-6" />}
-            title="Usuarios"
-            description="Gestionar usuarios"
-          />
-          <QuickCard
-            href="/oficiales/admin/pagos"
-            icon={<DollarSign className="h-6 w-6" />}
-            title="Pagos"
-            description="Revisar comprobantes"
-          />
-          <QuickCard
-            href="/oficiales/admin/cursos"
-            icon={<BookOpen className="h-6 w-6" />}
-            title="Cursos"
-            description="Gestionar cursos"
-          />
-          <QuickCard
-            href="/oficiales/admin/notificaciones"
-            icon={<Bell className="h-6 w-6" />}
-            title="Notificaciones"
-            description="Enviar notificaciones"
-          />
+        <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50">
+          <QuickRow href="/oficiales/admin/usuarios" icon={<Users className="h-5 w-5" />} title="Usuarios" description="Gestionar usuarios" />
+          <QuickRow href="/oficiales/admin/pagos" icon={<DollarSign className="h-5 w-5" />} title="Pagos" description="Revisar comprobantes" />
+          <QuickRow href="/oficiales/admin/cursos" icon={<BookOpen className="h-5 w-5" />} title="Cursos" description="Gestionar cursos" />
+          <QuickRow href="/oficiales/admin/notificaciones" icon={<Bell className="h-5 w-5" />} title="Notificaciones" description="Enviar notificaciones" />
         </div>
       )}
     </div>
   )
 }
 
-function QuickCard({
+function QuickRow({
   href,
   icon,
   title,
   description,
+  badge,
 }: {
   href: string
   icon: React.ReactNode
   title: string
   description: string
+  badge?: string
 }) {
   return (
-    <Link href={href}>
-      <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
-        <CardContent className="p-6 flex items-start gap-4">
-          <div className="p-2 rounded-lg bg-primary/10 text-primary">{icon}</div>
-          <div>
-            <p className="font-medium">{title}</p>
-            <p className="text-sm text-muted-foreground">{description}</p>
-          </div>
-        </CardContent>
-      </Card>
+    <Link href={href} className="flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+      <div className="h-9 w-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+        {icon}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm text-gray-900">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      {badge && (
+        <span className="h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shrink-0">
+          {badge}
+        </span>
+      )}
+      <ChevronRight className="h-4 w-4 text-gray-300 shrink-0" />
     </Link>
-  )
-}
-
-function ComingSoonCard({
-  icon,
-  title,
-  description,
-}: {
-  icon: React.ReactNode
-  title: string
-  description: string
-}) {
-  return (
-    <Card className="h-full opacity-60">
-      <CardContent className="p-6 flex items-start gap-4">
-        <div className="p-2 rounded-lg bg-gray-100 text-gray-400">{icon}</div>
-        <div className="flex-1">
-          <p className="font-medium text-gray-400">{title}</p>
-          <p className="text-sm text-gray-300">{description}</p>
-        </div>
-        <Lock className="h-4 w-4 text-gray-300 mt-1" />
-      </CardContent>
-    </Card>
   )
 }
