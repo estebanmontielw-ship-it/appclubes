@@ -828,3 +828,34 @@ model PlanillaDesignacionLog {
   @@map("planillas_designacion_logs")
 }
 
+// ─── TORNEO 3x3 ──────────────────────────────────────────
+model Torneo3x3Equipo {
+  id            String              @id @default(cuid())
+  nombre        String
+  ciudad        String?
+  categoria     String              // "Femenino Open" | "Masculino Open"
+  emailContacto String?
+  telContacto   String?
+  createdAt     DateTime            @default(now())
+  jugadores     Torneo3x3Jugador[]
+
+  @@map("torneo3x3_equipos")
+}
+
+model Torneo3x3Jugador {
+  id        String   @id @default(cuid())
+  equipoId  String
+  nombre    String
+  posicion  Int
+  fechaNac  String?
+  nroCi     String?
+  celular   String?
+  camiseta  String?
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+
+  equipo    Torneo3x3Equipo @relation(fields: [equipoId], references: [id])
+
+  @@map("torneo3x3_jugadores")
+}
+
