@@ -165,32 +165,45 @@ function AdminCTContent() {
       {/* Filters */}
       <div className="flex flex-col gap-2">
         {/* Estado tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {TABS.map(t => (
             <Button
               key={t.value}
               variant={filtro === t.value ? "default" : "outline"}
               size="sm"
               onClick={() => setFiltro(t.value)}
-              className={`shrink-0 ${t.value === "ELIMINADOS" ? "border-red-200 text-red-600 hover:bg-red-50" : ""}`}
+              className={`shrink-0 text-sm ${t.value === "ELIMINADOS" ? "border-red-200 text-red-600 hover:bg-red-50" : ""}`}
             >
               {t.label}
             </Button>
           ))}
         </div>
-        {/* Rol tabs */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-          {ROL_CT_TABS.map(t => (
-            <Button
-              key={t.value}
-              variant={rolFiltro === t.value ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setRolFiltro(t.value)}
-              className={`shrink-0 text-xs h-7 ${rolFiltro === t.value ? "font-bold" : "text-muted-foreground"}`}
-            >
-              {t.label}
-            </Button>
-          ))}
+        {/* Rol: select en móvil, tabs en desktop */}
+        <div>
+          {/* Mobile select */}
+          <select
+            className="md:hidden w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            value={rolFiltro}
+            onChange={(e) => setRolFiltro(e.target.value)}
+          >
+            {ROL_CT_TABS.map(t => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          {/* Desktop tabs */}
+          <div className="hidden md:flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {ROL_CT_TABS.map(t => (
+              <Button
+                key={t.value}
+                variant={rolFiltro === t.value ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setRolFiltro(t.value)}
+                className={`shrink-0 text-xs h-7 ${rolFiltro === t.value ? "font-bold" : "text-muted-foreground"}`}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
         </div>
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
