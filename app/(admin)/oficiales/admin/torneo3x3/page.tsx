@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { CheckCircle, XCircle, AlertCircle, RefreshCw, X } from "lucide-react"
+import { CheckCircle, XCircle, AlertCircle, RefreshCw, X, Download } from "lucide-react"
+import * as XLSX from "xlsx"
 
 interface Jugador {
   id: string
@@ -26,8 +27,64 @@ function isSinRegistrar(j: Jugador) {
   return j.nombre.includes("sin registrar")
 }
 
+function hasRealName(j: Jugador) {
+  return !!(j.nombre && !j.nombre.includes("sin registrar"))
+}
+
 function isComplete(j: Jugador) {
-  return !!(j.fechaNac && j.nroCi && j.celular && j.camiseta)
+  return !!(hasRealName(j) && j.fechaNac && j.nroCi && j.celular && j.camiseta)
+}
+
+function exportToExcel(equipos: Equipo[]) {
+  const wb = XLSX.utils.book_new()
+
+  const categorias = ["Masculino Open", "Femenino Open"] as const
+
+  for (const cat of categorias) {
+    const rows: (string | number)[][] = []
+
+    // Header row
+    rows.push(["Equipo", "Ciudad", "#", "Nombre", "Fecha Nac.", "Nro CI", "Camiseta", "Celular", "Estado"])
+
+    const catEquipos = equipos.filter(e => e.categoria === cat)
+    for (const equipo of catEquipos) {
+      const reales = equipo.jugadores.filter(hasRealName)
+      for (const j of reales) {
+        rows.push([
+          equipo.nombre,
+          equipo.ciudad || "",
+          j.posicion,
+          j.nombre,
+          j.fechaNac || "",
+          j.nroCi || "",
+          j.camiseta || "",
+          j.celular || "",
+          isComplete(j) ? "Completo" : "Incompleto",
+        ])
+      }
+      // Blank separator between teams
+      rows.push(["", "", "", "", "", "", "", "", ""])
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(rows)
+
+    // Column widths
+    ws["!cols"] = [
+      { wch: 22 }, { wch: 16 }, { wch: 4 }, { wch: 36 },
+      { wch: 14 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 12 },
+    ]
+
+    // Style header row bold (basic)
+    const range = XLSX.utils.decode_range(ws["!ref"] || "A1")
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const cell = ws[XLSX.utils.encode_cell({ r: 0, c: C })]
+      if (cell) cell.s = { font: { bold: true } }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, cat === "Masculino Open" ? "Masculino" : "Femenino")
+  }
+
+  XLSX.writeFile(wb, `torneo3x3-jugadores-${new Date().toISOString().slice(0, 10)}.xlsx`)
 }
 
 function StatusBadge({ stats }: { stats: Equipo["stats"] }) {
@@ -151,14 +208,24 @@ export default function AdminTorneo3x3Page() {
           <h1 className="text-2xl font-bold">Torneo 3x3</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Progreso de registro de jugadores</p>
         </div>
-        <button
-          onClick={load}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Actualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => exportToExcel(equipos)}
+            disabled={loading || equipos.length === 0}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-green-200 bg-green-50 text-green-700 text-sm font-medium hover:bg-green-100 disabled:opacity-50 transition-colors"
+          >
+            <Download className="h-4 w-4" />
+            Excel
+          </button>
+          <button
+            onClick={load}
+            disabled={loading}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}

@@ -32,11 +32,10 @@ export async function GET() {
 
     // Add completion stats per equipo
     const result = equipos.map(e => {
-      const jugadoresReales = e.jugadores.filter(j => !j.nombre.includes("sin registrar"))
-      const completos = jugadoresReales.filter(
-        j => j.fechaNac && j.nroCi && j.celular && j.camiseta
+      const completos = e.jugadores.filter(
+        j => !j.nombre.includes("sin registrar") && j.fechaNac && j.nroCi && j.celular && j.camiseta
       ).length
-      const total = jugadoresReales.length
+      const total = e.jugadores.length  // all slots including placeholders
       const listoParaCompetir = completos >= 3
 
       return {
