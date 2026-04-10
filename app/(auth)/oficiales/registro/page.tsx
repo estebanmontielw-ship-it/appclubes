@@ -139,14 +139,19 @@ export default function RegistroPage() {
     )
   }
 
-  const uploadFile = async (file: File, bucket: string): Promise<string | null> => {
+  const uploadFile = async (file: File, bucket: string, label: string): Promise<string> => {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("bucket", bucket)
 
     const res = await fetch("/api/upload", { method: "POST", body: formData })
-    if (!res.ok) return null
+    if (!res.ok) {
+      let msg = `Error al subir ${label}`
+      try { const d = await res.json(); msg = d.error || msg } catch {}
+      throw new Error(msg)
+    }
     const data = await res.json()
+    if (!data.url) throw new Error(`No se recibió URL para ${label}`)
     return data.url
   }
 
@@ -174,20 +179,11 @@ export default function RegistroPage() {
 
     setLoading(true)
     try {
-      // Upload files
+      // Upload files — throws with descriptive message if fails
       const [fotoCedulaUrl, fotoCarnetUrl] = await Promise.all([
-        uploadFile(fotoCedula, "fotos-cedula"),
-        uploadFile(fotoCarnet, "fotos-carnet"),
+        uploadFile(fotoCedula, "fotos-cedula", "foto de cédula"),
+        uploadFile(fotoCarnet, "fotos-carnet", "foto de carnet"),
       ])
-
-      if (!fotoCedulaUrl || !fotoCarnetUrl) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Error al subir los archivos. Intentá de nuevo.",
-        })
-        return
-      }
 
       // Register user
       const res = await fetch("/api/auth/registro", {

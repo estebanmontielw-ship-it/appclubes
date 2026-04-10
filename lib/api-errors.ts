@@ -77,7 +77,7 @@ export function handleApiError(
       default:
         Sentry.captureException(error, { tags: { context: ctx, prismaCode: error.code } })
         return NextResponse.json(
-          { error: "Error de base de datos" },
+          { error: `Error de base de datos (${error.code}): ${error.message.split("\n")[0]}` },
           { status: 500 }
         )
     }
@@ -85,9 +85,10 @@ export function handleApiError(
 
   // Errores de validación de Prisma (campos inválidos, tipos incorrectos)
   if (error instanceof Prisma.PrismaClientValidationError) {
+    const firstLine = error.message.split("\n").find(l => l.trim()) || error.message
     console.error(`${ctx} Prisma validation error:`, error.message)
     return NextResponse.json(
-      { error: "Datos inválidos enviados al servidor" },
+      { error: `Datos inválidos: ${firstLine}` },
       { status: 400 }
     )
   }
@@ -97,7 +98,7 @@ export function handleApiError(
     console.error(`${ctx} Error:`, error.message)
     Sentry.captureException(error, { tags: { context: ctx } })
     return NextResponse.json(
-      { error: "Error interno del servidor" },
+      { error: error.message || "Error interno del servidor" },
       { status: 500 }
     )
   }
@@ -106,7 +107,7 @@ export function handleApiError(
   console.error(`${ctx} Unknown error:`, error)
   Sentry.captureException(error, { tags: { context: ctx } })
   return NextResponse.json(
-    { error: "Error interno del servidor" },
+    { error: String(error) || "Error interno del servidor" },
     { status: 500 }
   )
 }

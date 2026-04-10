@@ -58,24 +58,12 @@ export async function POST(request: Request) {
       email_confirm: true,
     })
 
-    if (authError) {
-      if (authError.message.includes("already been registered")) {
-        return NextResponse.json(
-          { error: "Ya existe una cuenta con ese email" },
-          { status: 400 }
-        )
+    if (authError || !authData.user) {
+      const msg = authError?.message || "Error al crear el usuario"
+      if (msg.includes("already been registered") || msg.includes("already exists")) {
+        return NextResponse.json({ error: "Ya existe una cuenta con ese email" }, { status: 400 })
       }
-      return NextResponse.json(
-        { error: authError.message },
-        { status: 400 }
-      )
-    }
-
-    if (!authData.user) {
-      return NextResponse.json(
-        { error: "Error al crear el usuario" },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: `Error al crear cuenta: ${msg}` }, { status: 400 })
     }
 
     // Generate QR token
