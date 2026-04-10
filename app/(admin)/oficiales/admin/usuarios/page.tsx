@@ -69,39 +69,55 @@ export default function AdminUsuariosPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold md:text-2xl">Gestión de Usuarios</h1>
 
       {/* Filters */}
       <div className="flex flex-col gap-2">
-        {/* Estado tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+
+        {/* Estado tabs — scroll horizontal en móvil */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {TABS.map((tab) => (
             <Button
               key={tab.value}
               variant={filtro === tab.value ? "default" : "outline"}
               size="sm"
               onClick={() => setFiltro(tab.value)}
-              className="shrink-0"
+              className="shrink-0 text-sm"
             >
               {tab.label}
             </Button>
           ))}
         </div>
-        {/* Rol tabs */}
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
-          {ROL_TABS.map((tab) => (
-            <Button
-              key={tab.value}
-              variant={rolFiltro === tab.value ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setRolFiltro(tab.value)}
-              className={`shrink-0 text-xs h-7 ${rolFiltro === tab.value ? "font-bold" : "text-muted-foreground"}`}
-            >
-              {tab.label}
-            </Button>
-          ))}
+
+        {/* Rol: select en móvil, tabs en desktop */}
+        <div>
+          {/* Mobile select */}
+          <select
+            className="md:hidden w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/30"
+            value={rolFiltro}
+            onChange={(e) => setRolFiltro(e.target.value)}
+          >
+            {ROL_TABS.map((tab) => (
+              <option key={tab.value} value={tab.value}>{tab.label}</option>
+            ))}
+          </select>
+          {/* Desktop tabs */}
+          <div className="hidden md:flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            {ROL_TABS.map((tab) => (
+              <Button
+                key={tab.value}
+                variant={rolFiltro === tab.value ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setRolFiltro(tab.value)}
+                className={`shrink-0 text-xs h-7 ${rolFiltro === tab.value ? "font-bold" : "text-muted-foreground"}`}
+              >
+                {tab.label}
+              </Button>
+            ))}
+          </div>
         </div>
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
