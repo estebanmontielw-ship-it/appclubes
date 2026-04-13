@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { CalendarDays, Trophy, Users, Home as HomeIcon, Plane, LayoutGrid, Clock, MapPin, BarChart2, Radio } from "lucide-react"
 
 export interface LnbTeam {
@@ -37,6 +37,8 @@ interface Props {
   teams: LnbTeam[]
   matches: LnbMatch[]
   updatedAt: string
+  /** How often to poll for updates in ms. Default 30000 */
+  pollInterval?: number
 }
 
 type ViewMode = "general" | "fecha" | "club"
@@ -222,7 +224,47 @@ function DateHeader({ label, count }: { label: string; count: number }) {
   )
 }
 
-export default function ProgramacionLNBClient({ competitionName, teams, matches, updatedAt }: Props) {
+export default function ProgramacionLNBClient({ competitionName, teams, matches: initialMatches, updatedAt: initialUpdatedAt, pollInterval = 30_000 }: Props) {
+  // Live-polling state — overrides SSR-loaded data
+  const [matches, setMatches] = useState<LnbMatch[]>(initialMatches)
+  const [updatedAt, setUpdatedAt] = useState(initialUpdatedAt)
+  const [isPolling, setIsPolling] = useState(false)
+  const cancelRef = useRef(false)
+
+  useEffect(() => {
+    cancelRef.current = false
+    let timer: ReturnType<typeof setInterval>
+
+    const poll = async () => {
+      if (cancelRef.current) return
+      setIsPolling(true)
+      try {
+        const res = await fetch("/api/website/programacion-lnb", { cache: "no-store" })
+        if (!res.ok || cancelRef.current) return
+        const data = await res.json()
+        if (Array.isArray(data.matches) && !cancelRef.current) {
+          setMatches(data.matches)
+          if (data.updatedAt) setUpdatedAt(data.updatedAt)
+        }
+      } catch {
+        // Silently ignore network errors — keep showing current data
+      } finally {
+        if (!cancelRef.current) setIsPolling(false)
+      }
+    }
+
+    timer = setInterval(poll, pollInterval)
+
+    return () => {
+      cancelRef.current = true
+      clearInterval(timer)
+    }
+  }, [pollInterval])
+
+  const hasLive = matches.some(
+    (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+  )
+
   const [view, setView] = useState<ViewMode>("general")
   const [selectedRound, setSelectedRound] = useState<number | null>(null)
   const [selectedTeamId, setSelectedTeamId] = useState<string | number | null>(null)
@@ -337,9 +379,22 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches,
             <span className="text-red-500">LNB</span>
           </h1>
           <p className="text-sm text-blue-100/70 mb-4">{competitionName}</p>
-          {updatedLabel && (
-            <p className="text-[11px] text-blue-200/60 font-medium">Actualizado: {updatedLabel}</p>
-          )}
+          <div className="flex flex-wrap items-center gap-3 mt-1">
+            {updatedLabel && (
+              <p className="text-[11px] text-blue-200/60 font-medium flex items-center gap-1.5">
+                {isPolling ? (
+                  <span className="inline-block w-2.5 h-2.5 border border-blue-300/50 border-t-blue-300 rounded-full animate-spin" />
+                ) : null}
+                Actualizado: {updatedLabel}
+              </p>
+            )}
+            {hasLive && (
+              <div className="flex items-center gap-1.5 bg-red-500/20 border border-red-400/40 rounded-full px-3 py-0.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                <span className="text-red-300 text-[11px] font-bold uppercase tracking-wider">Partido en curso · live</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

@@ -7,7 +7,7 @@ export async function GET() {
     const payload = await loadLnbSchedule()
     return NextResponse.json(payload, {
       headers: {
-        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
       },
     })
   } catch (error: any) {

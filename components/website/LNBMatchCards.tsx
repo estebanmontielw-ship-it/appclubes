@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { MapPin, ExternalLink } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
@@ -32,12 +33,57 @@ function TeamLogo({ logo, name, sigla }: { logo: string | null; name: string; si
 }
 
 export default function LNBMatchCards({
-  matches,
-  nextMatchId,
+  matches: initialMatches,
+  nextMatchId: initialNextMatchId,
 }: {
   matches: NormalizedMatch[]
   nextMatchId: string | number | null
 }) {
+  const [matches, setMatches] = useState<NormalizedMatch[]>(initialMatches)
+  const [nextMatchId, setNextMatchId] = useState<string | number | null>(initialNextMatchId)
+  const [liveCount, setLiveCount] = useState(0)
+  const cancelRef = useRef(false)
+
+  useEffect(() => {
+    cancelRef.current = false
+
+    const poll = async () => {
+      if (cancelRef.current) return
+      try {
+        const res = await fetch("/api/website/programacion-lnb", { cache: "no-store" })
+        if (!res.ok || cancelRef.current) return
+        const data = await res.json()
+        if (!Array.isArray(data.matches) || cancelRef.current) return
+
+        const all = data.matches as NormalizedMatch[]
+        const now = new Date().toISOString()
+
+        const live = all.filter(
+          (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+        )
+        const upcoming = all
+          .filter((m) => m.status !== "COMPLETE" && !live.some((l) => l.id === m.id))
+          .sort((a, b) => (a.isoDateTime ?? "").localeCompare(b.isoDateTime ?? ""))
+
+        const filtered = [...live, ...upcoming.slice(0, 8)]
+        const next = upcoming.find((m) => m.isoDateTime && m.isoDateTime >= now)
+        const nextId = next?.id ?? upcoming[0]?.id ?? null
+
+        setMatches(filtered)
+        setNextMatchId(nextId)
+        setLiveCount(live.length)
+      } catch {
+        // Silently ignore — keep showing current data
+      }
+    }
+
+    const timer = setInterval(poll, 30_000)
+    return () => {
+      cancelRef.current = true
+      clearInterval(timer)
+    }
+  }, [])
+
   if (!matches.length) {
     return (
       <div className="py-12 text-center text-gray-400 text-sm">
@@ -57,6 +103,15 @@ export default function LNBMatchCards({
 
   return (
     <div className="space-y-6">
+      {liveCount > 0 && (
+        <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+          <span className="text-red-700 text-sm font-bold">
+            {liveCount === 1 ? "1 partido en curso" : `${liveCount} partidos en curso`}
+          </span>
+          <span className="text-red-400 text-xs">· actualizando en tiempo real</span>
+        </div>
+      )}
       {Array.from(byRound.entries()).map(([round, roundMatches]) => (
         <div key={round}>
           {/* Jornada header */}
