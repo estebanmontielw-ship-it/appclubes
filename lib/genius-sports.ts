@@ -122,5 +122,5 @@ export async function getMatchStatistics(matchId: string | number) {
 }
 
 export async function getSchedule(competitionId: string | number) {
-  return geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "medium")
+  return geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "short")
 }
