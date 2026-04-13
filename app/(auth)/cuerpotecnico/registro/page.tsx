@@ -360,7 +360,7 @@ export default function RegistroCTPage() {
               <div className="space-y-1"><Label>Nombre(s) *</Label><Input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Juan Carlos" /></div>
               <div className="space-y-1"><Label>Apellido(s) *</Label><Input value={apellido} onChange={e => setApellido(e.target.value)} placeholder="Ej: Pérez González" /></div>
             </div>
-            <div className="space-y-1"><Label>Número de CI *</Label><Input value={cedula} onChange={e => setCedula(e.target.value)} placeholder="1234567" /></div>
+            <div className="space-y-1"><Label>Número de CI *</Label><Input value={cedula} onChange={e => setCedula(e.target.value.replace(/[^\d]/g, ""))} placeholder="1234567" inputMode="numeric" /></div>
             <DatePickerSimple value={fechaNac} onChange={setFechaNac} />
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
