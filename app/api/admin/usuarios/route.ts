@@ -60,20 +60,33 @@ export async function GET(request: Request) {
           const term = `%${normalized}%`
           const raw = await prisma.$queryRaw<any[]>`
             SELECT u.* FROM "usuarios" u
-            WHERE unaccent(u."nombre") ILIKE unaccent(${term})
-               OR unaccent(u."apellido") ILIKE unaccent(${term})
-               OR u."cedula" ILIKE ${term}
+            WHERE (
+              unaccent(u."nombre") ILIKE unaccent(${term})
+              OR unaccent(u."apellido") ILIKE unaccent(${term})
+              OR u."cedula" ILIKE ${term}
+            )
             ORDER BY u."createdAt" DESC
           `
           // Fetch roles separately and merge
           const ids = raw.map((r: any) => r.id)
-          const roles = await prisma.usuarioRol.findMany({ where: { usuarioId: { in: ids } } })
-          const rolesById = new Map<string, typeof roles>()
-          for (const r of roles) {
+          const rolesAll = await prisma.usuarioRol.findMany({ where: { usuarioId: { in: ids } } })
+          const rolesById = new Map<string, typeof rolesAll>()
+          for (const r of rolesAll) {
             if (!rolesById.has(r.usuarioId)) rolesById.set(r.usuarioId, [])
             rolesById.get(r.usuarioId)!.push(r)
           }
-          const usuarios = raw.map((u: any) => ({ ...u, roles: rolesById.get(u.id) ?? [] }))
+          let usuarios = raw.map((u: any) => ({ ...u, roles: rolesById.get(u.id) ?? [] }))
+
+          // Apply estado and rol filters that couldn't be in the raw query
+          if (estado) {
+            usuarios = usuarios.filter((u: any) => u.estadoVerificacion === estado)
+          }
+          if (rol) {
+            usuarios = usuarios.filter((u: any) =>
+              (rolesById.get(u.id) ?? []).some((r: any) => String(r.rol).includes(rol))
+            )
+          }
+
           return NextResponse.json({ usuarios })
         } catch {
           // unaccent not available — fall back to standard search
