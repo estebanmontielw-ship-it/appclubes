@@ -26,8 +26,6 @@ export const metadata: Metadata = {
 }
 
 export default async function HomePage() {
-  // Temporary 3x3 tournament banner — visible Apr 10–13 2026 (disappears Mon 9am PY time = Apr 14 13:00 UTC)
-  const showTorneo3x3 = new Date() < new Date("2026-04-14T13:00:00Z")
   // Fetch latest published news
   let noticias: any[] = []
   try {
@@ -105,33 +103,6 @@ export default async function HomePage() {
     <>
       <LNBMatchTicker matches={tickerMatches} />
       <HeroSection slides={heroSlides} />
-
-      {/* Torneo 3x3 temporary banner */}
-      {showTorneo3x3 && (
-        <section className="bg-[#0f2044]">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-bold text-blue-300 uppercase tracking-widest mb-0.5">
-                Sábado 11 y Domingo 12 · Paseo La Galería
-              </p>
-              <p className="text-white font-black text-lg sm:text-xl leading-tight">
-                Torneo 3x3 CPB 2026
-              </p>
-              <p className="text-blue-200 text-sm mt-0.5">
-                Fixture, grupos y resultados en tiempo real
-              </p>
-            </div>
-            <a
-              href="https://play.fiba3x3.com/events/1df65c77-d14f-4592-a03d-609fdc9a5a93/schedule"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-white text-[#0f2044] font-bold text-sm px-5 py-2.5 rounded-xl hover:bg-blue-50 transition-colors whitespace-nowrap self-start sm:self-auto shrink-0"
-            >
-              Más información →
-            </a>
-          </div>
-        </section>
-      )}
 
       {/* Quick Stats / Links */}
       <QuickLinks />
