@@ -1,5 +1,33 @@
 import { getCompetitions, getSchedule, getTeams } from "@/lib/genius-sports"
 
+/** Fetch live score from FibaLiveStats for a specific matchId.
+ *  Returns { homeScore, awayScore } or null if unavailable. */
+async function fetchFibaLiveScore(matchId: string | number): Promise<{ homeScore: number; awayScore: number } | null> {
+  try {
+    const url = `https://fibalivestats.dcd.shared.geniussports.com/data/${matchId}/data.json`
+    const res = await fetch(url, { next: { revalidate: 0 } })
+    if (!res.ok) return null
+    const data = await res.json()
+
+    // FibaLiveStats data.json structure: { tm: { "1": { score: N }, "2": { score: N } } }
+    const teams = data?.tm
+    if (!teams) return null
+
+    const t1 = teams["1"]
+    const t2 = teams["2"]
+    if (t1 == null || t2 == null) return null
+
+    const s1 = parseInt(String(t1.score ?? t1.pts ?? ""), 10)
+    const s2 = parseInt(String(t2.score ?? t2.pts ?? ""), 10)
+    if (!Number.isFinite(s1) || !Number.isFinite(s2)) return null
+
+    // FibaLiveStats team "1" = home (the hosting team is always first)
+    return { homeScore: s1, awayScore: s2 }
+  } catch {
+    return null
+  }
+}
+
 /**
  * Shared loader for the LNB schedule. Used by both the public API route
  * (/api/website/programacion-lnb) and the server component page
@@ -429,6 +457,29 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
     if (b.isoDateTime) return 1
     return 0
   })
+
+  // Enrich LIVE matches with real-time score from FibaLiveStats
+  const liveMatches = matches.filter(
+    (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+  )
+  if (liveMatches.length > 0) {
+    const liveScores = await Promise.allSettled(
+      liveMatches.map((m) => fetchFibaLiveScore(m.id))
+    )
+    liveScores.forEach((result, i) => {
+      if (result.status === "fulfilled" && result.value) {
+        const match = liveMatches[i]
+        const idx = matches.findIndex((m) => m.id === match.id)
+        if (idx !== -1) {
+          matches[idx] = {
+            ...matches[idx],
+            homeScore: result.value.homeScore,
+            awayScore: result.value.awayScore,
+          }
+        }
+      }
+    })
+  }
 
   const uniqueTeamsByName = new Map<string, NormalizedTeam>()
   for (const m of matches) {
