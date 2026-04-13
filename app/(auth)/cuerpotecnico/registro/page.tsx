@@ -323,9 +323,9 @@ export default function RegistroCTPage() {
       const data = await res.json()
 
       if (data.autoVerificado || isPreverificado) {
-        toast({ title: "Registro exitoso", description: "Tu cuenta fue creada. Tu solicitud será revisada pronto." })
+        toast({ title: "✅ Solicitud enviada", description: "Tu registro fue recibido. El CPB lo revisará y te notificará por email.", duration: 8000 })
       } else {
-        toast({ title: "Registro exitoso", description: "Tu solicitud fue enviada. Recordá realizar la transferencia bancaria." })
+        toast({ title: "✅ Solicitud enviada", description: "Tu registro fue recibido. Revisá tu email para más instrucciones.", duration: 8000 })
       }
 
       router.push("/cuerpotecnico/login")
@@ -596,7 +596,7 @@ export default function RegistroCTPage() {
               Siguiente <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           ) : (
-            <Button className="flex-1" onClick={handleSubmit} disabled={loading || !aceptaTerminos}>
+            <Button className="flex-1" onClick={handleSubmit} disabled={loading || (!isPreverificado && !aceptaTerminos)}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Enviar solicitud
             </Button>
