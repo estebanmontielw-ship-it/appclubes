@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, Share2, AlertCircle, WifiOff } from "lucide-react"
+import { Download, Share2, AlertCircle, WifiOff, RefreshCw } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ROL_LABELS } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
@@ -29,56 +29,60 @@ export default function CarnetPage() {
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [isOffline, setIsOffline] = useState(false)
+  const [cacheTimestamp, setCacheTimestamp] = useState<number | null>(null)
+  const [retrying, setRetrying] = useState(false)
+
+  async function load(isRetry = false) {
+    if (isRetry) setRetrying(true)
+    try {
+      // Always bypass browser cache to get fresh status
+      const res = await fetch("/api/me", { cache: "no-store" })
+      if (!res.ok) {
+        loadFromCache()
+        return
+      }
+      const data = await res.json()
+      setUsuario(data.usuario)
+      setIsOffline(false)
+      setCacheTimestamp(null)
+
+      let qr: string | null = null
+      if (data.usuario.qrToken) {
+        const qrRes = await fetch(`/api/qr/${data.usuario.qrToken}`, { cache: "no-store" })
+        if (qrRes.ok) {
+          const qrData = await qrRes.json()
+          qr = qrData.qr
+          setQrDataUrl(qr)
+        }
+      }
+
+      // Save fresh data to cache for offline use
+      saveCarnetToCache(data.usuario, qr)
+    } catch {
+      // Network error — try to load from cache
+      loadFromCache()
+    } finally {
+      setLoading(false)
+      if (isRetry) setRetrying(false)
+    }
+  }
+
+  function loadFromCache() {
+    const cached = loadCarnetFromCache()
+    if (cached) {
+      setUsuario(cached.usuario as CarnetData)
+      setQrDataUrl(cached.qrDataUrl)
+      setIsOffline(true)
+      setCacheTimestamp(cached.timestamp)
+    }
+    setLoading(false)
+  }
 
   useEffect(() => {
-    async function load() {
-      try {
-        const res = await fetch("/api/me")
-        if (!res.ok) {
-          // Try offline cache
-          loadFromCache()
-          return
-        }
-        const data = await res.json()
-        setUsuario(data.usuario)
-
-        let qr: string | null = null
-        if (data.usuario.qrToken) {
-          const qrRes = await fetch(`/api/qr/${data.usuario.qrToken}`)
-          if (qrRes.ok) {
-            const qrData = await qrRes.json()
-            qr = qrData.qr
-            setQrDataUrl(qr)
-          }
-        }
-
-        // Save to cache for offline use
-        saveCarnetToCache(data.usuario, qr)
-      } catch {
-        // Network error — try to load from cache
-        loadFromCache()
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    function loadFromCache() {
-      const cached = loadCarnetFromCache()
-      if (cached) {
-        setUsuario(cached.usuario as CarnetData)
-        setQrDataUrl(cached.qrDataUrl)
-        setIsOffline(true)
-      }
-      setLoading(false)
-    }
-
     load()
 
     // Listen for online/offline events
-    const handleOnline = () => {
-      setIsOffline(false)
-      load()
-    }
+    const handleOnline = () => load()
     const handleOffline = () => setIsOffline(true)
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
@@ -88,6 +92,7 @@ export default function CarnetPage() {
       window.removeEventListener("online", handleOnline)
       window.removeEventListener("offline", handleOffline)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const handleShare = async () => {
@@ -125,11 +130,30 @@ export default function CarnetPage() {
       <h1 className="text-2xl font-bold">Mi Carnet</h1>
 
       {isOffline && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-center gap-3">
-          <WifiOff className="h-4 w-4 text-yellow-600 shrink-0" />
-          <p className="text-sm text-yellow-700">
-            Modo offline — mostrando carnet guardado
-          </p>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-3">
+          <WifiOff className="h-4 w-4 text-yellow-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-yellow-700">Mostrando carnet guardado</p>
+            {cacheTimestamp && (
+              <p className="text-xs text-yellow-600 mt-0.5">
+                Guardado el {new Date(cacheTimestamp).toLocaleDateString("es-PY", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                {" · "}<span className="font-medium">el estado puede no estar actualizado</span>
+              </p>
+            )}
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            className="shrink-0 border-yellow-300 text-yellow-700 hover:bg-yellow-100 h-8 text-xs"
+            disabled={retrying}
+            onClick={() => load(true)}
+          >
+            {retrying ? (
+              <RefreshCw className="h-3 w-3 animate-spin" />
+            ) : (
+              <><RefreshCw className="h-3 w-3 mr-1" />Actualizar</>
+            )}
+          </Button>
         </div>
       )}
 
