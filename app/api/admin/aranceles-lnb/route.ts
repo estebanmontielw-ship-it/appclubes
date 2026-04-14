@@ -65,8 +65,13 @@ export async function GET(request: Request) {
       )
     }
 
+    // Para LNB_MASC usamos orden fijo; para el resto, orden de inserción en DB
+    const fasesOrdenadas = torneo === "LNB_MASC"
+      ? FASE_ORDER.filter((f) => byFase[f])
+      : Object.keys(byFase)
+
     // Construir array ordenado de fases
-    const fases = FASE_ORDER.filter((f) => byFase[f]).map((f) => ({
+    const fases = fasesOrdenadas.map((f) => ({
       fase: f,
       faseNombre: byFase[f][0].faseNombre,
       roles: byFase[f].map((r) => ({
