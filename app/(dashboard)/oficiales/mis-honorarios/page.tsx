@@ -479,7 +479,7 @@ function FormPartido({
         />
         {sugerido && form.montoSugerido && (
           <p className="text-xs text-muted-foreground mt-1">
-            Arancel unitario LNB: {gs(form.montoSugerido)}. Podés editarlo libremente.
+            Arancel sugerido CPB: {gs(form.montoSugerido)}. Podés editarlo libremente.
           </p>
         )}
       </div>
