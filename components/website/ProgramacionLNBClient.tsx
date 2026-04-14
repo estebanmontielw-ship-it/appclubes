@@ -646,7 +646,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
                     <MatchCard
                       key={String(m.id)}
                       match={m}
-                      isNext={nextMatchId != null && String(m.id) === String(nextMatchId)}
+                      isNext={activeComp === "lnb" && nextMatchId != null && String(m.id) === String(nextMatchId)}
                     />
                   ))}
                 </div>
