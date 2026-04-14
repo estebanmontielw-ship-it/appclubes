@@ -4,18 +4,41 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
 
-const FASE_ORDER = [
-  "LNB_ETAPA1_ASU",
-  "LNB_ETAPA1_INT",
-  "LNB_COMUNEROS_ASU",
-  "LNB_COMUNEROS_INT",
-  "LNB_FINAL_COM",
-  "LNB_TOP4_ASU",
-  "LNB_TOP4_INT",
-  "LNB_TOP4_EXT",
-  "LNB_FINAL_TOP4",
-  "LNB_FINAL_EXT",
-]
+const FASE_ORDER_MAP: Record<string, string[]> = {
+  LNB_MASC: [
+    "LNB_ETAPA1_ASU", "LNB_ETAPA1_INT",
+    "LNB_COMUNEROS_ASU", "LNB_COMUNEROS_INT",
+    "LNB_FINAL_COM",
+    "LNB_TOP4_ASU", "LNB_TOP4_INT", "LNB_TOP4_EXT",
+    "LNB_FINAL_TOP4", "LNB_FINAL_EXT",
+  ],
+  LNB_FEM: [
+    "LNB_FEM_ETAPA1", "LNB_FEM_ETAPA2", "LNB_FEM_FINAL", "LNB_FEM_EXT",
+  ],
+  U22_FEM: [
+    "U22_FEM_ETAPA1", "U22_FEM_ETAPA2", "U22_FEM_FINAL",
+  ],
+  U22_MASC: [
+    "U22_MASC_ETAPA1", "U22_MASC_ETAPA2", "U22_MASC_FINAL",
+  ],
+  INF_FEM: [
+    "INF_FEM_ETAPA1", "INF_FEM_ETAPA1_UNICA",
+    "INF_FEM_ETAPA2_PLATA", "INF_FEM_ETAPA2_ORO",
+    "INF_FEM_FINAL_PLATA", "INF_FEM_FINAL_ORO",
+    "INF_FEM_INTERIOR_1", "INF_FEM_INTERIOR_2",
+  ],
+  INF_MASC_U1517: [
+    "INF_U1517_ETAPA1", "INF_U1517_ETAPA1_UNICA",
+    "INF_U1517_CTOS_PLATA", "INF_U1517_SEMI_PLATA",
+    "INF_U1517_CTOS_ORO", "INF_U1517_SEMI_ORO",
+    "INF_U1517_FINAL_PLATA", "INF_U1517_FINAL_ORO",
+    "INF_U1517_INTERIOR_1", "INF_U1517_INTERIOR_2",
+  ],
+  INF_MASC_U19: [
+    "INF_U19_ETAPA1", "INF_U19_CUARTOS", "INF_U19_SEMIS", "INF_U19_FINAL",
+    "INF_U19_INTERIOR_1", "INF_U19_INTERIOR_2",
+  ],
+}
 
 const ROL_ORDER = [
   "ARBITRO",
@@ -65,9 +88,10 @@ export async function GET(request: Request) {
       )
     }
 
-    // Para LNB_MASC usamos orden fijo; para el resto, orden de inserción en DB
-    const fasesOrdenadas = torneo === "LNB_MASC"
-      ? FASE_ORDER.filter((f) => byFase[f])
+    // Usar orden fijo por torneo si existe; si no, orden de inserción en DB
+    const faseOrder = FASE_ORDER_MAP[torneo]
+    const fasesOrdenadas = faseOrder
+      ? faseOrder.filter((f) => byFase[f])
       : Object.keys(byFase)
 
     // Construir array ordenado de fases
