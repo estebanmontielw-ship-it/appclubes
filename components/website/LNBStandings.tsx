@@ -32,6 +32,8 @@ interface Props {
   reboundsLeaders: LeaderEntry[]
   assistsLeaders: LeaderEntry[]
   error: string | null
+  /** Competition label shown in the table header. Default "LNB 2026". */
+  competitionLabel?: string
 }
 
 function TeamLogo({ logo, name, size = 32 }: { logo: string | null; name: string; size?: number }) {
@@ -109,6 +111,7 @@ export default function LNBStandings({
   reboundsLeaders,
   assistsLeaders,
   error,
+  competitionLabel = "LNB 2026",
 }: Props) {
   if (error) {
     return (
@@ -126,7 +129,7 @@ export default function LNBStandings({
         <div className="px-4 sm:px-6 py-4 border-b border-gray-50 flex items-center gap-2">
           <Trophy className="w-4 h-4 text-amber-500" />
           <h2 className="font-black text-sm uppercase tracking-wide text-[#0a1628]">
-            Clasificación — LNB 2026
+            Clasificación — {competitionLabel}
           </h2>
         </div>
 
