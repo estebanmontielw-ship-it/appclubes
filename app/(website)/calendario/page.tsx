@@ -45,6 +45,7 @@ export default async function CalendarioPage() {
               teams={data.teams}
               matches={data.matches}
               updatedAt={data.updatedAt}
+              showCompetitionSwitch={true}
             />
           )}
         </div>

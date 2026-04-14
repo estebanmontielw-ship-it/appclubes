@@ -513,6 +513,292 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// U22 Femenino
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function resolveU22FCompetitionId(): Promise<{ id: string | null; name: string | null }> {
+  const envId = process.env.GENIUS_U22F_COMPETITION_ID
+  if (envId) return { id: envId, name: null }
+
+  try {
+    const raw: any = await getCompetitions()
+    const comps: any[] = raw?.response?.data || raw?.data || []
+    const now = new Date().getFullYear()
+    const candidates = comps
+      .filter((c) => {
+        const name = String(c.competitionName || "").toUpperCase()
+        return (
+          (name.includes("U22") || name.includes("U-22")) &&
+          (name.includes("FEM") || name.includes("MUJER") || name.includes("WOMEN") || name.includes("DAMAS"))
+        )
+      })
+      .sort((a, b) => (b.year || 0) - (a.year || 0))
+
+    const current =
+      candidates.find((c) => c.year === now) ??
+      candidates.find((c) => c.year === now - 1) ??
+      candidates[0]
+
+    if (current) {
+      return { id: String(current.competitionId), name: current.competitionName ?? null }
+    }
+  } catch {
+    // fall through
+  }
+
+  return { id: null, name: null }
+}
+
+export async function resolveU22FCompetitionIdPublic() { return resolveU22FCompetitionId() }
+
+/**
+ * Load the U22 Femenino schedule. Similar to loadLnbSchedule but:
+ * - Uses the U22F competition ID
+ * - No FibaLiveStats URLs (statsUrl: null on every match)
+ * - No live score enrichment
+ */
+export async function loadU22FSchedule(): Promise<LnbSchedulePayload> {
+  const { id: competitionId, name: competitionName } = await resolveU22FCompetitionId()
+
+  if (!competitionId) {
+    throw new Error(
+      "No se encontró la competencia U22 Femenino. Definí GENIUS_U22F_COMPETITION_ID en las variables de entorno o verificá que Genius Sports tenga la competencia activa."
+    )
+  }
+
+  const [rawMatches, rawTeams] = await Promise.all([
+    getSchedule(competitionId),
+    getTeams(competitionId).catch(() => null),
+  ])
+
+  const matchItems: any[] =
+    rawMatches?.response?.data || rawMatches?.data || (Array.isArray(rawMatches) ? rawMatches : [])
+  const teamItems: any[] =
+    rawTeams?.response?.data || rawTeams?.data || (Array.isArray(rawTeams) ? rawTeams : []) || []
+
+  const teamById = new Map<string, NormalizedTeam>()
+  const teamByName = new Map<string, NormalizedTeam>()
+
+  for (const t of teamItems) {
+    const id = asString(t.competitorId) ?? asString(t.teamId) ?? asString(t.id)
+    const name =
+      asString(t.competitorName) ?? asString(t.teamName) ?? asString(t.name) ?? "Equipo"
+    const sigla = asString(t.competitorCode) ?? asString(t.teamCode) ?? asString(t.code)
+    const logo = extractLogo(t)
+    const normalized: NormalizedTeam = {
+      id: id ?? name,
+      name,
+      sigla: sigla || siglaFromName(name),
+      logo,
+    }
+    if (id != null) teamById.set(String(id), normalized)
+    teamByName.set(name.toLowerCase(), normalized)
+  }
+
+  const enrich = (c: any) => {
+    const id =
+      typeof c?.competitorId === "number" || typeof c?.competitorId === "string"
+        ? c.competitorId
+        : typeof c?.teamId === "number" || typeof c?.teamId === "string"
+          ? c.teamId
+          : null
+    const name = asString(c?.competitorName) ?? asString(c?.teamName) ?? "Equipo"
+    const byId = id != null ? teamById.get(String(id)) : null
+    const byName = teamByName.get(String(name).toLowerCase())
+    const team = byId ?? byName ?? null
+    return {
+      id,
+      name,
+      sigla: team?.sigla ?? siglaFromName(name),
+      logo: team?.logo ?? null,
+    }
+  }
+
+  function splitIso(v: string): { date: string | null; time: string | null } {
+    const sep = v.includes("T") ? "T" : v.includes(" ") ? " " : null
+    if (sep) {
+      const [d, t] = v.split(sep)
+      return { date: d ? d.slice(0, 10) : null, time: t ? t.slice(0, 5) : null }
+    }
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return { date: v, time: null }
+    if (/^\d{2}:\d{2}/.test(v)) return { date: null, time: v.slice(0, 5) }
+    return { date: null, time: null }
+  }
+
+  const matchesFirstPass = matchItems.map((m) => {
+    const competitors: any[] = Array.isArray(m.competitors) ? m.competitors : []
+
+    const isHomeMarker = (c: any): boolean => {
+      if (c?.isHomeCompetitor === 1 || c?.isHomeCompetitor === true || c?.isHomeCompetitor === "1") return true
+      const q = c?.qualifier ?? c?.position ?? null
+      if (q === 1 || q === "1") return true
+      const fields = [c?.competitorType, c?.homeAway, c?.role, c?.teamQualifier]
+      return fields.some((f) => {
+        if (f == null) return false
+        const s = String(f).toUpperCase().trim()
+        return s === "HOME" || s === "H" || s === "LOCAL"
+      })
+    }
+    const isAwayMarker = (c: any): boolean => {
+      if (c?.isHomeCompetitor === 0 || c?.isHomeCompetitor === false || c?.isHomeCompetitor === "0") return true
+      const q = c?.qualifier ?? c?.position ?? null
+      if (q === 2 || q === "2") return true
+      const fields = [c?.competitorType, c?.homeAway, c?.role, c?.teamQualifier]
+      return fields.some((f) => {
+        if (f == null) return false
+        const s = String(f).toUpperCase().trim()
+        return s === "AWAY" || s === "A" || s === "VISITOR" || s === "VISITANTE"
+      })
+    }
+
+    const detectedHome = competitors.find(isHomeMarker)
+    const detectedAway = competitors.find(isAwayMarker)
+    const home = detectedHome ?? competitors[0] ?? null
+    const away = detectedAway ?? competitors[1] ?? null
+    const homeInfo = enrich(home)
+    const awayInfo = enrich(away)
+
+    const rawDate =
+      asString(m.matchDate) ?? asString(m.date) ?? asString(m.startDate) ?? asString(m.scheduledDate) ?? null
+    const rawTime =
+      asString(m.matchTime) ?? asString(m.time) ?? asString(m.startTime) ?? asString(m.scheduledTime) ?? null
+
+    let dateStr: string | null = null
+    let timeStr: string | null = null
+
+    if (rawDate) {
+      const { date, time } = splitIso(rawDate)
+      dateStr = date
+      if (time) timeStr = time
+    }
+    if (rawTime) {
+      const { date: tDate, time: tTime } = splitIso(rawTime)
+      if (tTime && !timeStr) timeStr = tTime
+      if (tDate && !dateStr) dateStr = tDate
+    }
+
+    const iso = dateStr ? (timeStr ? `${dateStr}T${timeStr}:00` : dateStr) : null
+    const matchStatus = asString(m.matchStatus) ?? "SCHEDULED"
+    const matchId =
+      typeof m.matchId === "number" || typeof m.matchId === "string"
+        ? m.matchId
+        : `${homeInfo.name}-${awayInfo.name}-${dateStr ?? ""}`
+
+    return {
+      id: matchId,
+      date: dateStr,
+      time: timeStr,
+      isoDateTime: iso,
+      status: matchStatus,
+      homeId: homeInfo.id,
+      homeName: homeInfo.name,
+      homeSigla: homeInfo.sigla,
+      homeLogo: homeInfo.logo,
+      homeScore: parseScore(home),
+      awayId: awayInfo.id,
+      awayName: awayInfo.name,
+      awaySigla: awayInfo.sigla,
+      awayLogo: awayInfo.logo,
+      awayScore: parseScore(away),
+      venue: extractVenue(m),
+      statsUrl: null, // U22F: no FibaLiveStats
+      _rawRound: extractRound(m),
+      _seqNum: extractMatchSeqNum(m),
+    }
+  })
+
+  const FECHA_LABELS = [
+    "", "Primera", "Segunda", "Tercera", "Cuarta", "Quinta",
+    "Sexta", "Séptima", "Octava", "Novena", "Décima",
+    "Undécima", "Duodécima",
+  ]
+  const fechaLabel = (n: number) =>
+    n >= 1 && n <= 12 ? `${FECHA_LABELS[n]} Fecha` : `Fecha ${n}`
+
+  const hasAllRounds =
+    matchesFirstPass.length > 0 && matchesFirstPass.every((m) => m._rawRound != null)
+
+  const numTeamsInComp = Math.max(teamById.size, teamByName.size, 2)
+  const matchesPerJornada = Math.max(1, Math.floor(numTeamsInComp / 2))
+
+  let matches: NormalizedMatch[]
+
+  if (hasAllRounds) {
+    matches = matchesFirstPass.map((m) => {
+      const { _rawRound, _seqNum, ...rest } = m
+      return {
+        ...rest,
+        round: _rawRound ?? null,
+        roundLabel: _rawRound != null ? fechaLabel(_rawRound) : "Sin fecha",
+      } as NormalizedMatch
+    })
+  } else {
+    const hasSeqNums = matchesFirstPass.every((m) => m._seqNum != null)
+    if (hasSeqNums) {
+      matches = matchesFirstPass.map((m) => {
+        const { _rawRound, _seqNum, ...rest } = m
+        const round = Math.ceil((_seqNum as number) / matchesPerJornada)
+        return { ...rest, round, roundLabel: fechaLabel(round) } as NormalizedMatch
+      })
+    } else {
+      const weekKeys = Array.from(
+        new Set(matchesFirstPass.filter((m) => m.date).map((m) => isoWeekKey(m.date)))
+      ).sort()
+      const weekToRound = new Map<string, number>()
+      weekKeys.forEach((k, i) => weekToRound.set(k, i + 1))
+      matches = matchesFirstPass.map((m) => {
+        const { _rawRound, _seqNum, ...rest } = m
+        const key = isoWeekKey(m.date)
+        const round = weekToRound.get(key) ?? null
+        return {
+          ...rest,
+          round,
+          roundLabel: round ? fechaLabel(round) : "Sin fecha",
+        } as NormalizedMatch
+      })
+    }
+  }
+
+  matches.sort((a, b) => {
+    if (a.isoDateTime && b.isoDateTime) return a.isoDateTime.localeCompare(b.isoDateTime)
+    if (a.isoDateTime) return -1
+    if (b.isoDateTime) return 1
+    return 0
+  })
+
+  const uniqueTeamsByName = new Map<string, NormalizedTeam>()
+  for (const m of matches) {
+    if (m.homeName && !uniqueTeamsByName.has(m.homeName)) {
+      uniqueTeamsByName.set(m.homeName, {
+        id: m.homeId ?? m.homeName,
+        name: m.homeName,
+        sigla: m.homeSigla,
+        logo: m.homeLogo,
+      })
+    }
+    if (m.awayName && !uniqueTeamsByName.has(m.awayName)) {
+      uniqueTeamsByName.set(m.awayName, {
+        id: m.awayId ?? m.awayName,
+        name: m.awayName,
+        sigla: m.awaySigla,
+        logo: m.awayLogo,
+      })
+    }
+  }
+  const teams = Array.from(uniqueTeamsByName.values()).sort((a, b) => a.name.localeCompare(b.name))
+
+  return {
+    competition: {
+      id: competitionId,
+      name: competitionName || "U22 Femenino",
+    },
+    teams,
+    matches,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
 /** Returns a plain-text summary of the LNB schedule for AI chatbot context.
  *  Grouped by jornada, with scores for completed matches and time/venue for upcoming. */
 export async function getLnbScheduleContext(): Promise<string> {
