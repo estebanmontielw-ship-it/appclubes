@@ -15,6 +15,8 @@ interface MatchRow {
   equipoVisit: string
   cancha: string | null
   categoria: string
+  competicionId: string
+  competicionNombre: string
   planillaId: string | null
   estado: string | null
   asignados: number
@@ -90,7 +92,7 @@ export default function DesignacionesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           matchId: match.matchId,
-          competicionId: "LNB",
+          competicionId: match.competicionId,
           categoria: match.categoria,
           fecha: `${fechaStr}T${horaStr || "00:00"}:00.000Z`,
           horaStr: match.hora,
@@ -137,8 +139,8 @@ export default function DesignacionesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Designaciones LNB</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Planillas de árbitros y mesa</p>
+          <h1 className="text-xl font-bold text-gray-900">Designaciones CPB</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Todos los torneos · árbitros y mesa</p>
         </div>
         <div className="flex items-center gap-2">
           <a
@@ -239,8 +241,13 @@ export default function DesignacionesPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  {/* Hora */}
-                  <p className="text-sm font-bold text-primary mb-1">{match.hora.slice(0, 5)}</p>
+                  {/* Hora + categoría */}
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-bold text-primary">{match.hora.slice(0, 5)}</p>
+                    <span className="text-[10px] font-black uppercase tracking-wide bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">
+                      {match.categoria}
+                    </span>
+                  </div>
                   {/* Teams */}
                   <p className="font-semibold text-gray-900 text-sm leading-snug">
                     {match.equipoLocal}
