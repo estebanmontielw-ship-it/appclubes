@@ -9,8 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/components/ui/use-toast"
 import {
   DollarSign, Plus, CheckCircle, Clock, TrendingUp,
-  Pencil, Trash2, ChevronDown, ChevronUp, X, Loader2,
-  CalendarDays, Trophy, Lightbulb,
+  Pencil, Trash2, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
+  X, Loader2, CalendarDays, Trophy, Lightbulb,
 } from "lucide-react"
 
 // ─── CONSTANTES ──────────────────────────────────────────
@@ -97,6 +97,16 @@ function catLabel(v: string) {
 }
 function rolLabel(v: string) {
   return ROLES.find((r) => r.value === v)?.label ?? v
+}
+
+const MES_NOMBRES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+]
+
+function getYearMonth(iso: string): [number, number] {
+  const [y, m] = iso.split("T")[0].split("-")
+  return [Number(y), Number(m)]
 }
 
 // ─── SUGERENCIAS DESDE DESIGNACIONES ─────────────────────
@@ -585,131 +595,258 @@ function ModalEdicion({
 // ─── TAB: DASHBOARD ───────────────────────────────────────
 
 function TabDashboard({
-  stats,
   registros,
   onCargar,
   onMarcarPagado,
   marking,
 }: {
-  stats: Stats
   registros: Registro[]
   onCargar: () => void
   onMarcarPagado: (id: string) => void
   marking: string | null
 }) {
-  const recientes = registros.slice(0, 5)
+  const now = new Date()
+  const [mes, setMes] = useState(now.getMonth() + 1) // 1-12
+  const [anio, setAnio] = useState(now.getFullYear())
+
+  function navMes(delta: number) {
+    let m = mes + delta
+    let a = anio
+    if (m > 12) { m = 1; a++ }
+    if (m < 1) { m = 12; a-- }
+    setMes(m); setAnio(a)
+  }
+
+  const esMesActual = mes === now.getMonth() + 1 && anio === now.getFullYear()
+
+  // Registros del mes seleccionado
+  const delMes = registros.filter((r) => {
+    const [y, m] = getYearMonth(r.fecha)
+    return y === anio && m === mes
+  })
+  const cobradoMes     = delMes.filter(r => r.estado === "PAGADO").reduce((s, r) => s + r.monto, 0)
+  const pendienteMes   = delMes.filter(r => r.estado === "PENDIENTE").reduce((s, r) => s + r.monto, 0)
+  const totalMes       = cobradoMes + pendienteMes
+  const pctCobrado     = totalMes > 0 ? Math.round((cobradoMes / totalMes) * 100) : 0
+
+  // Registros del año seleccionado
+  const delAnio        = registros.filter((r) => getYearMonth(r.fecha)[0] === anio)
+  const cobradoAnio    = delAnio.filter(r => r.estado === "PAGADO").reduce((s, r) => s + r.monto, 0)
+  const pendienteAnio  = delAnio.filter(r => r.estado === "PENDIENTE").reduce((s, r) => s + r.monto, 0)
+  const totalAnio      = cobradoAnio + pendienteAnio
+
+  // Todos los pendientes (de cualquier mes), más antiguos primero
+  const todosPendientes = registros
+    .filter(r => r.estado === "PENDIENTE")
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+
+  // Últimos 6 meses para el gráfico de barras
+  const last6 = Array.from({ length: 6 }, (_, i) => {
+    let m = mes - (5 - i)
+    let a = anio
+    while (m < 1) { m += 12; a-- }
+    const regs = registros.filter((r) => {
+      const [ry, rm] = getYearMonth(r.fecha)
+      return ry === a && rm === m
+    })
+    return {
+      label: MES_NOMBRES[m - 1].slice(0, 3),
+      total: regs.reduce((s, r) => s + r.monto, 0),
+      isSelected: m === mes && a === anio,
+    }
+  })
+  const maxBar = Math.max(...last6.map(l => l.total), 1)
 
   return (
-    <div className="space-y-5">
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Total acumulado</p>
-                <p className="text-2xl font-bold mt-0.5">{gs(stats.totalAcumulado)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stats.countTotal} partido{stats.countTotal !== 1 ? "s" : ""}</p>
-              </div>
-              <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                <TrendingUp className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Pendiente de cobro</p>
-                <p className="text-2xl font-bold text-amber-600 mt-0.5">{gs(stats.totalPendiente)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stats.countPendiente} partido{stats.countPendiente !== 1 ? "s" : ""}</p>
-              </div>
-              <div className="h-9 w-9 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
-                <Clock className="h-5 w-5 text-amber-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-muted-foreground">Total cobrado</p>
-                <p className="text-2xl font-bold text-green-600 mt-0.5">{gs(stats.totalPagado)}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stats.countPagado} partido{stats.countPagado !== 1 ? "s" : ""}</p>
-              </div>
-              <div className="h-9 w-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="space-y-4">
+
+      {/* ── Navegador de mes ── */}
+      <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 px-4 py-3">
+        <button
+          onClick={() => navMes(-1)}
+          className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+        <div className="text-center">
+          <p className="font-bold text-gray-900">{MES_NOMBRES[mes - 1]} {anio}</p>
+          {esMesActual && <p className="text-[10px] text-primary font-semibold">Mes actual</p>}
+        </div>
+        <button
+          onClick={() => navMes(1)}
+          disabled={esMesActual}
+          className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-500 transition-colors disabled:opacity-30"
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
       </div>
 
-      {/* CTA cargar */}
-      <button
-        onClick={onCargar}
-        className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-primary/30 text-primary text-sm font-semibold hover:bg-primary/5 transition-colors"
-      >
-        <Plus className="h-4 w-4" /> Cargar nuevo partido
-      </button>
+      {/* ── Card principal — resumen del mes ── */}
+      <div className="bg-gradient-to-br from-primary to-primary/75 rounded-3xl p-5 text-white shadow-lg">
+        <p className="text-sm font-medium text-white/70">
+          {esMesActual ? "Recaudado este mes" : `Recaudado en ${MES_NOMBRES[mes - 1]}`}
+        </p>
+        <p className="text-4xl font-extrabold mt-1 tracking-tight">
+          {gs(totalMes)}
+        </p>
+        <p className="text-sm text-white/60 mt-0.5">
+          {delMes.length} partido{delMes.length !== 1 ? "s" : ""}
+        </p>
 
-      {/* Pendientes de cobrar */}
-      {registros.filter((r) => r.estado === "PENDIENTE").length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Pendientes de cobro
+        {totalMes > 0 ? (
+          <div className="mt-5">
+            {/* Barra cobrado / pendiente */}
+            <div className="h-2.5 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-white rounded-full transition-all duration-700"
+                style={{ width: `${pctCobrado}%` }}
+              />
+            </div>
+            <div className="flex justify-between mt-3 gap-4">
+              <div>
+                <p className="text-[11px] text-white/60 font-medium">Cobrado</p>
+                <p className="text-base font-bold">{gs(cobradoMes)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[11px] text-white/60 font-medium">Pendiente</p>
+                <p className="text-base font-bold text-amber-200">{gs(pendienteMes)}</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-white/50 mt-4 italic">Sin partidos registrados</p>
+        )}
+      </div>
+
+      {/* ── Stats del año ── */}
+      <div className="grid grid-cols-3 gap-2.5">
+        <div className="bg-white rounded-2xl border border-gray-100 p-3.5 text-center">
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+            Cobrado {anio}
           </p>
-          <div className="space-y-2">
-            {registros
-              .filter((r) => r.estado === "PENDIENTE")
-              .slice(0, 4)
-              .map((r) => (
-                <Card key={r.id}>
-                  <CardContent className="p-3.5 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{r.equipoA} vs {r.equipoB}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {fmtFecha(r.fecha)} · {catLabel(r.categoria)} {r.rama} · {rolLabel(r.rol)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="font-bold text-sm">{gs(r.monto)}</span>
-                      <button
-                        onClick={() => onMarcarPagado(r.id)}
-                        disabled={marking === r.id}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-medium hover:bg-green-100 transition-colors disabled:opacity-50"
-                      >
-                        {marking === r.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle className="h-3 w-3" />}
-                        Cobrado
-                      </button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          <p className="text-lg font-extrabold text-green-600 mt-1 leading-none">
+            {cobradoAnio >= 1_000_000
+              ? `${(cobradoAnio / 1_000_000).toFixed(1)}M`
+              : cobradoAnio >= 1000
+              ? `${Math.round(cobradoAnio / 1000)}k`
+              : gs(cobradoAnio)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            {delAnio.filter(r => r.estado === "PAGADO").length} partidos
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-3.5 text-center">
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+            Pendiente {anio}
+          </p>
+          <p className="text-lg font-extrabold text-amber-500 mt-1 leading-none">
+            {pendienteAnio >= 1_000_000
+              ? `${(pendienteAnio / 1_000_000).toFixed(1)}M`
+              : pendienteAnio >= 1000
+              ? `${Math.round(pendienteAnio / 1000)}k`
+              : gs(pendienteAnio)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            {delAnio.filter(r => r.estado === "PENDIENTE").length} partidos
+          </p>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-3.5 text-center">
+          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">
+            Total {anio}
+          </p>
+          <p className="text-lg font-extrabold mt-1 leading-none">
+            {totalAnio >= 1_000_000
+              ? `${(totalAnio / 1_000_000).toFixed(1)}M`
+              : totalAnio >= 1000
+              ? `${Math.round(totalAnio / 1000)}k`
+              : gs(totalAnio)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">{delAnio.length} partidos</p>
+        </div>
+      </div>
+
+      {/* ── Gráfico de barras — últimos 6 meses ── */}
+      {registros.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-4">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+            Actividad · últimos 6 meses
+          </p>
+          <div className="flex items-end justify-between gap-1.5">
+            {last6.map((bar, i) => (
+              <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
+                <div
+                  className="w-full rounded-t overflow-hidden bg-gray-100"
+                  style={{ height: "52px" }}
+                >
+                  <div className="w-full flex flex-col justify-end h-full">
+                    <div
+                      className={`w-full rounded-t transition-all duration-500 ${bar.isSelected ? "bg-primary" : "bg-primary/35"}`}
+                      style={{ height: `${Math.max(Math.round((bar.total / maxBar) * 100), bar.total > 0 ? 8 : 0)}%` }}
+                    />
+                  </div>
+                </div>
+                <span className={`text-[9px] font-semibold ${bar.isSelected ? "text-primary" : "text-muted-foreground"}`}>
+                  {bar.label}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Últimos partidos */}
-      {recientes.length > 0 && (
+      {/* ── Pendientes de cobrar (todos, no solo del mes) ── */}
+      {todosPendientes.length > 0 && (
         <div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Últimos registrados
+            Pendientes de cobro · {todosPendientes.length}
+          </p>
+          <div className="space-y-2">
+            {todosPendientes.slice(0, 5).map((r) => (
+              <Card key={r.id}>
+                <CardContent className="p-3.5 flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">{r.equipoA} vs {r.equipoB}</p>
+                    <p className="text-xs text-muted-foreground">{fmtFecha(r.fecha)} · {rolLabel(r.rol)}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-bold text-sm text-amber-600">{gs(r.monto)}</span>
+                    <button
+                      onClick={() => onMarcarPagado(r.id)}
+                      disabled={marking === r.id}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-green-50 text-green-700 text-xs font-semibold hover:bg-green-100 transition-colors disabled:opacity-50"
+                    >
+                      {marking === r.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <CheckCircle className="h-3 w-3" />}
+                      Cobrar
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Partidos del mes seleccionado ── */}
+      {delMes.length > 0 && (
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+            Partidos · {MES_NOMBRES[mes - 1]}
           </p>
           <div className="space-y-1.5">
-            {recientes.map((r) => (
-              <div key={r.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50">
+            {delMes.map((r) => (
+              <div
+                key={r.id}
+                className="flex items-center justify-between py-2.5 px-3.5 rounded-xl bg-white border border-gray-100"
+              >
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{r.equipoA} vs {r.equipoB}</p>
+                  <p className="text-sm font-semibold truncate">{r.equipoA} vs {r.equipoB}</p>
                   <p className="text-xs text-muted-foreground">{fmtFecha(r.fecha)} · {rolLabel(r.rol)}</p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2.5 shrink-0">
                   <span className="text-sm font-bold">{gs(r.monto)}</span>
-                  <Badge variant={r.estado === "PAGADO" ? "success" : "warning"} className="text-[10px]">
-                    {r.estado === "PAGADO" ? "Cobrado" : "Pendiente"}
-                  </Badge>
+                  <div className={`h-2 w-2 rounded-full ${r.estado === "PAGADO" ? "bg-green-500" : "bg-amber-400"}`} />
                 </div>
               </div>
             ))}
@@ -717,15 +854,24 @@ function TabDashboard({
         </div>
       )}
 
+      {/* ── Empty state ── */}
       {registros.length === 0 && (
         <Card>
-          <CardContent className="py-12 text-center text-muted-foreground">
-            <DollarSign className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
-            <p className="font-medium">Todavía no cargaste partidos</p>
-            <p className="text-sm mt-1">Usá el botón de arriba para registrar tu primer honorario</p>
+          <CardContent className="py-14 text-center text-muted-foreground">
+            <DollarSign className="h-14 w-14 text-muted-foreground/15 mx-auto mb-3" />
+            <p className="font-semibold">Todavía no cargaste partidos</p>
+            <p className="text-sm mt-1">Empezá registrando tu primer honorario</p>
           </CardContent>
         </Card>
       )}
+
+      {/* ── CTA ── */}
+      <button
+        onClick={onCargar}
+        className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-primary text-white text-sm font-bold hover:bg-primary/90 active:scale-[0.98] transition-all shadow-sm"
+      >
+        <Plus className="h-4 w-4" /> Cargar nuevo partido
+      </button>
     </div>
   )
 }
@@ -1043,7 +1189,6 @@ export default function MisHonorariosPage() {
       {/* Contenido por tab */}
       {tab === "dashboard" && (
         <TabDashboard
-          stats={stats}
           registros={registros}
           onCargar={() => setTab("cargar")}
           onMarcarPagado={handleMarcarPagado}
