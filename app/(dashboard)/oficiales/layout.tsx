@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Sidebar from "@/components/layout/Sidebar"
 import Navbar from "@/components/layout/Navbar"
+import WhatsNewModal from "@/components/layout/WhatsNewModal"
 import { createClient } from "@/utils/supabase/client"
 import type { TipoRol } from "@prisma/client"
 import { useNotifications } from "@/hooks/useNotifications"
@@ -114,6 +115,11 @@ export default function DashboardLayout({
         />
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
+
+      {/* One-time "What's New" popup — only shown to regular officials */}
+      {userLoaded && !roles.includes("SUPER_ADMIN") && !roles.includes("DESIGNADOR") && (
+        <WhatsNewModal />
+      )}
     </div>
   )
 }
