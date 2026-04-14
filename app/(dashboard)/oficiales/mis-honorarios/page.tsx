@@ -18,13 +18,14 @@ import {
 const RAMAS = ["Masculino", "Femenino"]
 
 const CATEGORIAS: { value: string; label: string }[] = [
-  { value: "PRIMERA_DIVISION", label: "Primera División (LNB)" },
+  { value: "PRIMERA_DIVISION", label: "Primera División — LNB Masc." },
+  { value: "FEMENINO",         label: "Liga Nacional Femenina (LNBF)" },
   { value: "SEGUNDA_DIVISION", label: "Segunda División" },
-  { value: "U21", label: "Sub-21" },
-  { value: "U18", label: "Sub-18" },
-  { value: "U16", label: "Sub-16" },
-  { value: "U14", label: "Sub-14" },
-  { value: "ESPECIAL", label: "Especial / Amistoso" },
+  { value: "U21",              label: "Sub-21" },
+  { value: "U18",              label: "Sub-18" },
+  { value: "U16",              label: "Sub-16" },
+  { value: "U14",              label: "Sub-14" },
+  { value: "ESPECIAL",         label: "Especial / Amistoso" },
 ]
 
 const ROLES: { value: string; label: string }[] = [
@@ -109,13 +110,15 @@ function mapRolDesignacion(rol: string): string {
 }
 
 function mapCategoriaDesignacion(cat: string): { categoria: string; rama: string } {
-  if (cat === "LNB")  return { categoria: "PRIMERA_DIVISION", rama: "Masculino" }
-  if (cat === "LNBF") return { categoria: "PRIMERA_DIVISION", rama: "Femenino" }
-  if (cat === "U22" || cat === "U21") return { categoria: "U21", rama: "Masculino" }
-  if (cat === "U22F") return { categoria: "U21", rama: "Femenino" }
-  if (cat === "U18")  return { categoria: "U18", rama: "Masculino" }
-  if (cat === "U16")  return { categoria: "U16", rama: "Masculino" }
-  if (cat === "U14")  return { categoria: "U14", rama: "Masculino" }
+  if (cat === "LNB")               return { categoria: "PRIMERA_DIVISION", rama: "Masculino" }
+  if (cat === "LNBF")              return { categoria: "FEMENINO",         rama: "Femenino" }
+  if (cat === "U22" || cat === "U21") return { categoria: "U21",           rama: "Masculino" }
+  if (cat === "U22F" || cat === "U21F") return { categoria: "U21",         rama: "Femenino" }
+  if (cat === "U18")               return { categoria: "U18",              rama: "Masculino" }
+  if (cat === "U18F")              return { categoria: "U18",              rama: "Femenino" }
+  if (cat === "U16")               return { categoria: "U16",              rama: "Masculino" }
+  if (cat === "U14")               return { categoria: "U14",              rama: "Masculino" }
+  if (cat === "SEG" || cat === "SEGUNDA") return { categoria: "SEGUNDA_DIVISION", rama: "Masculino" }
   return { categoria: "", rama: "Masculino" }
 }
 

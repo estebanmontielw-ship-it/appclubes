@@ -26,9 +26,18 @@ export async function GET(request: Request) {
     const categoria = searchParams.get("categoria")
     const rama = searchParams.get("rama")
 
-    // Por ahora solo LNB_MASC tiene aranceles configurados
-    let torneo: string | null = null
-    if (categoria === "PRIMERA_DIVISION" && rama === "Masculino") torneo = "LNB_MASC"
+    // Mapear categoria+rama al torneo key en ArancelLnb
+    const TORNEO_MAP: Record<string, Record<string, string>> = {
+      PRIMERA_DIVISION: { Masculino: "LNB_MASC" },
+      FEMENINO:         { Femenino: "LNB_FEM" },
+      SEGUNDA_DIVISION: { Masculino: "SEG_MASC", Femenino: "SEG_FEM" },
+      U21:              { Masculino: "U21_MASC", Femenino: "U21_FEM" },
+      U18:              { Masculino: "U18_MASC", Femenino: "U18_FEM" },
+      U16:              { Masculino: "U16_MASC", Femenino: "U16_FEM" },
+      U14:              { Masculino: "U14_MASC", Femenino: "U14_FEM" },
+      ESPECIAL:         { Masculino: "ESP_MASC", Femenino: "ESP_FEM" },
+    }
+    const torneo: string | null = TORNEO_MAP[categoria]?.[rama] ?? null
 
     if (!torneo) {
       return NextResponse.json({ fases: [], torneo: null })

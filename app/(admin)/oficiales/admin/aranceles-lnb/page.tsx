@@ -51,27 +51,31 @@ function calcular(netoCalculable: number, feriado: boolean) {
 
 const RAMAS = ["Masculino", "Femenino"] as const
 
+// Categorías reales del sistema (CategoriaPartido enum)
+// PRIMERA_DIVISION y FEMENINO son siempre una sola rama → no muestran selector de rama
 const CATEGORIAS_CALC = [
-  { value: "PRIMERA_DIVISION", label: "Primera División (LNB)" },
-  { value: "SEGUNDA_DIVISION", label: "Segunda División" },
-  { value: "U22",              label: "Sub-22" },
-  { value: "U21",              label: "Sub-21" },
-  { value: "U18",              label: "Sub-18" },
-  { value: "U16",              label: "Sub-16" },
-  { value: "U14",              label: "Sub-14" },
+  { value: "PRIMERA_DIVISION", label: "Primera División — LNB Masc.", torneo: "LNB_MASC", tieneRama: false },
+  { value: "FEMENINO",         label: "Liga Nacional Femenina (LNBF)", torneo: "LNB_FEM",  tieneRama: false },
+  { value: "SEGUNDA_DIVISION", label: "Segunda División",              torneo: null,        tieneRama: true  },
+  { value: "U21",              label: "Sub-21",                        torneo: null,        tieneRama: true  },
+  { value: "U18",              label: "Sub-18",                        torneo: null,        tieneRama: true  },
+  { value: "U16",              label: "Sub-16",                        torneo: null,        tieneRama: true  },
+  { value: "U14",              label: "Sub-14",                        torneo: null,        tieneRama: true  },
+  { value: "ESPECIAL",         label: "Especial / Amistoso",           torneo: null,        tieneRama: true  },
 ]
 
 const TORNEO_PREFIX: Record<string, string> = {
-  PRIMERA_DIVISION: "LNB",
   SEGUNDA_DIVISION: "SEG",
-  U22: "U22",
   U21: "U21",
   U18: "U18",
   U16: "U16",
   U14: "U14",
+  ESPECIAL: "ESP",
 }
 
 function computeTorneo(rama: string, categoria: string): string {
+  const cat = CATEGORIAS_CALC.find((c) => c.value === categoria)
+  if (cat?.torneo) return cat.torneo          // fijo (LNB_MASC, LNB_FEM)
   const prefix = TORNEO_PREFIX[categoria] ?? categoria
   return `${prefix}_${rama === "Femenino" ? "FEM" : "MASC"}`
 }
@@ -356,8 +360,9 @@ export default function ArancelesLnbPage() {
       .finally(() => setLoading(false))
   }, [rama, categoria])
 
-  const catLabel = CATEGORIAS_CALC.find((c) => c.value === categoria)?.label ?? categoria
-  const esLnbMasc = categoria === "PRIMERA_DIVISION" && rama === "Masculino"
+  const catObj = CATEGORIAS_CALC.find((c) => c.value === categoria)
+  const esLnbMasc = categoria === "PRIMERA_DIVISION"
+  const tieneRama = catObj?.tieneRama ?? true
 
   return (
     <div className="space-y-5 max-w-3xl">
@@ -368,30 +373,10 @@ export default function ArancelesLnbPage() {
         </p>
       </div>
 
-      {/* Rama */}
-      <div>
-        <Label className="text-xs text-muted-foreground mb-1.5 block">Rama</Label>
-        <div className="flex gap-2">
-          {RAMAS.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRama(r)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
-                rama === r
-                  ? "bg-primary text-white border-primary"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Categoría */}
+      {/* Categoría primero */}
       <div>
         <Label className="text-xs text-muted-foreground mb-1.5 block">Categoría</Label>
-        <Select value={categoria} onValueChange={setCategoria}>
+        <Select value={categoria} onValueChange={(v) => { setCategoria(v); setRama("Masculino") }}>
           <SelectTrigger className="h-9 max-w-xs">
             <SelectValue />
           </SelectTrigger>
@@ -402,6 +387,28 @@ export default function ArancelesLnbPage() {
           </SelectContent>
         </Select>
       </div>
+
+      {/* Rama — solo si la categoría aplica a ambas ramas */}
+      {tieneRama && (
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">Rama</Label>
+          <div className="flex gap-2">
+            {RAMAS.map((r) => (
+              <button
+                key={r}
+                onClick={() => setRama(r)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  rama === r
+                    ? "bg-primary text-white border-primary"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Tabs Calculadora / Tabla */}
       <div className="flex gap-2 pt-1">
@@ -426,7 +433,7 @@ export default function ArancelesLnbPage() {
       ) : fases.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            No hay aranceles configurados para <strong>{catLabel} {rama}</strong>.
+            No hay aranceles configurados para <strong>{catObj?.label ?? categoria}{tieneRama ? ` ${rama}` : ""}</strong>.
           </CardContent>
         </Card>
       ) : tab === "calculadora" ? (
