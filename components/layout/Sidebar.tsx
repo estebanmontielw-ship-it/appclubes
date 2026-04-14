@@ -98,6 +98,7 @@ function getNavSections(
             icon: ClipboardList,
             subItems: [
               { label: "Planillas LNB", href: "/oficiales/admin/designaciones" },
+              { label: "Aranceles LNB Masc.", href: "/oficiales/admin/aranceles-lnb" },
             ],
           },
         ],
@@ -216,6 +217,7 @@ function getNavSections(
             icon: ClipboardList,
             subItems: [
               { label: "Planillas LNB", href: "/oficiales/admin/designaciones" },
+              { label: "Aranceles LNB Masc.", href: "/oficiales/admin/aranceles-lnb" },
             ],
           },
         ],
