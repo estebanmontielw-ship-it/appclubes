@@ -76,12 +76,24 @@ function gs(n: number) {
 }
 
 function fmtFecha(iso: string) {
-  const d = new Date(iso)
-  return d.toLocaleDateString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric" })
+  // Extract date part directly — avoids UTC→local timezone shift (e.g. UTC midnight = prev day in PY)
+  const datePart = iso.split("T")[0] // "2026-04-13"
+  const [y, m, d] = datePart.split("-")
+  return `${d}/${m}/${y}`
+}
+
+// Legacy mapping for categoria values stored before the category rename (PR #16)
+const CAT_LEGACY: Record<string, string> = {
+  PRIMERA_DIVISION: "Liga Nacional Masc. (LNB)",
+  SEGUNDA_DIVISION: "2da División Masc.",
+  U21: "Sub-22",
+  U18: "Sub-17",
+  U16: "Sub-15",
+  U14: "Sub-13",
 }
 
 function catLabel(v: string) {
-  return CATEGORIAS.find((c) => c.value === v)?.label ?? v
+  return CATEGORIAS.find((c) => c.value === v)?.label ?? CAT_LEGACY[v] ?? v
 }
 function rolLabel(v: string) {
   return ROLES.find((r) => r.value === v)?.label ?? v
