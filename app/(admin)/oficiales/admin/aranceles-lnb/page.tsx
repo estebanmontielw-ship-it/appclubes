@@ -47,6 +47,35 @@ function calcular(netoCalculable: number, feriado: boolean) {
   return { iva, totalConIva, totalFeriado }
 }
 
+// ─── CATEGORÍAS Y RAMAS ───────────────────────────────────
+
+const RAMAS = ["Masculino", "Femenino"] as const
+
+const CATEGORIAS_CALC = [
+  { value: "PRIMERA_DIVISION", label: "Primera División (LNB)" },
+  { value: "SEGUNDA_DIVISION", label: "Segunda División" },
+  { value: "U22",              label: "Sub-22" },
+  { value: "U21",              label: "Sub-21" },
+  { value: "U18",              label: "Sub-18" },
+  { value: "U16",              label: "Sub-16" },
+  { value: "U14",              label: "Sub-14" },
+]
+
+const TORNEO_PREFIX: Record<string, string> = {
+  PRIMERA_DIVISION: "LNB",
+  SEGUNDA_DIVISION: "SEG",
+  U22: "U22",
+  U21: "U21",
+  U18: "U18",
+  U16: "U16",
+  U14: "U14",
+}
+
+function computeTorneo(rama: string, categoria: string): string {
+  const prefix = TORNEO_PREFIX[categoria] ?? categoria
+  return `${prefix}_${rama === "Femenino" ? "FEM" : "MASC"}`
+}
+
 // ─── GRUPOS DE FASES (fase base → sedes disponibles) ─────
 
 const FASE_GRUPOS = [
@@ -60,18 +89,29 @@ const FASE_GRUPOS = [
 
 // ─── CALCULADORA ─────────────────────────────────────────
 
-function Calculadora({ fases }: { fases: Fase[] }) {
+function Calculadora({ fases, esLnbMasc }: { fases: Fase[]; esLnbMasc: boolean }) {
   const [grupoKey, setGrupoKey] = useState<string>("etapa1")
   const [sedeKey, setSedeKey]   = useState<string>("ASU")
+  const [faseSimple, setFaseSimple] = useState<string>(fases[0]?.fase ?? "")
   const [feriado, setFeriado]   = useState(false)
 
-  const grupo = FASE_GRUPOS.find((g) => g.key === grupoKey) ?? FASE_GRUPOS[0]
+  // Reset cuando cambian las fases (cambio de torneo)
+  useEffect(() => {
+    setGrupoKey("etapa1")
+    setSedeKey("ASU")
+    setFaseSimple(fases[0]?.fase ?? "")
+  }, [fases])
 
-  // Si la sede actual no existe en el grupo nuevo, resetear a la primera
+  // ── modo LNB Masc (grupos + sede) ──
+  const grupo = FASE_GRUPOS.find((g) => g.key === grupoKey) ?? FASE_GRUPOS[0]
   const sedeValida = grupo.sedes.find((s) => s.k === sedeKey) ? sedeKey : grupo.sedes[0].k
   const sede = grupo.sedes.find((s) => s.k === sedeValida) ?? grupo.sedes[0]
+  const faseLnb = fases.find((f) => f.fase === sede.faseKey)
 
-  const fase = fases.find((f) => f.fase === sede.faseKey)
+  // ── modo simple (otras categorías) ──
+  const faseSimpleObj = fases.find((f) => f.fase === faseSimple)
+
+  const fase = esLnbMasc ? faseLnb : faseSimpleObj
   if (!fase) return null
 
   const { iva, totalConIva, totalFeriado } = calcular(fase.netoCalculable, feriado)
@@ -82,7 +122,7 @@ function Calculadora({ fases }: { fases: Fase[] }) {
     setSedeKey(g?.sedes[0].k ?? "UNICA")
   }
 
-  const tieneSedes = grupo.sedes.length > 1
+  const tieneSedes = esLnbMasc && grupo.sedes.length > 1
 
   return (
     <Card>
@@ -90,22 +130,34 @@ function Calculadora({ fases }: { fases: Fase[] }) {
         <CardTitle className="text-base">Calculadora de honorarios</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* Selector de fase base */}
-        <div>
-          <Label className="text-xs text-muted-foreground mb-1.5 block">Fase del torneo</Label>
-          <Select value={grupoKey} onValueChange={handleGrupo}>
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {FASE_GRUPOS.map((g) => (
-                <SelectItem key={g.key} value={g.key}>{g.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Selector de fase */}
+        {esLnbMasc ? (
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Fase del torneo</Label>
+            <Select value={grupoKey} onValueChange={handleGrupo}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {FASE_GRUPOS.map((g) => (
+                  <SelectItem key={g.key} value={g.key}>{g.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Fase del torneo</Label>
+            <Select value={faseSimple} onValueChange={setFaseSimple}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {fases.map((f) => (
+                  <SelectItem key={f.fase} value={f.fase}>{f.faseNombre}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
-        {/* Botones de sede (solo si hay más de una opción) */}
+        {/* Botones de sede (solo LNB Masc con múltiples sedes) */}
         {tieneSedes && (
           <div>
             <Label className="text-xs text-muted-foreground mb-1.5 block">Sede</Label>
@@ -287,68 +339,98 @@ function TablaResumen({ fases }: { fases: Fase[] }) {
 // ─── PÁGINA PRINCIPAL ─────────────────────────────────────
 
 export default function ArancelesLnbPage() {
-  const [fases, setFases] = useState<Fase[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<"calculadora" | "tabla">("calculadora")
+  const [rama, setRama]           = useState<string>("Masculino")
+  const [categoria, setCategoria] = useState<string>("PRIMERA_DIVISION")
+  const [fases, setFases]         = useState<Fase[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [tab, setTab]             = useState<"calculadora" | "tabla">("calculadora")
 
   useEffect(() => {
-    fetch("/api/admin/aranceles-lnb?torneo=LNB_MASC")
+    setLoading(true)
+    setFases([])
+    const torneo = computeTorneo(rama, categoria)
+    fetch(`/api/admin/aranceles-lnb?torneo=${torneo}`)
       .then((r) => r.json())
-      .then((data) => {
-        if (data.fases) setFases(data.fases)
-        else setError("No se pudieron cargar los aranceles")
-      })
-      .catch(() => setError("Error al cargar los aranceles"))
+      .then((data) => setFases(data.fases ?? []))
+      .catch(() => {})
       .finally(() => setLoading(false))
-  }, [])
+  }, [rama, categoria])
+
+  const catLabel = CATEGORIAS_CALC.find((c) => c.value === categoria)?.label ?? categoria
+  const esLnbMasc = categoria === "PRIMERA_DIVISION" && rama === "Masculino"
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-5 max-w-3xl">
       <div>
-        <h1 className="text-2xl font-bold">Aranceles LNB Masculino 2026</h1>
+        <h1 className="text-2xl font-bold">Calculadora de Aranceles</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Tarifas v2 — IVA 10% incluido. Feriados/suspendidos: +50% sobre total c/IVA.
+          IVA 10% incluido · Feriados/suspendidos: +50% sobre total c/IVA
         </p>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={() => setTab("calculadora")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === "calculadora"
-              ? "bg-primary text-white"
-              : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
-          }`}
-        >
-          Calculadora
-        </button>
-        <button
-          onClick={() => setTab("tabla")}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-            tab === "tabla"
-              ? "bg-primary text-white"
-              : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
-          }`}
-        >
-          Tabla completa
-        </button>
+      {/* Rama */}
+      <div>
+        <Label className="text-xs text-muted-foreground mb-1.5 block">Rama</Label>
+        <div className="flex gap-2">
+          {RAMAS.map((r) => (
+            <button
+              key={r}
+              onClick={() => setRama(r)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                rama === r
+                  ? "bg-primary text-white border-primary"
+                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Categoría */}
+      <div>
+        <Label className="text-xs text-muted-foreground mb-1.5 block">Categoría</Label>
+        <Select value={categoria} onValueChange={setCategoria}>
+          <SelectTrigger className="h-9 max-w-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {CATEGORIAS_CALC.map((c) => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Tabs Calculadora / Tabla */}
+      <div className="flex gap-2 pt-1">
+        {(["calculadora", "tabla"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              tab === t
+                ? "bg-primary text-white"
+                : "bg-white border border-gray-200 text-gray-600 hover:border-gray-300"
+            }`}
+          >
+            {t === "calculadora" ? "Calculadora" : "Tabla completa"}
+          </button>
+        ))}
+      </div>
+
+      {/* Contenido */}
       {loading ? (
-        <div className="text-center py-16 text-muted-foreground animate-pulse">Cargando aranceles...</div>
-      ) : error ? (
-        <Card>
-          <CardContent className="py-10 text-center text-red-500">{error}</CardContent>
-        </Card>
+        <div className="text-center py-16 text-muted-foreground animate-pulse">Cargando...</div>
       ) : fases.length === 0 ? (
         <Card>
           <CardContent className="py-10 text-center text-muted-foreground">
-            No hay aranceles cargados. Ejecutá el SQL de migración en Supabase primero.
+            No hay aranceles configurados para <strong>{catLabel} {rama}</strong>.
           </CardContent>
         </Card>
       ) : tab === "calculadora" ? (
-        <Calculadora fases={fases} />
+        <Calculadora key={computeTorneo(rama, categoria)} fases={fases} esLnbMasc={esLnbMasc} />
       ) : (
         <TablaResumen fases={fases} />
       )}
