@@ -86,6 +86,44 @@ function rolLabel(v: string) {
   return ROLES.find((r) => r.value === v)?.label ?? v
 }
 
+// ─── MONEY INPUT ─────────────────────────────────────────
+
+function MoneyInput({
+  value,
+  onChange,
+  className = "",
+}: {
+  value: string
+  onChange: (raw: string) => void
+  className?: string
+}) {
+  // Strip non-digits and format with dots (Guaraní style: 350.000)
+  function formatGs(raw: string) {
+    const digits = raw.replace(/\D/g, "")
+    if (!digits) return ""
+    return Number(digits).toLocaleString("es-PY")
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/\D/g, "")
+    onChange(raw)
+  }
+
+  return (
+    <div className={`relative ${className}`}>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none">Gs.</span>
+      <Input
+        type="text"
+        inputMode="numeric"
+        value={formatGs(value)}
+        onChange={handleChange}
+        placeholder="0"
+        className="pl-10 h-9"
+      />
+    </div>
+  )
+}
+
 // ─── FORMULARIO (crear o editar) ──────────────────────────
 
 interface FormData {
@@ -291,12 +329,10 @@ function FormPartido({
             </span>
           )}
         </Label>
-        <Input
-          type="number"
+        <MoneyInput
           value={form.monto}
-          onChange={(e) => { set("monto", e.target.value); setSugerido(false) }}
-          placeholder="Ej: 200000"
-          className="h-9 max-w-[200px]"
+          onChange={(raw) => { set("monto", raw); setSugerido(false) }}
+          className="max-w-[220px]"
         />
         {sugerido && form.montoSugerido && (
           <p className="text-xs text-muted-foreground mt-1">
