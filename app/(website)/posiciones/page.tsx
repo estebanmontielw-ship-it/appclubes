@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
-import LNBStandings, { type StandingRow, type LeaderEntry } from "@/components/website/LNBStandings"
+import PosicionesClient from "@/components/website/PosicionesClient"
+import { type StandingRow, type LeaderEntry } from "@/components/website/LNBStandings"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { getStandings, getLeaders } from "@/lib/genius-sports"
 
@@ -150,12 +151,13 @@ export default async function PosicionesPage() {
           subtitle="Clasificación de equipos — LNB 2026"
         />
         <div className="mt-6">
-          <LNBStandings
+          <PosicionesClient
             standings={standings}
             scoringLeaders={scoringLeaders}
             reboundsLeaders={reboundsLeaders}
             assistsLeaders={assistsLeaders}
             error={error}
+            showCompetitionSwitch={true}
           />
         </div>
       </div>

@@ -39,6 +39,8 @@ interface Props {
   updatedAt: string
   /** How often to poll for updates in ms. Default 30000 */
   pollInterval?: number
+  /** Show LNB / U22 Femenino competition toggle. Default false. */
+  showCompetitionSwitch?: boolean
 }
 
 type ViewMode = "general" | "fecha" | "club"
@@ -224,14 +226,26 @@ function DateHeader({ label, count }: { label: string; count: number }) {
   )
 }
 
-export default function ProgramacionLNBClient({ competitionName, teams, matches: initialMatches, updatedAt: initialUpdatedAt, pollInterval = 30_000 }: Props) {
+export default function ProgramacionLNBClient({ competitionName, teams, matches: initialMatches, updatedAt: initialUpdatedAt, pollInterval = 30_000, showCompetitionSwitch = false }: Props) {
   // Live-polling state — overrides SSR-loaded data
   const [matches, setMatches] = useState<LnbMatch[]>(initialMatches)
   const [updatedAt, setUpdatedAt] = useState(initialUpdatedAt)
   const [isPolling, setIsPolling] = useState(false)
   const cancelRef = useRef(false)
 
+  // Competition switching
+  const [activeComp, setActiveComp] = useState<"lnb" | "u22f">("lnb")
+  const [u22fData, setU22fData] = useState<{
+    matches: LnbMatch[]
+    teams: LnbTeam[]
+    competitionName: string
+  } | null>(null)
+  const [u22fLoading, setU22fLoading] = useState(false)
+
   useEffect(() => {
+    // Only poll for LNB — U22F has no live matches
+    if (activeComp !== "lnb") return
+
     cancelRef.current = false
     let timer: ReturnType<typeof setInterval>
 
@@ -259,19 +273,60 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
       cancelRef.current = true
       clearInterval(timer)
     }
-  }, [pollInterval])
+  }, [pollInterval, activeComp])
 
-  const hasLive = matches.some(
+  // Only show live indicator when LNB is active
+  const hasLive = activeComp === "lnb" && matches.some(
     (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
   )
+
+  // Active competition data
+  const activeMatches = activeComp === "lnb" ? matches : (u22fData?.matches ?? [])
+  const activeTeams = activeComp === "lnb" ? teams : (u22fData?.teams ?? [])
+  const activeCompName = activeComp === "lnb" ? competitionName : (u22fData?.competitionName ?? "U22 Femenino")
 
   const [view, setView] = useState<ViewMode>("general")
   const [selectedRound, setSelectedRound] = useState<number | null>(null)
   const [selectedTeamId, setSelectedTeamId] = useState<string | number | null>(null)
   const [clubSide, setClubSide] = useState<ClubSide>("all")
 
+  async function handleSelectCompetition(key: "lnb" | "u22f") {
+    if (key === activeComp) return
+    setView("general")
+    setSelectedRound(null)
+    setSelectedTeamId(null)
+    setClubSide("all")
+    if (key === "lnb") {
+      setActiveComp("lnb")
+      return
+    }
+    // U22F — fetch once, cache in state
+    if (u22fData) {
+      setActiveComp("u22f")
+      return
+    }
+    setU22fLoading(true)
+    try {
+      const res = await fetch("/api/website/programacion-u22f", { cache: "no-store" })
+      if (!res.ok) return
+      const data = await res.json()
+      if (Array.isArray(data.matches)) {
+        setU22fData({
+          matches: data.matches,
+          teams: data.teams ?? [],
+          competitionName: data.competition?.name ?? "U22 Femenino",
+        })
+        setActiveComp("u22f")
+      }
+    } catch {
+      // Silently ignore — keep on LNB
+    } finally {
+      setU22fLoading(false)
+    }
+  }
+
   // Show all matches — completed ones display the score, upcoming ones display time.
-  const scheduledMatches = useMemo(() => matches, [matches])
+  const scheduledMatches = useMemo(() => activeMatches, [activeMatches])
 
   // Rounds that actually have matches (for the "Por jornada" filter buttons)
   const availableRounds = useMemo(() => {
@@ -329,7 +384,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
   }
 
   // Filtered list based on current view
-  const selectedTeam = teams.find((t) => String(t.id) === String(selectedTeamId))
+  const selectedTeam = activeTeams.find((t) => String(t.id) === String(selectedTeamId))
   const filteredMatches = useMemo(() => {
     if (view === "general") return scheduledMatches
     if (view === "fecha") {
@@ -365,9 +420,39 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
 
   return (
     <div>
+      {/* Competition selector */}
+      {showCompetitionSwitch && (
+        <div className="flex items-center gap-2 mb-4">
+          <button
+            onClick={() => handleSelectCompetition("lnb")}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+              activeComp === "lnb"
+                ? "bg-[#0a1628] text-white border-[#0a1628] shadow-sm"
+                : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
+            }`}
+          >
+            LNB
+          </button>
+          <button
+            onClick={() => handleSelectCompetition("u22f")}
+            disabled={u22fLoading}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+              activeComp === "u22f"
+                ? "bg-[#0a1628] text-white border-[#0a1628] shadow-sm"
+                : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
+            }`}
+          >
+            {u22fLoading && (
+              <span className="inline-block w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+            )}
+            U22 Femenino
+          </button>
+        </div>
+      )}
+
       {/* Brand header */}
       <div className="relative rounded-2xl overflow-hidden bg-gradient-to-br from-[#0a1628] via-[#0f2544] to-[#0a1628] text-white p-6 sm:p-8 mb-6 shadow-lg">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+        <div className={`absolute top-0 right-0 w-64 h-64 ${activeComp === "lnb" ? "bg-red-500/10" : "bg-rose-500/10"} rounded-full blur-3xl -translate-y-1/2 translate-x-1/2`} />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
         <div className="relative">
           <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-blue-300 font-semibold mb-2">
@@ -376,9 +461,13 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
           </div>
           <h1 className="font-heading text-3xl sm:text-5xl leading-none mb-2">
             <span className="text-white">Programación </span>
-            <span className="text-red-500">LNB</span>
+            {activeComp === "lnb" ? (
+              <span className="text-red-500">LNB</span>
+            ) : (
+              <span className="text-rose-400">U22 <span className="text-2xl sm:text-3xl text-rose-300">Femenino</span></span>
+            )}
           </h1>
-          <p className="text-sm text-blue-100/70 mb-4">{competitionName}</p>
+          <p className="text-sm text-blue-100/70 mb-4">{activeCompName}</p>
           <div className="flex flex-wrap items-center gap-3 mt-1">
             {updatedLabel && (
               <p className="text-[11px] text-blue-200/60 font-medium flex items-center gap-1.5">
@@ -468,11 +557,11 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
         <div className="bg-white rounded-xl border border-gray-100 p-3 mb-4 space-y-3">
           <div>
             <p className="text-[11px] uppercase tracking-wider font-bold text-gray-400 mb-2 px-1">Elegí el club</p>
-            {teams.length === 0 ? (
+            {activeTeams.length === 0 ? (
               <p className="text-sm text-gray-400 p-2">No hay clubes disponibles.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
-                {teams.map((t) => {
+                {activeTeams.map((t) => {
                   const isSelected = String(t.id) === String(selectedTeamId)
                   return (
                     <button
@@ -557,7 +646,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
                     <MatchCard
                       key={String(m.id)}
                       match={m}
-                      isNext={nextMatchId != null && String(m.id) === String(nextMatchId)}
+                      isNext={activeComp === "lnb" && nextMatchId != null && String(m.id) === String(nextMatchId)}
                     />
                   ))}
                 </div>
