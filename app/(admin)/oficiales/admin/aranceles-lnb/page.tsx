@@ -47,16 +47,42 @@ function calcular(netoCalculable: number, feriado: boolean) {
   return { iva, totalConIva, totalFeriado }
 }
 
+// ─── GRUPOS DE FASES (fase base → sedes disponibles) ─────
+
+const FASE_GRUPOS = [
+  { key: "etapa1",    label: "Etapa 1",             sedes: [{ k: "ASU", label: "Asunción", faseKey: "LNB_ETAPA1_ASU" }, { k: "INT", label: "Interior", faseKey: "LNB_ETAPA1_INT" }] },
+  { key: "comuneros", label: "Comuneros",            sedes: [{ k: "ASU", label: "Asunción", faseKey: "LNB_COMUNEROS_ASU" }, { k: "INT", label: "Interior", faseKey: "LNB_COMUNEROS_INT" }] },
+  { key: "final_com", label: "Final Comuneros",      sedes: [{ k: "UNICA", label: "", faseKey: "LNB_FINAL_COM" }] },
+  { key: "top4",      label: "Top 4",                sedes: [{ k: "ASU", label: "Asunción", faseKey: "LNB_TOP4_ASU" }, { k: "INT", label: "Interior", faseKey: "LNB_TOP4_INT" }, { k: "EXT", label: "Internacional", faseKey: "LNB_TOP4_EXT" }] },
+  { key: "final_t4",  label: "Final Top 4",          sedes: [{ k: "UNICA", label: "", faseKey: "LNB_FINAL_TOP4" }] },
+  { key: "final_ext", label: "Final — Internacional", sedes: [{ k: "UNICA", label: "", faseKey: "LNB_FINAL_EXT" }] },
+]
+
 // ─── CALCULADORA ─────────────────────────────────────────
 
 function Calculadora({ fases }: { fases: Fase[] }) {
-  const [faseKey, setFaseKey] = useState<string>(fases[0]?.fase ?? "")
-  const [feriado, setFeriado] = useState(false)
+  const [grupoKey, setGrupoKey] = useState<string>("etapa1")
+  const [sedeKey, setSedeKey]   = useState<string>("ASU")
+  const [feriado, setFeriado]   = useState(false)
 
-  const fase = fases.find((f) => f.fase === faseKey)
+  const grupo = FASE_GRUPOS.find((g) => g.key === grupoKey) ?? FASE_GRUPOS[0]
+
+  // Si la sede actual no existe en el grupo nuevo, resetear a la primera
+  const sedeValida = grupo.sedes.find((s) => s.k === sedeKey) ? sedeKey : grupo.sedes[0].k
+  const sede = grupo.sedes.find((s) => s.k === sedeValida) ?? grupo.sedes[0]
+
+  const fase = fases.find((f) => f.fase === sede.faseKey)
   if (!fase) return null
 
   const { iva, totalConIva, totalFeriado } = calcular(fase.netoCalculable, feriado)
+
+  function handleGrupo(key: string) {
+    setGrupoKey(key)
+    const g = FASE_GRUPOS.find((g) => g.key === key)
+    setSedeKey(g?.sedes[0].k ?? "UNICA")
+  }
+
+  const tieneSedes = grupo.sedes.length > 1
 
   return (
     <Card>
@@ -64,34 +90,56 @@ function Calculadora({ fases }: { fases: Fase[] }) {
         <CardTitle className="text-base">Calculadora de honorarios</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        {/* Selección */}
-        <div className="flex flex-wrap gap-4 items-end">
-          <div className="flex-1 min-w-[200px]">
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Fase del torneo</Label>
-            <Select value={faseKey} onValueChange={setFaseKey}>
-              <SelectTrigger className="h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {fases.map((f) => (
-                  <SelectItem key={f.fase} value={f.fase}>{f.faseNombre}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Selector de fase base */}
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">Fase del torneo</Label>
+          <Select value={grupoKey} onValueChange={handleGrupo}>
+            <SelectTrigger className="h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {FASE_GRUPOS.map((g) => (
+                <SelectItem key={g.key} value={g.key}>{g.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Botones de sede (solo si hay más de una opción) */}
+        {tieneSedes && (
           <div>
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Condición</Label>
-            <button
-              onClick={() => setFeriado(!feriado)}
-              className={`h-9 px-4 rounded-lg text-sm font-medium border transition-colors ${
-                feriado
-                  ? "bg-amber-500 text-white border-amber-500"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-              }`}
-            >
-              {feriado ? "Feriado (+50%)" : "Día normal"}
-            </button>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">Sede</Label>
+            <div className="flex gap-2 flex-wrap">
+              {grupo.sedes.map((s) => (
+                <button
+                  key={s.k}
+                  onClick={() => setSedeKey(s.k)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    sedeValida === s.k
+                      ? "bg-primary text-white border-primary"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           </div>
+        )}
+
+        {/* Condición feriado */}
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">Condición</Label>
+          <button
+            onClick={() => setFeriado(!feriado)}
+            className={`h-9 px-4 rounded-lg text-sm font-medium border transition-colors ${
+              feriado
+                ? "bg-amber-500 text-white border-amber-500"
+                : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+            }`}
+          >
+            {feriado ? "Feriado (+50%)" : "Día normal"}
+          </button>
         </div>
 
         {/* Desglose por roles */}
