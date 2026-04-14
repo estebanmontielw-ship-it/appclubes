@@ -147,6 +147,7 @@ function Calculadora({ fases }: { fases: Fase[] }) {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             Desglose — {fase.faseNombre}
           </p>
+          <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b text-xs text-muted-foreground">
@@ -176,6 +177,7 @@ function Calculadora({ fases }: { fases: Fase[] }) {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
 
         {/* Totales */}
@@ -230,6 +232,7 @@ function TablaResumen({ fases }: { fases: Fase[] }) {
               </div>
             </CardHeader>
             <CardContent className="px-4 pb-4">
+              <div className="overflow-x-auto">
               <table className="w-full text-xs mb-3">
                 <thead>
                   <tr className="border-b text-muted-foreground">
@@ -259,6 +262,7 @@ function TablaResumen({ fases }: { fases: Fase[] }) {
                   ))}
                 </tbody>
               </table>
+              </div>
 
               <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs border-t pt-2">
                 <span className="text-gray-500">

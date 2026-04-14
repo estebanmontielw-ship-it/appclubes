@@ -129,7 +129,7 @@ export default function AdminFinanzasPage() {
           <Button size="sm" onClick={() => setShowArancelForm(!showArancelForm)}><Plus className="mr-1 h-4 w-4" /> Nuevo arancel</Button>
           {showArancelForm && (
             <Card><CardContent className="p-4 space-y-3">
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div><Label className="text-xs">Categoría</Label>
                   <Select value={arCat} onValueChange={setArCat}><SelectTrigger className="h-9"><SelectValue placeholder="Cat." /></SelectTrigger>
                     <SelectContent>{CATEGORIAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>

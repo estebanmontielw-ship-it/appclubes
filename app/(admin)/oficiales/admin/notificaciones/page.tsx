@@ -339,7 +339,7 @@ export default function AdminNotificacionesPage() {
           {/* Canales */}
           <div className="space-y-3 pt-2">
             <Label>Canales de envío</Label>
-            <div className="flex gap-6">
+            <div className="flex flex-wrap gap-6">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="notif"

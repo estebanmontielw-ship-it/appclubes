@@ -185,7 +185,7 @@ export default function DesignacionesPage() {
 
       {/* Summary */}
       {!loading && matchesFecha.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
           <div className="bg-white rounded-xl border border-gray-100 p-3 text-center">
             <p className="text-2xl font-bold text-gray-900">{matchesFecha.length}</p>
             <p className="text-xs text-gray-500 mt-0.5">Partidos</p>
