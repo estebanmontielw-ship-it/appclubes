@@ -97,7 +97,7 @@ function getNavSections(
             label: "Designaciones",
             icon: ClipboardList,
             subItems: [
-              { label: "Planillas LNB", href: "/oficiales/admin/designaciones" },
+              { label: "Planillas CPB", href: "/oficiales/admin/designaciones" },
               { label: "Calculadora Aranceles", href: "/oficiales/admin/aranceles-lnb" },
             ],
           },
@@ -216,7 +216,7 @@ function getNavSections(
             label: "Designaciones",
             icon: ClipboardList,
             subItems: [
-              { label: "Planillas LNB", href: "/oficiales/admin/designaciones" },
+              { label: "Planillas CPB", href: "/oficiales/admin/designaciones" },
               { label: "Calculadora Aranceles", href: "/oficiales/admin/aranceles-lnb" },
             ],
           },

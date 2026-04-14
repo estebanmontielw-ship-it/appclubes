@@ -4,7 +4,7 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
 import { geniusFetch } from "@/lib/genius-sports"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { resolveAllCpbCompetitions } from "@/lib/programacion-lnb"
 
 export const dynamic = "force-dynamic"
 
@@ -61,32 +61,46 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const fecha = searchParams.get("fecha") // YYYY-MM-DD
 
-    // Resolve competition ID (uses env var or auto-detects)
-    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
-    if (!competitionId) {
-      return NextResponse.json({ matches: [], error: "No se encontró la competencia LNB" })
+    // Resolve ALL CPB competitions for this year
+    const competitions = await resolveAllCpbCompetitions()
+    if (competitions.length === 0) {
+      return NextResponse.json({ matches: [], error: "No se encontraron competencias CPB en Genius Sports" })
     }
 
-    // Load schedule — use limit=500 to ensure we get the full season
-    const raw = await geniusFetch(`/competitions/${competitionId}/matches?limit=500`, "medium")
-    const matches = parseMatches(raw)
+    // Fetch matches from all competitions in parallel
+    const fetchResults = await Promise.allSettled(
+      competitions.map(async (comp) => {
+        const raw = await geniusFetch(`/competitions/${comp.id}/matches?limit=500`, "medium")
+        return { matches: parseMatches(raw), comp }
+      })
+    )
 
-    // Filter by date if provided
-    const filtered = fecha
-      ? matches.filter((m: any) => extractDate(m) === fecha)
-      : matches.slice(0, 60)
+    // Merge all matches with their competition info
+    const allMatchEntries: Array<{ match: any; comp: typeof competitions[0] }> = []
+    for (const r of fetchResults) {
+      if (r.status === "fulfilled") {
+        for (const m of r.value.matches) {
+          allMatchEntries.push({ match: m, comp: r.value.comp })
+        }
+      }
+    }
 
-    // Debug info — visible in the API response to diagnose issues
-    const allDates = Array.from(new Set(matches.map((m: any) => extractDate(m)).filter(Boolean))).sort()
+    // Filter by date
+    const filteredEntries = fecha
+      ? allMatchEntries.filter(({ match: m }) => extractDate(m) === fecha)
+      : allMatchEntries.slice(0, 80)
 
-    if (filtered.length === 0) return NextResponse.json({
+    // Debug info
+    const allDates = Array.from(new Set(allMatchEntries.map(({ match: m }) => extractDate(m)).filter(Boolean))).sort()
+
+    if (filteredEntries.length === 0) return NextResponse.json({
       matches: [],
-      competitionId,
-      _debug: { totalFromAPI: matches.length, availableDates: allDates.slice(0, 30) },
+      competitions: competitions.map(c => c.id),
+      _debug: { totalFromAPI: allMatchEntries.length, availableDates: allDates.slice(0, 30) },
     })
 
     // Load existing planillas for these matches
-    const matchIds = filtered.map((m: any) => String(m.matchId))
+    const matchIds = filteredEntries.map(({ match: m }) => String(m.matchId))
     const planillas = await prisma.planillaDesignacion.findMany({
       where: { matchId: { in: matchIds } },
       select: {
@@ -100,36 +114,40 @@ export async function GET(request: Request) {
 
     const planillaMap = new Map(planillas.map(p => [p.matchId, p]))
 
-    const result = filtered.map((m: any) => {
-      const fechaStr = extractDate(m) || ""
-      const horaStr = extractTime(m) || ""
+    const result = filteredEntries
+      .map(({ match: m, comp }) => {
+        const fechaStr = extractDate(m) || ""
+        const horaStr = extractTime(m) || ""
 
-      // Identify home/away via isHomeCompetitor
-      const competitors: any[] = m.competitors || []
-      const home = competitors.find((c: any) => c.isHomeCompetitor == 1 || c.isHomeCompetitor === "1" || c.isHomeCompetitor === true) || competitors[0]
-      const away = competitors.find((c: any) => c.isHomeCompetitor == 0 || c.isHomeCompetitor === "0" || c.isHomeCompetitor === false) || competitors[1]
+        const competitors: any[] = m.competitors || []
+        const home = competitors.find((c: any) => c.isHomeCompetitor == 1 || c.isHomeCompetitor === "1" || c.isHomeCompetitor === true) || competitors[0]
+        const away = competitors.find((c: any) => c.isHomeCompetitor == 0 || c.isHomeCompetitor === "0" || c.isHomeCompetitor === false) || competitors[1]
 
-      const planilla = planillaMap.get(String(m.matchId)) || null
-      const asignados = planilla
-        ? [planilla.ccNombre, planilla.a1Nombre, planilla.a2Nombre, planilla.apNombre, planilla.cronNombre, planilla.lanzNombre].filter(Boolean).length
-        : 0
+        const planilla = planillaMap.get(String(m.matchId)) || null
+        const asignados = planilla
+          ? [planilla.ccNombre, planilla.a1Nombre, planilla.a2Nombre, planilla.apNombre, planilla.cronNombre, planilla.lanzNombre].filter(Boolean).length
+          : 0
 
-      return {
-        matchId: String(m.matchId),
-        fecha: fechaStr,
-        hora: horaStr,
-        equipoLocal: home?.competitorName || "Local",
-        equipoVisit: away?.competitorName || "Visitante",
-        cancha: extractVenueName(m),
-        categoria: "LNB",
-        planillaId: planilla?.id || null,
-        estado: planilla?.estado || null,
-        asignados,
-        confirmadaEn: planilla?.confirmadaEn || null,
-      }
-    })
+        return {
+          matchId: String(m.matchId),
+          fecha: fechaStr,
+          hora: horaStr,
+          equipoLocal: home?.competitorName || "Local",
+          equipoVisit: away?.competitorName || "Visitante",
+          cancha: extractVenueName(m),
+          categoria: comp.categoria,
+          competicionId: comp.id,
+          competicionNombre: comp.name,
+          planillaId: planilla?.id || null,
+          estado: planilla?.estado || null,
+          asignados,
+          confirmadaEn: planilla?.confirmadaEn || null,
+        }
+      })
+      // Sort by time within the day
+      .sort((a, b) => (a.hora || "").localeCompare(b.hora || ""))
 
-    return NextResponse.json({ matches: result, competitionId })
+    return NextResponse.json({ matches: result, competitions: competitions.map(c => c.id) })
   } catch (error) {
     return handleApiError(error, { context: "GET /api/designaciones" })
   }

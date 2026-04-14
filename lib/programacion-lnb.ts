@@ -72,6 +72,59 @@ export interface LnbSchedulePayload {
 
 export async function resolveLnbCompetitionIdPublic() { return resolveLnbCompetitionId() }
 
+export interface CpbCompetition {
+  id: string
+  name: string
+  categoria: string  // LNB | LNBF | U22_MASC | U22_FEM | U19_MASC | U17_MASC | U17_FEM | ...
+}
+
+function categoriaFromCompName(name: string): string {
+  const u = name.toUpperCase()
+  const hasFem = u.includes("FEM") || u.includes("MUJER") || u.includes("WOMEN")
+  if (u.includes("U22") || u.includes("U-22") || u.includes("SUB-22") || u.includes("SUB 22") || u.includes("DESARROLLO"))
+    return hasFem ? "U22_FEM" : "U22_MASC"
+  if (u.includes("U19") || u.includes("U-19") || u.includes("SUB-19") || u.includes("SUB 19"))
+    return hasFem ? "U19_FEM" : "U19_MASC"
+  if (u.includes("U17") || u.includes("U-17") || u.includes("SUB-17") || u.includes("SUB 17"))
+    return hasFem ? "U17_FEM" : "U17_MASC"
+  if (u.includes("U15") || u.includes("U-15") || u.includes("SUB-15") || u.includes("SUB 15"))
+    return hasFem ? "U15_FEM" : "U15_MASC"
+  if (u.includes("U13") || u.includes("U-13") || u.includes("SUB-13") || u.includes("SUB 13"))
+    return hasFem ? "U13_FEM" : "U13_MASC"
+  if (hasFem) return "LNBF"
+  return "LNB"
+}
+
+/** Returns all CPB competitions active in the current year from Genius Sports. */
+export async function resolveAllCpbCompetitions(): Promise<CpbCompetition[]> {
+  const currentYear = new Date().getFullYear()
+  try {
+    const raw: any = await getCompetitions()
+    const comps: any[] = raw?.response?.data || raw?.data || []
+    const thisYear = comps.filter((c) => {
+      const y = Number(c.year)
+      return y === currentYear || y === currentYear - 1
+    })
+    // Prefer current year; if none, fall back to previous year
+    const candidates = thisYear.filter(c => Number(c.year) === currentYear).length > 0
+      ? thisYear.filter(c => Number(c.year) === currentYear)
+      : thisYear
+    if (candidates.length > 0) {
+      return candidates.map((c) => ({
+        id: String(c.competitionId),
+        name: c.competitionName ?? String(c.competitionId),
+        categoria: categoriaFromCompName(c.competitionName ?? ""),
+      }))
+    }
+  } catch {
+    // fall through to env var fallback
+  }
+  // Env var fallback (at minimum LNB)
+  const envId = process.env.GENIUS_LNB_COMPETITION_ID
+  if (envId) return [{ id: envId, name: "LNB", categoria: "LNB" }]
+  return []
+}
+
 async function resolveLnbCompetitionId(): Promise<{ id: string | null; name: string | null }> {
   const envId = process.env.GENIUS_LNB_COMPETITION_ID
   if (envId) return { id: envId, name: null }
