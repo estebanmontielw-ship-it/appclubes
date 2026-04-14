@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { startTransition, useEffect, useRef, useState } from "react"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -70,7 +70,6 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
         .then((payload) => {
           if (Array.isArray(payload?.matches)) {
             const all: NormalizedMatch[] = payload.matches
-            const now = new Date().toISOString()
             const live = all.filter(
               (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
             )
@@ -78,7 +77,9 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
               .filter((m) => m.status !== "COMPLETE" && !live.includes(m))
               .sort((a, b) => (a.isoDateTime ?? "").localeCompare(b.isoDateTime ?? ""))
             const recent = all.filter((m) => m.status === "COMPLETE").slice(-4)
-            setMatches([...recent, ...live, ...upcoming].slice(0, 20))
+            startTransition(() => {
+              setMatches([...recent, ...live, ...upcoming].slice(0, 20))
+            })
           }
         })
         .catch(() => {})
