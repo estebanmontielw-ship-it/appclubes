@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { startTransition, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { MapPin, ExternalLink } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
@@ -17,9 +17,12 @@ function fmtDate(dateStr: string | null): string {
 function TeamLogo({ logo, name, sigla }: { logo: string | null; name: string; sigla: string | null }) {
   if (logo) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={logo}
         alt={name}
+        width={64}
+        height={64}
         className="w-14 h-14 sm:w-16 sm:h-16 object-contain"
         onError={(e) => { (e.target as HTMLImageElement).style.display = "none" }}
       />
@@ -69,9 +72,11 @@ export default function LNBMatchCards({
         const next = upcoming.find((m) => m.isoDateTime && m.isoDateTime >= now)
         const nextId = next?.id ?? upcoming[0]?.id ?? null
 
-        setMatches(filtered)
-        setNextMatchId(nextId)
-        setLiveCount(live.length)
+        startTransition(() => {
+          setMatches(filtered)
+          setNextMatchId(nextId)
+          setLiveCount(live.length)
+        })
       } catch {
         // Silently ignore — keep showing current data
       }

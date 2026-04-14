@@ -31,9 +31,13 @@ export default function NewsCard({ titulo, slug, extracto, imagenUrl, categoria,
       <article className="card-soft overflow-hidden h-full">
         {cover.src && (
           <div className="aspect-video overflow-hidden bg-gray-100">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={cover.src}
               alt={titulo}
+              width={640}
+              height={360}
+              loading="lazy"
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               style={{ objectPosition: cover.objectPosition }}
             />
