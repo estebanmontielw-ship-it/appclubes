@@ -26,18 +26,22 @@ export async function GET(request: Request) {
     const categoria = searchParams.get("categoria")
     const rama = searchParams.get("rama")
 
-    // Mapear categoria+rama al torneo key en ArancelLnb
-    const TORNEO_MAP: Record<string, Record<string, string>> = {
-      PRIMERA_DIVISION: { Masculino: "LNB_MASC" },
-      FEMENINO:         { Femenino: "LNB_FEM" },
-      SEGUNDA_DIVISION: { Masculino: "SEG_MASC", Femenino: "SEG_FEM" },
-      U21:              { Masculino: "U21_MASC", Femenino: "U21_FEM" },
-      U18:              { Masculino: "U18_MASC", Femenino: "U18_FEM" },
-      U16:              { Masculino: "U16_MASC", Femenino: "U16_FEM" },
-      U14:              { Masculino: "U14_MASC", Femenino: "U14_FEM" },
-      ESPECIAL:         { Masculino: "ESP_MASC", Femenino: "ESP_FEM" },
+    // Categorías fijas (no dependen de rama)
+    const TORNEO_FIJO: Record<string, string> = {
+      LNB:  "LNB_MASC",
+      LNBF: "LNB_FEM",
+      U19:  "U19_MASC",
     }
-    const torneo: string | null = TORNEO_MAP[categoria]?.[rama] ?? null
+    // Categorías con rama
+    const TORNEO_CON_RAMA: Record<string, string> = {
+      U22: "U22", U17: "U17", U15: "U15", U13: "U13", ESPECIAL: "ESP",
+    }
+    let torneo: string | null = null
+    if (TORNEO_FIJO[categoria]) {
+      torneo = TORNEO_FIJO[categoria]
+    } else if (TORNEO_CON_RAMA[categoria]) {
+      torneo = `${TORNEO_CON_RAMA[categoria]}_${rama === "Femenino" ? "FEM" : "MASC"}`
+    }
 
     if (!torneo) {
       return NextResponse.json({ fases: [], torneo: null })

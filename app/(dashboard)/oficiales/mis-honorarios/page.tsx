@@ -18,14 +18,14 @@ import {
 const RAMAS = ["Masculino", "Femenino"]
 
 const CATEGORIAS: { value: string; label: string }[] = [
-  { value: "PRIMERA_DIVISION", label: "Primera División — LNB Masc." },
-  { value: "FEMENINO",         label: "Liga Nacional Femenina (LNBF)" },
-  { value: "SEGUNDA_DIVISION", label: "Segunda División" },
-  { value: "U21",              label: "Sub-21" },
-  { value: "U18",              label: "Sub-18" },
-  { value: "U16",              label: "Sub-16" },
-  { value: "U14",              label: "Sub-14" },
-  { value: "ESPECIAL",         label: "Especial / Amistoso" },
+  { value: "LNB",      label: "LNB — Liga Nacional Masc." },
+  { value: "LNBF",     label: "LNBF — Liga Nacional Fem." },
+  { value: "U22",      label: "Sub-22" },
+  { value: "U19",      label: "Sub-19 (Masculino)" },
+  { value: "U17",      label: "Sub-17" },
+  { value: "U15",      label: "Sub-15" },
+  { value: "U13",      label: "Sub-13" },
+  { value: "ESPECIAL", label: "Especial / Amistoso" },
 ]
 
 const ROLES: { value: string; label: string }[] = [
@@ -110,15 +110,19 @@ function mapRolDesignacion(rol: string): string {
 }
 
 function mapCategoriaDesignacion(cat: string): { categoria: string; rama: string } {
-  if (cat === "LNB")               return { categoria: "PRIMERA_DIVISION", rama: "Masculino" }
-  if (cat === "LNBF")              return { categoria: "FEMENINO",         rama: "Femenino" }
-  if (cat === "U22" || cat === "U21") return { categoria: "U21",           rama: "Masculino" }
-  if (cat === "U22F" || cat === "U21F") return { categoria: "U21",         rama: "Femenino" }
-  if (cat === "U18")               return { categoria: "U18",              rama: "Masculino" }
-  if (cat === "U18F")              return { categoria: "U18",              rama: "Femenino" }
-  if (cat === "U16")               return { categoria: "U16",              rama: "Masculino" }
-  if (cat === "U14")               return { categoria: "U14",              rama: "Masculino" }
-  if (cat === "SEG" || cat === "SEGUNDA") return { categoria: "SEGUNDA_DIVISION", rama: "Masculino" }
+  if (cat === "LNB")                  return { categoria: "LNB",      rama: "Masculino" }
+  if (cat === "LNBF")                 return { categoria: "LNBF",     rama: "Femenino"  }
+  if (cat === "U22")                  return { categoria: "U22",      rama: "Masculino" }
+  if (cat === "U22F")                 return { categoria: "U22",      rama: "Femenino"  }
+  if (cat === "U19")                  return { categoria: "U19",      rama: "Masculino" }
+  if (cat === "U17")                  return { categoria: "U17",      rama: "Masculino" }
+  if (cat === "U17F")                 return { categoria: "U17",      rama: "Femenino"  }
+  if (cat === "U15")                  return { categoria: "U15",      rama: "Masculino" }
+  if (cat === "U15F")                 return { categoria: "U15",      rama: "Femenino"  }
+  if (cat === "U13")                  return { categoria: "U13",      rama: "Masculino" }
+  if (cat === "U13F")                 return { categoria: "U13",      rama: "Femenino"  }
+  // Legacy / alias
+  if (cat === "U21" || cat === "U22_MASC") return { categoria: "U22", rama: "Masculino" }
   return { categoria: "", rama: "Masculino" }
 }
 
