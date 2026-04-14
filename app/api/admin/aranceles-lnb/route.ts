@@ -1,0 +1,90 @@
+import { createClient } from "@/utils/supabase/server"
+import { cookies } from "next/headers"
+import prisma from "@/lib/prisma"
+import { NextResponse } from "next/server"
+import { handleApiError } from "@/lib/api-errors"
+
+const FASE_ORDER = [
+  "LNB_ETAPA1_ASU",
+  "LNB_ETAPA1_INT",
+  "LNB_COMUNEROS_ASU",
+  "LNB_COMUNEROS_INT",
+  "LNB_FINAL_COM",
+  "LNB_TOP4_ASU",
+  "LNB_TOP4_INT",
+  "LNB_TOP4_EXT",
+  "LNB_FINAL_TOP4",
+  "LNB_FINAL_EXT",
+]
+
+const ROL_ORDER = [
+  "ARBITRO",
+  "ARBITRO_NAC",
+  "ARBITRO_INTL",
+  "OFICIAL_MESA",
+  "ESTADISTICO",
+  "RELATOR",
+]
+
+export async function GET(request: Request) {
+  try {
+    const cookieStore = cookies()
+    const supabase = createClient(cookieStore)
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+    }
+
+    const adminRoles = await prisma.usuarioRol.findMany({
+      where: { usuarioId: user.id, rol: { in: ["SUPER_ADMIN", "DESIGNADOR"] } },
+    })
+    if (adminRoles.length === 0) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(request.url)
+    const torneo = searchParams.get("torneo") || "LNB_MASC"
+
+    const rows = await prisma.arancelLnb.findMany({
+      where: { torneo, activo: true },
+      orderBy: [{ fase: "asc" }, { rol: "asc" }],
+    })
+
+    // Agrupar por fase manteniendo el orden correcto
+    const byFase: Record<string, typeof rows> = {}
+    for (const row of rows) {
+      if (!byFase[row.fase]) byFase[row.fase] = []
+      byFase[row.fase].push(row)
+    }
+
+    // Ordenar roles dentro de cada fase
+    for (const fase of Object.keys(byFase)) {
+      byFase[fase].sort(
+        (a, b) => ROL_ORDER.indexOf(a.rol) - ROL_ORDER.indexOf(b.rol)
+      )
+    }
+
+    // Construir array ordenado de fases
+    const fases = FASE_ORDER.filter((f) => byFase[f]).map((f) => ({
+      fase: f,
+      faseNombre: byFase[f][0].faseNombre,
+      roles: byFase[f].map((r) => ({
+        id: r.id,
+        rol: r.rol,
+        montoUnitario: Number(r.montoUnitario),
+        cantPersonas: r.cantPersonas,
+        esManual: r.esManual,
+        subtotal: r.esManual ? null : Number(r.montoUnitario) * r.cantPersonas,
+      })),
+      netoCalculable: byFase[f]
+        .filter((r) => !r.esManual)
+        .reduce((acc, r) => acc + Number(r.montoUnitario) * r.cantPersonas, 0),
+      tieneManual: byFase[f].some((r) => r.esManual),
+    }))
+
+    return NextResponse.json({ torneo, fases })
+  } catch (error) {
+    return handleApiError(error, { context: "admin/aranceles-lnb" })
+  }
+}
