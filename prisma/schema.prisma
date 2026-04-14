@@ -57,6 +57,7 @@ model Usuario {
   certificados         Certificado[]
   designaciones        Designacion[]
   honorarios           Honorario[]
+  honorariosPropios    HonorarioPropio[]
   notificaciones       Notificacion[]
   notifEnviadas        Notificacion[]     @relation("NotifEnviadas")
   cursosComoInstructor Curso[]            @relation("InstructorCurso")
@@ -826,6 +827,31 @@ model PlanillaDesignacionLog {
   cambiadoEn           DateTime @default(now())
 
   @@map("planillas_designacion_logs")
+}
+
+// ─── HONORARIOS PROPIOS (autogestión oficiales) ──────────
+model HonorarioPropio {
+  id            String    @id @default(uuid())
+  usuarioId     String
+  fecha         DateTime
+  rama          String    // "Masculino" | "Femenino"
+  categoria     String    // "PRIMERA_DIVISION" | "SEGUNDA_DIVISION" | "U21" | "U18" | "U16" | "U14" | "ESPECIAL"
+  equipoA       String
+  equipoB       String
+  rol           String    // "ARBITRO" | "OFICIAL_MESA" | "ESTADISTICO" | "RELATOR"
+  fase          String?   // "LNB_ETAPA1_ASU" etc. — solo para LNB_MASC
+  faseNombre    String?   // "Etapa 1 — Asunción"
+  montoSugerido Decimal?  @db.Decimal(12, 2)
+  monto         Decimal   @db.Decimal(12, 2)
+  estado        String    @default("PENDIENTE") // "PENDIENTE" | "PAGADO"
+  pagadoEn      DateTime?
+  notas         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  usuario       Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("honorarios_propios")
 }
 
 // ─── ARANCELES LNB v2 (LNB MASCULINO 2026) ───────────────
