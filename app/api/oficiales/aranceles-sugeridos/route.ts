@@ -5,7 +5,8 @@ import { NextResponse } from "next/server"
 
 export const dynamic = "force-dynamic"
 
-const FASE_ORDER = [
+// Orden de display para las fases del LNB Masc (los otros torneos no tienen orden fijo)
+const LNB_FASE_ORDER = [
   "LNB_ETAPA1_ASU", "LNB_ETAPA1_INT",
   "LNB_COMUNEROS_ASU", "LNB_COMUNEROS_INT",
   "LNB_FINAL_COM",
@@ -13,7 +14,19 @@ const FASE_ORDER = [
   "LNB_FINAL_TOP4", "LNB_FINAL_EXT",
 ]
 
-// GET ?categoria=PRIMERA_DIVISION&rama=Masculino
+// Mapa categoría + rama → clave de torneo en aranceles_lnb
+const TORNEO_MAP: Record<string, { masc: string | null; fem: string | null }> = {
+  LNB:     { masc: "LNB_MASC",       fem: null         },
+  LNBF:    { masc: null,             fem: "LNB_FEM"    },
+  U22:     { masc: "U22_MASC",       fem: "U22_FEM"    },
+  U19:     { masc: "INF_MASC_U19",   fem: null         },
+  U17:     { masc: "INF_MASC_U1517", fem: "INF_FEM"    },
+  U15:     { masc: "INF_MASC_U1517", fem: "INF_FEM"    },
+  U13:     { masc: "INF_MASC_U1517", fem: "INF_FEM"    },
+  ESPECIAL:{ masc: "ESP_MASC",       fem: "ESP_FEM"    },
+}
+
+// GET ?categoria=LNB&rama=Masculino
 // Devuelve fases con montos unitarios por rol, solo para torneos configurados
 export async function GET(request: Request) {
   try {
@@ -23,25 +36,13 @@ export async function GET(request: Request) {
     if (!user) return NextResponse.json({ error: "No autenticado" }, { status: 401 })
 
     const { searchParams } = new URL(request.url)
-    const categoria = searchParams.get("categoria")
-    const rama = searchParams.get("rama")
+    const categoriaRaw = searchParams.get("categoria")
+    const ramaRaw      = searchParams.get("rama")
 
-    // Categorías fijas (no dependen de rama)
-    const TORNEO_FIJO: Record<string, string> = {
-      LNB:  "LNB_MASC",
-      LNBF: "LNB_FEM",
-      U19:  "U19_MASC",
-    }
-    // Categorías con rama
-    const TORNEO_CON_RAMA: Record<string, string> = {
-      U22: "U22", U17: "U17", U15: "U15", U13: "U13", ESPECIAL: "ESP",
-    }
-    let torneo: string | null = null
-    if (TORNEO_FIJO[categoria]) {
-      torneo = TORNEO_FIJO[categoria]
-    } else if (TORNEO_CON_RAMA[categoria]) {
-      torneo = `${TORNEO_CON_RAMA[categoria]}_${rama === "Femenino" ? "FEM" : "MASC"}`
-    }
+    if (!categoriaRaw) return NextResponse.json({ fases: [], torneo: null })
+
+    const entry  = TORNEO_MAP[categoriaRaw]
+    const torneo = entry ? (ramaRaw === "Femenino" ? entry.fem : entry.masc) : null
 
     if (!torneo) {
       return NextResponse.json({ fases: [], torneo: null })
@@ -49,6 +50,7 @@ export async function GET(request: Request) {
 
     const rows = await prisma.arancelLnb.findMany({
       where: { torneo, activo: true },
+      orderBy: { createdAt: "asc" },
     })
 
     if (rows.length === 0) {
@@ -62,7 +64,12 @@ export async function GET(request: Request) {
       byFase[row.fase].push(row)
     }
 
-    const fases = FASE_ORDER.filter((f) => byFase[f]).map((f) => ({
+    // Para LNB usamos orden fijo; para el resto, orden de inserción
+    const fasesOrdenadas = torneo === "LNB_MASC"
+      ? LNB_FASE_ORDER.filter((f) => byFase[f])
+      : Object.keys(byFase)
+
+    const fases = fasesOrdenadas.map((f) => ({
       fase: f,
       faseNombre: byFase[f][0].faseNombre,
       // mapa rol → montoUnitario (solo los no manuales)
