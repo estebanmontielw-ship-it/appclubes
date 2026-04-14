@@ -101,7 +101,19 @@ export async function GET(request: Request) {
     const fases = fasesOrdenadas.map((f) => ({
       fase: f,
       faseNombre: byFase[f][0].faseNombre,
-      // mapa rol → montoUnitario (solo los no manuales)
+      // array completo para calculadora (con cantPersonas y subtotales)
+      roles: byFase[f].map((r) => ({
+        rol: r.rol,
+        montoUnitario: Number(r.montoUnitario),
+        cantPersonas: r.cantPersonas,
+        esManual: r.esManual,
+        subtotal: r.esManual ? null : Number(r.montoUnitario) * r.cantPersonas,
+      })),
+      netoCalculable: byFase[f]
+        .filter((r) => !r.esManual)
+        .reduce((acc, r) => acc + Number(r.montoUnitario) * r.cantPersonas, 0),
+      tieneManual: byFase[f].some((r) => r.esManual),
+      // mapa rol → montoUnitario para la sugerencia rápida en honorarios
       montosPorRol: Object.fromEntries(
         byFase[f]
           .filter((r) => !r.esManual)

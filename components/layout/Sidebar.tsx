@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList,
+  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList, Calculator,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -271,6 +271,7 @@ function getNavSections(
       items: [
         { label: "Mis partidos", href: "/oficiales/mis-partidos", icon: Calendar },
         { label: "Mis honorarios", href: "/oficiales/mis-honorarios", icon: Banknote },
+        { label: "Calculadora", href: "/oficiales/calculadora", icon: Calculator },
       ],
     },
     {
