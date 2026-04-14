@@ -18,14 +18,14 @@ function TickerCard({ m }: { m: NormalizedMatch }) {
   const hasScore = m.homeScore != null && m.awayScore != null
 
   return (
-    <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/[0.07] transition-colors">
+    <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-white/[0.07] transition-colors whitespace-nowrap">
       {isLive && (
         <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block shrink-0" />
       )}
       <span className="text-[11px] font-bold text-white/85 uppercase tracking-wide">
         {m.homeSigla ?? m.homeName.slice(0, 3).toUpperCase()}
       </span>
-      <span className={`text-[11px] font-black tabular-nums ${isLive ? "text-red-400" : isComplete ? "text-white/50" : "text-blue-300"}`}>
+      <span className={`text-[11px] font-black tabular-nums whitespace-nowrap ${isLive ? "text-red-400" : isComplete ? "text-white/50" : "text-blue-300"}`}>
         {(isLive || isComplete) && hasScore
           ? `${m.homeScore}–${m.awayScore}`
           : m.time
@@ -110,7 +110,7 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
           {/* Scrollable strip */}
           <div
             ref={scrollRef}
-            className="flex items-center flex-1 overflow-x-auto py-1.5"
+            className="flex items-center flex-1 overflow-x-auto py-1.5 flex-nowrap"
             style={{ scrollbarWidth: "none" }}
           >
             {/* Brand label */}
