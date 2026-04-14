@@ -51,33 +51,24 @@ function calcular(netoCalculable: number, feriado: boolean) {
 
 const RAMAS = ["Masculino", "Femenino"] as const
 
-// Categorías reales del sistema (CategoriaPartido enum)
-// PRIMERA_DIVISION y FEMENINO son siempre una sola rama → no muestran selector de rama
+// Categorías reales del sistema CPB
+// tieneRama: false → categoría es rama-específica (sin selector de rama)
+// U19 solo existe en Masculino → tieneRama: false
 const CATEGORIAS_CALC = [
-  { value: "PRIMERA_DIVISION", label: "Primera División — LNB Masc.", torneo: "LNB_MASC", tieneRama: false },
-  { value: "FEMENINO",         label: "Liga Nacional Femenina (LNBF)", torneo: "LNB_FEM",  tieneRama: false },
-  { value: "SEGUNDA_DIVISION", label: "Segunda División",              torneo: null,        tieneRama: true  },
-  { value: "U21",              label: "Sub-21",                        torneo: null,        tieneRama: true  },
-  { value: "U18",              label: "Sub-18",                        torneo: null,        tieneRama: true  },
-  { value: "U16",              label: "Sub-16",                        torneo: null,        tieneRama: true  },
-  { value: "U14",              label: "Sub-14",                        torneo: null,        tieneRama: true  },
-  { value: "ESPECIAL",         label: "Especial / Amistoso",           torneo: null,        tieneRama: true  },
+  { value: "LNB",     label: "LNB — Liga Nacional Masc.", torneo: "LNB_MASC",  tieneRama: false },
+  { value: "LNBF",    label: "LNBF — Liga Nacional Fem.", torneo: "LNB_FEM",   tieneRama: false },
+  { value: "U22",     label: "Sub-22",                    torneo: null,         tieneRama: true  },
+  { value: "U19",     label: "Sub-19 (solo Masculino)",   torneo: "U19_MASC",  tieneRama: false },
+  { value: "U17",     label: "Sub-17",                    torneo: null,         tieneRama: true  },
+  { value: "U15",     label: "Sub-15",                    torneo: null,         tieneRama: true  },
+  { value: "U13",     label: "Sub-13",                    torneo: null,         tieneRama: true  },
+  { value: "ESPECIAL",label: "Especial / Amistoso",       torneo: null,         tieneRama: true  },
 ]
-
-const TORNEO_PREFIX: Record<string, string> = {
-  SEGUNDA_DIVISION: "SEG",
-  U21: "U21",
-  U18: "U18",
-  U16: "U16",
-  U14: "U14",
-  ESPECIAL: "ESP",
-}
 
 function computeTorneo(rama: string, categoria: string): string {
   const cat = CATEGORIAS_CALC.find((c) => c.value === categoria)
-  if (cat?.torneo) return cat.torneo          // fijo (LNB_MASC, LNB_FEM)
-  const prefix = TORNEO_PREFIX[categoria] ?? categoria
-  return `${prefix}_${rama === "Femenino" ? "FEM" : "MASC"}`
+  if (cat?.torneo) return cat.torneo                    // fijo: LNB_MASC, LNB_FEM, U19_MASC
+  return `${categoria}_${rama === "Femenino" ? "FEM" : "MASC"}`
 }
 
 // ─── GRUPOS DE FASES (fase base → sedes disponibles) ─────
@@ -361,7 +352,7 @@ export default function ArancelesLnbPage() {
   }, [rama, categoria])
 
   const catObj = CATEGORIAS_CALC.find((c) => c.value === categoria)
-  const esLnbMasc = categoria === "PRIMERA_DIVISION"
+  const esLnbMasc = categoria === "LNB"
   const tieneRama = catObj?.tieneRama ?? true
 
   return (
@@ -376,7 +367,7 @@ export default function ArancelesLnbPage() {
       {/* Categoría primero */}
       <div>
         <Label className="text-xs text-muted-foreground mb-1.5 block">Categoría</Label>
-        <Select value={categoria} onValueChange={(v) => { setCategoria(v); setRama("Masculino") }}>
+        <Select value={categoria} onValueChange={(v) => { setCategoria(v); setRama("Masculino"); setTab("calculadora") }}>
           <SelectTrigger className="h-9 max-w-xs">
             <SelectValue />
           </SelectTrigger>
