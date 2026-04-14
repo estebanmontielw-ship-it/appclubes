@@ -86,6 +86,120 @@ function rolLabel(v: string) {
   return ROLES.find((r) => r.value === v)?.label ?? v
 }
 
+// ─── SUGERENCIAS DESDE DESIGNACIONES ─────────────────────
+
+interface DesignacionSugerida {
+  id: string
+  rol: string
+  partido: {
+    fecha: string
+    hora: string
+    categoria: string
+    equipoLocal: string
+    equipoVisit: string
+  }
+}
+
+function mapRolDesignacion(rol: string): string {
+  if (["ARBITRO_PRINCIPAL", "ARBITRO_ASISTENTE_1", "ARBITRO_ASISTENTE_2"].includes(rol)) return "ARBITRO"
+  if (["MESA_ANOTADOR", "MESA_CRONOMETRADOR", "MESA_OPERADOR_24S"].includes(rol)) return "OFICIAL_MESA"
+  if (rol === "MESA_ASISTENTE") return "RELATOR"
+  if (rol === "ESTADISTICO") return "ESTADISTICO"
+  return ""
+}
+
+function mapCategoriaDesignacion(cat: string): { categoria: string; rama: string } {
+  if (cat === "LNB")  return { categoria: "PRIMERA_DIVISION", rama: "Masculino" }
+  if (cat === "LNBF") return { categoria: "PRIMERA_DIVISION", rama: "Femenino" }
+  if (cat === "U22" || cat === "U21") return { categoria: "U21", rama: "Masculino" }
+  if (cat === "U22F") return { categoria: "U21", rama: "Femenino" }
+  if (cat === "U18")  return { categoria: "U18", rama: "Masculino" }
+  if (cat === "U16")  return { categoria: "U16", rama: "Masculino" }
+  if (cat === "U14")  return { categoria: "U14", rama: "Masculino" }
+  return { categoria: "", rama: "Masculino" }
+}
+
+function SugerenciasPanel({ onSelect }: { onSelect: (initial: Partial<FormData>) => void }) {
+  const [designaciones, setDesignaciones] = useState<DesignacionSugerida[]>([])
+  const [loading, setLoading] = useState(true)
+  const [abierto, setAbierto] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/mis-partidos")
+      .then((r) => r.json())
+      .then((data) => {
+        const hoy = new Date().toISOString().split("T")[0]
+        const pasadas = ((data.designaciones ?? []) as DesignacionSugerida[])
+          .filter((d) => d.partido.fecha.split("T")[0] <= hoy)
+          .sort((a, b) => b.partido.fecha.localeCompare(a.partido.fecha))
+          .slice(0, 6)
+        setDesignaciones(pasadas)
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading || designaciones.length === 0) return null
+
+  function handleSelect(d: DesignacionSugerida) {
+    const { categoria, rama } = mapCategoriaDesignacion(d.partido.categoria)
+    onSelect({
+      fecha: d.partido.fecha.split("T")[0],
+      rama,
+      categoria,
+      equipoA: d.partido.equipoLocal,
+      equipoB: d.partido.equipoVisit,
+      rol: mapRolDesignacion(d.rol),
+    })
+    setAbierto(false)
+  }
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+      <button
+        onClick={() => setAbierto(!abierto)}
+        className="w-full flex items-center justify-between text-left"
+      >
+        <div className="flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-primary" />
+          <span className="text-sm font-semibold text-primary">Cargar desde mis designaciones</span>
+          <span className="text-xs text-muted-foreground">({designaciones.length} recientes)</span>
+        </div>
+        {abierto
+          ? <ChevronUp className="h-4 w-4 text-primary shrink-0" />
+          : <ChevronDown className="h-4 w-4 text-primary shrink-0" />}
+      </button>
+
+      {abierto && (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Tocá un partido para autocompletar el formulario. Podés editar antes de guardar.
+          </p>
+          {designaciones.map((d) => (
+            <button
+              key={d.id}
+              onClick={() => handleSelect(d)}
+              className="w-full text-left flex items-center justify-between gap-3 p-3 rounded-lg bg-white border border-gray-100 hover:border-primary/30 hover:bg-primary/5 transition-colors"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium truncate">
+                  {d.partido.equipoLocal} vs {d.partido.equipoVisit}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {fmtFecha(d.partido.fecha)}{d.partido.hora ? ` · ${d.partido.hora}` : ""} · {d.partido.categoria}
+                </p>
+              </div>
+              <span className="text-xs font-medium text-primary shrink-0 bg-primary/10 px-2 py-1 rounded-md">
+                Usar
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── MONEY INPUT ─────────────────────────────────────────
 
 function MoneyInput({
@@ -250,7 +364,7 @@ function FormPartido({
       </div>
 
       {/* Categoría + Rol — en la misma fila */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label className="text-xs text-muted-foreground mb-1 block">Categoría</Label>
           <Select value={form.categoria} onValueChange={(v) => set("categoria", v)}>
@@ -272,7 +386,7 @@ function FormPartido({
       </div>
 
       {/* Equipos */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <Label className="text-xs text-muted-foreground mb-1 block">Equipo A (local)</Label>
           <Input
@@ -771,6 +885,13 @@ export default function MisHonorariosPage() {
   const [deleting, setDeleting] = useState<string | null>(null)
   const [marking, setMarking] = useState<string | null>(null)
   const [editando, setEditando] = useState<Registro | null>(null)
+  const [formKey, setFormKey] = useState(0)
+  const [formInitial, setFormInitial] = useState<Partial<FormData>>({})
+
+  function handleApplyDesignacion(initial: Partial<FormData>) {
+    setFormInitial(initial)
+    setFormKey((k) => k + 1)
+  }
 
   const cargarDatos = useCallback(async () => {
     try {
@@ -924,18 +1045,23 @@ export default function MisHonorariosPage() {
       )}
 
       {tab === "cargar" && (
-        <Card>
-          <CardContent className="p-5">
-            <h2 className="font-semibold mb-4 flex items-center gap-2">
-              <Plus className="h-4 w-4" /> Cargar nuevo partido
-            </h2>
-            <FormPartido
-              onSave={handleSave}
-              onCancel={() => setTab("dashboard")}
-              saving={saving}
-            />
-          </CardContent>
-        </Card>
+        <div className="space-y-4">
+          <SugerenciasPanel onSelect={handleApplyDesignacion} />
+          <Card>
+            <CardContent className="p-5">
+              <h2 className="font-semibold mb-4 flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Cargar nuevo partido
+              </h2>
+              <FormPartido
+                key={formKey}
+                initial={formInitial}
+                onSave={handleSave}
+                onCancel={() => setTab("dashboard")}
+                saving={saving}
+              />
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {/* Modal edición */}
