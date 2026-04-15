@@ -65,9 +65,10 @@ export async function GET(request: Request) {
       where: { usado: false },
     })
     const preMatches = allPre.filter(p => {
-      // Require at least 2 parts matching or full name contained
-      if (p.nombreNormalizado.includes(qNorm)) return true
-      const matchCount = qParts.filter(part => p.nombreNormalizado.includes(part)).length
+      // Use stored normalized name, fallback to normalizing on-the-fly if empty
+      const nameNorm = p.nombreNormalizado?.trim() || normalizeName(p.nombre)
+      if (nameNorm.includes(qNorm)) return true
+      const matchCount = qParts.filter(part => nameNorm.includes(part)).length
       return matchCount >= 2
     }).slice(0, 5)
 
