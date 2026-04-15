@@ -98,11 +98,21 @@ export async function GET(request: Request) {
       ? faseOrder.filter((f) => byFase[f])
       : Object.keys(byFase)
 
+    // Orden canónico de roles: árbitros primero, luego mesa, auxiliar, técnicos
+    const ROL_ORDER: Record<string, number> = {
+      ARBITRO: 0, ARBITRO_NAC: 1, ARBITRO_INTL: 2,
+      OFICIAL_MESA: 3, AUXILIAR: 4,
+      ESTADISTICO: 5, RELATOR: 6,
+    }
+
     const fases = fasesOrdenadas.map((f) => ({
       fase: f,
       faseNombre: byFase[f][0].faseNombre,
       // array completo para calculadora (con cantPersonas y subtotales)
-      roles: byFase[f].map((r) => ({
+      roles: byFase[f]
+        .slice()
+        .sort((a, b) => (ROL_ORDER[a.rol] ?? 99) - (ROL_ORDER[b.rol] ?? 99))
+        .map((r) => ({
         rol: r.rol,
         montoUnitario: Number(r.montoUnitario),
         cantPersonas: r.cantPersonas,

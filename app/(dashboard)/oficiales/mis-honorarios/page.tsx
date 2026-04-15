@@ -317,6 +317,7 @@ function FormPartido({
   const [plusTransporte, setPlusTransporte] = useState(0)
 
   const INFERIORES = ["U13", "U15", "U17", "U19"]
+  const esInterior = (form.fase ?? "").includes("INTERIOR")
   const TRANSPORTE_OPTS = [
     { label: "Asunción", plus: 0 },
     { label: "Luque  +60k", plus: 60000 },
@@ -361,6 +362,15 @@ function FormPartido({
     setSugerido(false)
     setPlusTransporte(0)
   }, [form.categoria, form.rama])
+
+  // Resetear transporte si la fase seleccionada es Interior
+  useEffect(() => {
+    if (esInterior && plusTransporte !== 0) {
+      setPlusTransporte(0)
+      setForm((f) => ({ ...f, monto: String(Math.max(0, Number(f.monto || "0") - plusTransporte)) }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esInterior])
 
   function handleTransporte(newPlus: number) {
     const prev = plusTransporte
@@ -480,8 +490,8 @@ function FormPartido({
         </div>
       )}
 
-      {/* Plus transporte (solo Inferiores) */}
-      {INFERIORES.includes(form.categoria) && (
+      {/* Plus transporte (solo Inferiores Asunción — no Interior) */}
+      {INFERIORES.includes(form.categoria) && !esInterior && (
         <div>
           <Label className="text-xs text-muted-foreground mb-1.5 block">
             Sede / Plus transporte{" "}

@@ -45,6 +45,7 @@ const ROL_ORDER = [
   "ARBITRO_NAC",
   "ARBITRO_INTL",
   "OFICIAL_MESA",
+  "AUXILIAR",
   "ESTADISTICO",
   "RELATOR",
 ]
