@@ -80,7 +80,7 @@ export async function GET() {
       getLeaders(competitionId).catch(() => null),
     ])
 
-    const standings = normalizeStandings(sRaw)
+    const standings = normalizeStandings(sRaw).sort((a, b) => a.rank - b.rank)
     const scoringLeaders = extractLeaderCategory(lRaw, "points", "Puntos")
     const reboundsLeaders = extractLeaderCategory(lRaw, "rebounds", "Rebotes")
     const assistsLeaders = extractLeaderCategory(lRaw, "assists", "Asistencias")

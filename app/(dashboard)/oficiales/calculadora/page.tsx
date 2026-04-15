@@ -145,19 +145,51 @@ function Calculadora({ fases, esLnbMasc, tieneTransporte }: {
               </SelectContent>
             </Select>
           </div>
-        ) : (
-          <div>
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Fase del torneo</Label>
-            <Select value={faseSimple} onValueChange={setFaseSimple}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {fases.map((f) => (
-                  <SelectItem key={f.fase} value={f.fase}>{cleanFaseNombre(f.faseNombre)}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        ) : (() => {
+          const fasesRegulares = fases.filter(f => !f.fase.includes("INTERIOR"))
+          const fasesInterior  = fases.filter(f => f.fase.includes("INTERIOR"))
+          return (
+            <>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Fase del torneo</Label>
+                <Select
+                  value={esInterior ? "" : faseSimple}
+                  onValueChange={(v) => { setFaseSimple(v); setTransporte(0) }}
+                >
+                  <SelectTrigger className="h-9"><SelectValue placeholder="Seleccionar fase…" /></SelectTrigger>
+                  <SelectContent>
+                    {fasesRegulares.map((f) => (
+                      <SelectItem key={f.fase} value={f.fase}>{cleanFaseNombre(f.faseNombre)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {fasesInterior.length > 0 && (
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1.5 block">Interior</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {fasesInterior.map((f) => {
+                      const label = f.faseNombre.replace(/^Interior\s*[—–-]\s*/i, "")
+                      return (
+                        <button
+                          key={f.fase}
+                          onClick={() => setFaseSimple(f.fase)}
+                          className={`px-4 py-2 rounded-lg text-sm font-semibold border transition-colors ${
+                            faseSimple === f.fase
+                              ? "bg-primary text-white border-primary"
+                              : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                          }`}
+                        >
+                          {label}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </>
+          )
+        })()}
 
         {/* Sede (LNB interior) */}
         {tieneSedes && (

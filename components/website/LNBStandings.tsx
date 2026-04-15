@@ -149,6 +149,7 @@ export default function LNBStandings({
                   <th className="text-center px-2 py-3 hidden sm:table-cell">PJ</th>
                   <th className="text-center px-2 py-3">G</th>
                   <th className="text-center px-2 py-3">P</th>
+                  <th className="text-center px-2 py-3">Pts</th>
                   <th className="text-center px-2 py-3">%</th>
                   <th className="text-center px-2 py-3 hidden md:table-cell">PF</th>
                   <th className="text-center px-2 py-3 hidden md:table-cell">PC</th>
@@ -182,6 +183,9 @@ export default function LNBStandings({
                     </td>
                     <td className="px-2 py-3 text-center font-bold text-[#0a1628]">{row.wins}</td>
                     <td className="px-2 py-3 text-center text-gray-400">{row.losses}</td>
+                    <td className="px-2 py-3 text-center font-black text-[#0a1628]">
+                      {row.wins * 2 + row.losses}
+                    </td>
                     <td className="px-2 py-3 text-center font-semibold text-gray-600">
                       {row.winPct != null ? (row.winPct * 100).toFixed(0) + "%" : "—"}
                     </td>

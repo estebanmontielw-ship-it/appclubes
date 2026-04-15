@@ -134,7 +134,7 @@ export default async function PosicionesPage() {
       getLeaders(competitionId).catch(() => null),
     ])
 
-    standings = normalizeStandings(sRaw)
+    standings = normalizeStandings(sRaw).sort((a, b) => a.rank - b.rank)
     const leaders = normalizeLeaders(lRaw)
     scoringLeaders = leaders.scoring
     reboundsLeaders = leaders.rebounds
