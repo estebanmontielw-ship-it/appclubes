@@ -88,6 +88,11 @@ const FASE_GRUPOS = [
 
 // ─── CALCULADORA ─────────────────────────────────────────
 
+// Strip "— Asunción" suffix from phase names (sede buttons handle the distinction)
+function cleanFaseNombre(nombre: string) {
+  return nombre.replace(/\s*—\s*Asunción\s*$/i, "").trim()
+}
+
 function Calculadora({
   fases,
   esLnbMasc,
@@ -121,9 +126,18 @@ function Calculadora({
   const faseSimpleObj = fases.find((f) => f.fase === faseSimple)
 
   const fase = esLnbMasc ? faseLnb : faseSimpleObj
+
+  // Interior phases have their own higher rates — transport buttons don't apply
+  const esInterior = !esLnbMasc && faseSimple.includes("INTERIOR")
+
+  useEffect(() => {
+    if (esInterior) setTransport(0)
+  }, [esInterior])
+
   if (!fase) return null
 
-  const { iva, cIVA, baseFin, total } = calcular(fase.netoCalculable, feriado, transport)
+  const transporteEfectivo = esInterior ? 0 : transport
+  const { iva, cIVA, baseFin, total } = calcular(fase.netoCalculable, feriado, transporteEfectivo)
   const tieneSedes = esLnbMasc && grupo.sedes.length > 1
 
   function handleGrupo(key: string) {
@@ -159,7 +173,7 @@ function Calculadora({
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {fases.map((f) => (
-                  <SelectItem key={f.fase} value={f.fase}>{f.faseNombre}</SelectItem>
+                  <SelectItem key={f.fase} value={f.fase}>{cleanFaseNombre(f.faseNombre)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -188,14 +202,16 @@ function Calculadora({
           </div>
         )}
 
-        {/* Plus transporte — solo torneos de Inferiores */}
-        {tieneTransporte && (
+        {/* Plus transporte — solo Inferiores, no aplica en fases de Interior */}
+        {tieneTransporte && !esInterior && (
           <div>
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Sede / Plus transporte</Label>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">
+              Sede / Plus transporte <span className="text-gray-400 font-normal">(área metropolitana)</span>
+            </Label>
             <div className="flex gap-2 flex-wrap">
               {[
-                { label: "Asunción",  value: 0     },
-                { label: "Luque +60k",value: 60000 },
+                { label: "Asunción",    value: 0     },
+                { label: "Luque +60k",  value: 60000 },
                 { label: "Capiatá +80k",value: 80000 },
               ].map((s) => (
                 <button
@@ -211,6 +227,16 @@ function Calculadora({
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Info: Interior ya incluye tarifas de viaje */}
+        {tieneTransporte && esInterior && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5">
+            <span className="text-amber-500 text-xs mt-0.5">ℹ</span>
+            <p className="text-xs text-amber-700">
+              Las fases de <strong>Interior</strong> ya incluyen tarifas de viaje. El plus transporte del área metropolitana no aplica.
+            </p>
           </div>
         )}
 
@@ -287,13 +313,13 @@ function Calculadora({
               <span>{gs(baseFin)}</span>
             </div>
           )}
-          {transport > 0 && (
+          {transporteEfectivo > 0 && (
             <div className="flex justify-between text-sm text-blue-700 border-t border-blue-100 pt-2">
               <span>Plus transporte</span>
-              <span className="font-medium">+ {gs(transport)}</span>
+              <span className="font-medium">+ {gs(transporteEfectivo)}</span>
             </div>
           )}
-          {(feriado || transport > 0) && (
+          {(feriado || transporteEfectivo > 0) && (
             <div className="flex justify-between text-base font-extrabold border-t-2 pt-2 text-gray-900">
               <span>Total final</span>
               <span>{gs(total)}</span>
