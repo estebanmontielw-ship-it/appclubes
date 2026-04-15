@@ -40,18 +40,17 @@ function normalizeStandings(raw: any): StandingRow[] {
       gamesPlayed: stats?.gamesPlayed ?? stats?.played ?? 0,
       wins: stats?.wins ?? stats?.won ?? 0,
       losses: stats?.losses ?? stats?.lost ?? 0,
-      winPct: stats?.winPercentage ?? stats?.winPct ?? stats?.pct ?? stats?.percentage ?? null,
-      pointsFor: stats?.pointsFor ?? stats?.ptsFor ?? stats?.pf ?? stats?.totalPointsFor ?? stats?.totalPoints ?? null,
-      pointsAgainst: stats?.pointsAgainst ?? stats?.ptsAgainst ?? stats?.pa ?? stats?.totalPointsAgainst ?? null,
+      winPct: (stats?.played ?? stats?.gamesPlayed ?? 0) > 0
+        ? (stats?.wins ?? stats?.won ?? 0) / (stats?.played ?? stats?.gamesPlayed)
+        : null,
+      pointsFor: stats?.scoredFor ?? stats?.pointsFor ?? stats?.ptsFor ?? null,
+      pointsAgainst: stats?.scoredAgainst ?? stats?.pointsAgainst ?? stats?.ptsAgainst ?? null,
       pointDiff:
+        stats?.pointsDiff ??
         stats?.pointDifferential ??
         stats?.pointDiff ??
-        stats?.pointsDifferential ??
-        stats?.pDiff ??
-        ((stats?.pointsFor ?? stats?.ptsFor ?? stats?.pf ?? stats?.totalPointsFor) != null &&
-         (stats?.pointsAgainst ?? stats?.ptsAgainst ?? stats?.pa ?? stats?.totalPointsAgainst) != null
-          ? (stats?.pointsFor ?? stats?.ptsFor ?? stats?.pf ?? stats?.totalPointsFor) -
-            (stats?.pointsAgainst ?? stats?.ptsAgainst ?? stats?.pa ?? stats?.totalPointsAgainst)
+        (stats?.scoredFor != null && stats?.scoredAgainst != null
+          ? stats.scoredFor - stats.scoredAgainst
           : null),
     }
   })
