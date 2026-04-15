@@ -283,7 +283,7 @@ function MoneyInput({
         value={formatGs(value)}
         onChange={handleChange}
         placeholder="0"
-        className="pl-10 h-9"
+        className="pl-10 h-11"
       />
     </div>
   )
@@ -407,20 +407,20 @@ function FormPartido({
           type="date"
           value={form.fecha}
           onChange={(e) => set("fecha", e.target.value)}
-          className="h-9 max-w-[200px]"
+          className="h-11 w-full sm:max-w-[200px]"
         />
       </div>
 
       {/* Rama */}
       <div>
         <Label className="text-xs text-muted-foreground mb-1.5 block">Rama</Label>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
           {RAMAS.map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => set("rama", r)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+              className={`px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
                 form.rama === r
                   ? "bg-primary text-white border-primary"
                   : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
@@ -437,7 +437,7 @@ function FormPartido({
         <div>
           <Label className="text-xs text-muted-foreground mb-1 block">Categoría</Label>
           <Select value={form.categoria} onValueChange={(v) => set("categoria", v)}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Seleccioná..." /></SelectTrigger>
+            <SelectTrigger className="h-11"><SelectValue placeholder="Seleccioná..." /></SelectTrigger>
             <SelectContent>
               {CATEGORIAS.map((c) => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}
             </SelectContent>
@@ -446,7 +446,7 @@ function FormPartido({
         <div>
           <Label className="text-xs text-muted-foreground mb-1 block">Tu rol</Label>
           <Select value={form.rol} onValueChange={(v) => set("rol", v)}>
-            <SelectTrigger className="h-9"><SelectValue placeholder="Seleccioná..." /></SelectTrigger>
+            <SelectTrigger className="h-11"><SelectValue placeholder="Seleccioná..." /></SelectTrigger>
             <SelectContent>
               {ROLES.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
             </SelectContent>
@@ -462,7 +462,7 @@ function FormPartido({
             value={form.equipoA}
             onChange={(e) => set("equipoA", e.target.value)}
             placeholder="Ej: Olimpia"
-            className="h-9"
+            className="h-11"
           />
         </div>
         <div>
@@ -471,7 +471,7 @@ function FormPartido({
             value={form.equipoB}
             onChange={(e) => set("equipoB", e.target.value)}
             placeholder="Ej: Libertad"
-            className="h-9"
+            className="h-11"
           />
         </div>
       </div>
@@ -489,7 +489,7 @@ function FormPartido({
             </div>
           ) : (
             <Select value={form.fase} onValueChange={(v) => set("fase", v)}>
-              <SelectTrigger className="h-9">
+              <SelectTrigger className="h-11">
                 <SelectValue placeholder="Elegí la fase para sugerir monto..." />
               </SelectTrigger>
               <SelectContent>
@@ -546,7 +546,7 @@ function FormPartido({
         <MoneyInput
           value={form.monto}
           onChange={(raw) => { set("monto", raw); setSugerido(false) }}
-          className="max-w-[220px]"
+          className="w-full sm:max-w-[220px]"
         />
         {sugerido && form.montoSugerido && (
           <p className="text-xs text-muted-foreground mt-1">
@@ -558,28 +558,28 @@ function FormPartido({
       {/* Estado */}
       <div>
         <Label className="text-xs text-muted-foreground mb-1.5 block">Estado del cobro</Label>
-        <div className="flex gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
           <button
             type="button"
             onClick={() => set("estado", "PENDIENTE")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
               form.estado === "PENDIENTE"
                 ? "bg-amber-500 text-white border-amber-500"
                 : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
             }`}
           >
-            <Clock className="h-4 w-4" /> Pendiente de cobro
+            <Clock className="h-4 w-4" /> Pendiente
           </button>
           <button
             type="button"
             onClick={() => set("estado", "PAGADO")}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+            className={`flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium border transition-colors ${
               form.estado === "PAGADO"
                 ? "bg-green-600 text-white border-green-600"
                 : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
             }`}
           >
-            <CheckCircle className="h-4 w-4" /> Ya cobrado
+            <CheckCircle className="h-4 w-4" /> Cobrado
           </button>
         </div>
       </div>
@@ -591,25 +591,25 @@ function FormPartido({
           value={form.notas}
           onChange={(e) => set("notas", e.target.value)}
           placeholder="Observaciones, sede, etc."
-          className="h-9"
+          className="h-11"
         />
       </div>
 
       {/* Acciones */}
-      <div className="flex gap-2 pt-2">
+      <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
+        <button
+          onClick={onCancel}
+          className="px-4 py-3 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
+        >
+          Cancelar
+        </button>
         <button
           onClick={() => onSave(form)}
           disabled={!valid || saving}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50 hover:bg-primary/90 transition-colors"
+          className="flex items-center justify-center gap-2 flex-1 py-3 rounded-lg bg-primary text-white text-sm font-semibold disabled:opacity-50 hover:bg-primary/90 transition-colors active:scale-[0.98]"
         >
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
           Guardar partido
-        </button>
-        <button
-          onClick={onCancel}
-          className="px-4 py-2.5 rounded-lg text-sm font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 transition-colors"
-        >
-          Cancelar
         </button>
       </div>
     </div>
@@ -847,7 +847,7 @@ function TabDashboard({
               <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
                 <div
                   className="w-full rounded-t overflow-hidden bg-gray-100"
-                  style={{ height: "52px" }}
+                  style={{ height: "72px" }}
                 >
                   <div className="w-full flex flex-col justify-end h-full">
                     <div
@@ -1228,7 +1228,7 @@ export default function MisHonorariosPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-4 max-w-2xl pb-safe">
       <div>
         <h1 className="text-2xl font-bold">Mis Honorarios</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -1237,7 +1237,7 @@ export default function MisHonorariosPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b pb-1">
+      <div className="flex gap-1 border-b pb-px overflow-x-auto scrollbar-none">
         {([
           { key: "dashboard", label: "Dashboard" },
           { key: "historial", label: `Historial${registros.length > 0 ? ` (${registros.length})` : ""}` },
@@ -1246,7 +1246,7 @@ export default function MisHonorariosPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-[1px] ${
+            className={`whitespace-nowrap px-3 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px flex-shrink-0 ${
               tab === key
                 ? "border-primary text-primary"
                 : "border-transparent text-gray-500 hover:text-gray-800"
