@@ -59,19 +59,23 @@ export async function GET(request: Request) {
       })
     }
 
-    // Search in pre-verified — include used records too UNLESS they have a linked CT account
-    // (a record can be marked usado:true but still have no CT account if the process was incomplete)
-    const qParts = qNorm.split(/\s+/).filter(p => p.length > 2)
-    const allPre = await prisma.ctPreverificado.findMany()
-    const registeredIds = new Set(registered.map((r: any) => r.id))
-    const preMatches = allPre.filter(p => {
-      // Skip if already found in registered CT results
-      if (p.usuarioCtId && registeredIds.has(p.usuarioCtId)) return false
+    // Search in pre-verified — DB-level filter then in-memory AND logic for multi-word
+    const qParts = qNorm.split(/\s+/).filter(p => p.length > 1)
+
+    // Pre-filter at DB level: any record containing at least one search word
+    const candidates = await prisma.ctPreverificado.findMany({
+      where: {
+        OR: qParts.map(part => ({ nombreNormalizado: { contains: part } })),
+      },
+      take: 50,
+    })
+
+    // In-memory: require ALL words to appear in the name (AND logic)
+    const preMatches = candidates.filter(p => {
       const nameNorm = p.nombreNormalizado?.trim() || normalizeName(p.nombre)
       if (nameNorm.includes(qNorm)) return true
-      const matchCount = qParts.filter(part => nameNorm.includes(part)).length
-      return matchCount >= 2
-    }).slice(0, 5)
+      return qParts.every(part => nameNorm.includes(part))
+    }).slice(0, 10)
 
     return NextResponse.json({
       registered: registered.map(r => ({
