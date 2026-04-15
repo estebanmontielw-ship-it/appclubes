@@ -154,12 +154,34 @@ function SugerenciasPanel({ onSelect }: { onSelect: (initial: Partial<FormData>)
   const [abierto, setAbierto] = useState(false)
 
   useEffect(() => {
-    fetch("/api/mis-partidos")
-      .then((r) => r.json())
-      .then((data) => {
+    Promise.all([
+      fetch("/api/mis-partidos").then((r) => r.json()),
+      fetch("/api/oficiales/honorarios-propios").then((r) => r.json()),
+    ])
+      .then(([dataDesig, dataHon]) => {
         const hoy = new Date().toISOString().split("T")[0]
-        const pasadas = ((data.designaciones ?? []) as DesignacionSugerida[])
-          .filter((d) => d.partido.fecha.split("T")[0] <= hoy)
+
+        // Build a set of already-saved match keys to exclude from suggestions
+        const guardados = new Set<string>(
+          ((dataHon.registros ?? []) as any[]).map((h: any) => {
+            const fecha = h.fecha ? String(h.fecha).split("T")[0] : ""
+            const a = (h.equipoA ?? "").toLowerCase().trim()
+            const b = (h.equipoB ?? "").toLowerCase().trim()
+            return `${fecha}|${a}|${b}|${h.rol ?? ""}`
+          })
+        )
+
+        const pasadas = ((dataDesig.designaciones ?? []) as DesignacionSugerida[])
+          .filter((d) => {
+            if (d.partido.fecha.split("T")[0] > hoy) return false
+            const fecha = d.partido.fecha.split("T")[0]
+            const a = (d.partido.equipoLocal ?? "").toLowerCase().trim()
+            const b = (d.partido.equipoVisit ?? "").toLowerCase().trim()
+            const rol = mapRolDesignacion(d.rol)
+            // exclude if already saved (check both team orderings)
+            return !guardados.has(`${fecha}|${a}|${b}|${rol}`) &&
+                   !guardados.has(`${fecha}|${b}|${a}|${rol}`)
+          })
           .sort((a, b) => b.partido.fecha.localeCompare(a.partido.fecha))
           .slice(0, 6)
         setDesignaciones(pasadas)
