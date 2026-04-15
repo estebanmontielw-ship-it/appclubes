@@ -314,6 +314,14 @@ function FormPartido({
   const [fasesSugeridas, setFasesSugeridas] = useState<FaseSugerida[]>([])
   const [loadingFases, setLoadingFases] = useState(false)
   const [sugerido, setSugerido] = useState(false)
+  const [plusTransporte, setPlusTransporte] = useState(0)
+
+  const INFERIORES = ["U13", "U15", "U17", "U19"]
+  const TRANSPORTE_OPTS = [
+    { label: "Asunción", plus: 0 },
+    { label: "Luque  +60k", plus: 60000 },
+    { label: "Capiatá  +80k", plus: 80000 },
+  ] as const
 
   const set = (k: keyof FormData, v: string | number | null) =>
     setForm((f) => ({ ...f, [k]: v }))
@@ -339,19 +347,29 @@ function FormPartido({
         ...f,
         faseNombre: faseDatos.faseNombre,
         montoSugerido: sugeridoMonto,
-        monto: String(sugeridoMonto),
+        monto: String(sugeridoMonto + plusTransporte),
       }))
       setSugerido(true)
     } else {
       setSugerido(false)
     }
-  }, [form.fase, form.rol, fasesSugeridas])
+  }, [form.fase, form.rol, fasesSugeridas]) // eslint-disable-line
 
-  // Limpiar fase cuando categoria/rama cambian
+  // Limpiar fase y transporte cuando categoria/rama cambian
   useEffect(() => {
     setForm((f) => ({ ...f, fase: "", faseNombre: "", montoSugerido: null }))
     setSugerido(false)
+    setPlusTransporte(0)
   }, [form.categoria, form.rama])
+
+  function handleTransporte(newPlus: number) {
+    const prev = plusTransporte
+    setPlusTransporte(newPlus)
+    setForm((f) => ({
+      ...f,
+      monto: String(Math.max(0, Number(f.monto || "0") - prev + newPlus)),
+    }))
+  }
 
   const valid =
     form.fecha && form.rama && form.categoria &&
@@ -462,6 +480,37 @@ function FormPartido({
         </div>
       )}
 
+      {/* Plus transporte (solo Inferiores) */}
+      {INFERIORES.includes(form.categoria) && (
+        <div>
+          <Label className="text-xs text-muted-foreground mb-1.5 block">
+            Sede / Plus transporte{" "}
+            <span className="text-primary font-medium">(se suma al monto)</span>
+          </Label>
+          <div className="flex gap-2 flex-wrap">
+            {TRANSPORTE_OPTS.map((opt) => (
+              <button
+                key={opt.plus}
+                type="button"
+                onClick={() => handleTransporte(opt.plus)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                  plusTransporte === opt.plus
+                    ? "bg-primary text-white border-primary"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {plusTransporte > 0 && (
+            <p className="text-xs text-blue-600 mt-1.5 font-medium">
+              + {gs(plusTransporte)} incluido en el monto abajo
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Monto */}
       <div>
         <Label className="text-xs text-muted-foreground mb-1 block">
@@ -479,7 +528,7 @@ function FormPartido({
         />
         {sugerido && form.montoSugerido && (
           <p className="text-xs text-muted-foreground mt-1">
-            Arancel sugerido CPB: {gs(form.montoSugerido)}. Podés editarlo libremente.
+            Arancel sugerido CPB: {gs(form.montoSugerido)}{plusTransporte > 0 ? ` + transporte ${gs(plusTransporte)}` : ""}. Podés editarlo libremente.
           </p>
         )}
       </div>
