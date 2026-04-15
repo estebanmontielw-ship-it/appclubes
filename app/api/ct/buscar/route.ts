@@ -59,13 +59,14 @@ export async function GET(request: Request) {
       })
     }
 
-    // Search in pre-verified (not yet registered) - strict matching
+    // Search in pre-verified — include used records too UNLESS they have a linked CT account
+    // (a record can be marked usado:true but still have no CT account if the process was incomplete)
     const qParts = qNorm.split(/\s+/).filter(p => p.length > 2)
-    const allPre = await prisma.ctPreverificado.findMany({
-      where: { usado: false },
-    })
+    const allPre = await prisma.ctPreverificado.findMany()
+    const registeredIds = new Set(registered.map((r: any) => r.id))
     const preMatches = allPre.filter(p => {
-      // Use stored normalized name, fallback to normalizing on-the-fly if empty
+      // Skip if already found in registered CT results
+      if (p.usuarioCtId && registeredIds.has(p.usuarioCtId)) return false
       const nameNorm = p.nombreNormalizado?.trim() || normalizeName(p.nombre)
       if (nameNorm.includes(qNorm)) return true
       const matchCount = qParts.filter(part => nameNorm.includes(part)).length
