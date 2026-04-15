@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server"
 import { cookies } from "next/headers"
 import prisma from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
 
@@ -38,12 +39,43 @@ export async function GET(request: Request) {
     const where: Record<string, unknown> = { activo: !eliminados }
     if (estado && !eliminados) where.estadoHabilitacion = estado
     if (rol) where.rol = rol
+
     if (buscar) {
-      where.OR = [
-        { nombre: { contains: buscar, mode: "insensitive" } },
-        { apellido: { contains: buscar, mode: "insensitive" } },
-        { email: { contains: buscar, mode: "insensitive" } },
-      ]
+      const normalized = buscar.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
+      const words = normalized.split(/\s+/).filter(w => w.length > 1)
+      if (words.length > 0) {
+        try {
+          const wordClauses = words.map(w => {
+            const t = `%${w}%`
+            return Prisma.sql`(
+              unaccent(ct."nombre") ILIKE unaccent(${t})
+              OR unaccent(ct."apellido") ILIKE unaccent(${t})
+              OR ct."email" ILIKE ${t}
+            )`
+          })
+          const whereWords = Prisma.join(wordClauses, " AND ")
+          const activo = !eliminados
+          const raw = await prisma.$queryRaw<any[]>`
+            SELECT ct.* FROM "cuerpo_tecnico" ct
+            WHERE ct."activo" = ${activo}
+            AND ${whereWords}
+            ORDER BY ct."createdAt" DESC
+            LIMIT ${limite}
+          `
+          // Apply estado/rol filters that can't be in raw SQL easily
+          let miembros = raw
+          if (estado && !eliminados) miembros = miembros.filter((m: any) => m.estadoHabilitacion === estado)
+          if (rol) miembros = miembros.filter((m: any) => m.rol === rol)
+          return NextResponse.json({ miembros })
+        } catch {
+          // unaccent not available — fall back to standard Prisma search
+          where.OR = [
+            { nombre: { contains: buscar, mode: "insensitive" } },
+            { apellido: { contains: buscar, mode: "insensitive" } },
+            { email: { contains: buscar, mode: "insensitive" } },
+          ]
+        }
+      }
     }
 
     const miembros = await prisma.cuerpoTecnico.findMany({

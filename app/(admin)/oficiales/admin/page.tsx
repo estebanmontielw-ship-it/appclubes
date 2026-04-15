@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -67,9 +67,16 @@ export default function AdminDashboardPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [searching, setSearching] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function onSearchChange(q: string) {
+    setSearchQuery(q)
+    if (q.length < 2) { setSearchResults([]); return }
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => handleSearch(q), 300)
+  }
 
   async function handleSearch(q: string) {
-    setSearchQuery(q)
     if (q.length < 2) { setSearchResults([]); return }
     setSearching(true)
     try {
@@ -134,7 +141,7 @@ export default function AdminDashboardPage() {
           <Search className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
           <input
             value={searchQuery}
-            onChange={(e) => handleSearch(e.target.value)}
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder="Buscar oficial o cuerpo técnico por nombre, CI o email..."
             className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             style={{ fontSize: "16px" }}
