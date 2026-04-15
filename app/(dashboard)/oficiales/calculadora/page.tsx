@@ -75,6 +75,11 @@ const FASE_GRUPOS = [
 
 // ─── CALCULADORA ─────────────────────────────────────────
 
+// Strip "— Asunción" suffix from phase names in dropdown (sede buttons handle the distinction)
+function cleanFaseNombre(nombre: string) {
+  return nombre.replace(/\s*—\s*Asunción\s*$/i, "").trim()
+}
+
 function Calculadora({ fases, esLnbMasc, tieneTransporte }: {
   fases: Fase[]
   esLnbMasc: boolean
@@ -101,9 +106,18 @@ function Calculadora({ fases, esLnbMasc, tieneTransporte }: {
   const faseSimpleObj = fases.find((f) => f.fase === faseSimple)
   const fase = esLnbMasc ? faseLnb : faseSimpleObj
 
+  // Interior phases have their own higher rates — transport buttons don't apply
+  const esInterior = !esLnbMasc && faseSimple.includes("INTERIOR")
+
+  // Auto-reset transport when switching to/from interior phases
+  useEffect(() => {
+    if (esInterior) setTransporte(0)
+  }, [esInterior])
+
   if (!fase) return null
 
-  const { iva, cIVA, baseFin, total } = calcular(fase.netoCalculable, feriado, transporte)
+  const transporteEfectivo = esInterior ? 0 : transporte
+  const { iva, cIVA, baseFin, total } = calcular(fase.netoCalculable, feriado, transporteEfectivo)
   const tieneSedes = esLnbMasc && grupo.sedes.length > 1
 
   function handleGrupo(key: string) {
@@ -139,7 +153,9 @@ function Calculadora({ fases, esLnbMasc, tieneTransporte }: {
               <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {fases.map((f) => (
-                  <SelectItem key={f.fase} value={f.fase}>{f.faseNombre}</SelectItem>
+                  <SelectItem key={f.fase} value={f.fase}>
+                    {cleanFaseNombre(f.faseNombre)}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -168,15 +184,17 @@ function Calculadora({ fases, esLnbMasc, tieneTransporte }: {
           </div>
         )}
 
-        {/* Plus transporte (solo Inferiores) */}
-        {tieneTransporte && (
+        {/* Plus transporte (solo Inferiores, no aplica en fases de Interior) */}
+        {tieneTransporte && !esInterior && (
           <div>
-            <Label className="text-xs text-muted-foreground mb-1.5 block">Sede / Plus transporte</Label>
+            <Label className="text-xs text-muted-foreground mb-1.5 block">
+              Sede / Plus transporte <span className="text-gray-400 font-normal">(área metropolitana)</span>
+            </Label>
             <div className="flex gap-2 flex-wrap">
               {([
                 { label: "Asunción", plus: 0 },
-                { label: "Luque +60k", plus: 60000 },
-                { label: "Capiatá +80k", plus: 80000 },
+                { label: "Luque  +60k", plus: 60000 },
+                { label: "Capiatá  +80k", plus: 80000 },
               ] as const).map((opt) => (
                 <button
                   key={opt.plus}
@@ -191,6 +209,16 @@ function Calculadora({ fases, esLnbMasc, tieneTransporte }: {
                 </button>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Info: Interior tiene tarifas propias */}
+        {tieneTransporte && esInterior && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2.5">
+            <span className="text-amber-500 text-xs mt-0.5">ℹ</span>
+            <p className="text-xs text-amber-700">
+              Las fases de <strong>Interior</strong> ya incluyen tarifas de viaje. El plus transporte del área metropolitana no aplica.
+            </p>
           </div>
         )}
 
@@ -253,13 +281,13 @@ function Calculadora({ fases, esLnbMasc, tieneTransporte }: {
                 <span className="font-bold">{gs(baseFin)}</span>
               </div>
             )}
-            {transporte > 0 && (
+            {transporteEfectivo > 0 && (
               <div className="flex justify-between text-blue-700 bg-blue-50 px-3 py-1.5 rounded-lg">
                 <span className="text-sm font-semibold">Plus transporte</span>
-                <span className="font-bold">+ {gs(transporte)}</span>
+                <span className="font-bold">+ {gs(transporteEfectivo)}</span>
               </div>
             )}
-            {(feriado || transporte > 0) && (
+            {(feriado || transporteEfectivo > 0) && (
               <div className="flex justify-between font-black text-base bg-gray-900 text-white px-4 py-3 rounded-xl mt-2">
                 <span>TOTAL FINAL</span>
                 <span>{gs(total)}</span>
