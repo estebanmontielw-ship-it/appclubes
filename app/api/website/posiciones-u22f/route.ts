@@ -23,14 +23,18 @@ function normalizeStandings(raw: any): StandingRow[] {
       gamesPlayed: stats?.gamesPlayed ?? stats?.played ?? 0,
       wins: stats?.wins ?? stats?.won ?? 0,
       losses: stats?.losses ?? stats?.lost ?? 0,
-      winPct: stats?.winPercentage ?? stats?.winPct ?? null,
-      pointsFor: stats?.pointsFor ?? stats?.ptsFor ?? null,
-      pointsAgainst: stats?.pointsAgainst ?? stats?.ptsAgainst ?? null,
+      winPct: stats?.winPercentage ?? stats?.winPct ?? stats?.pct ?? stats?.percentage ?? null,
+      pointsFor: stats?.pointsFor ?? stats?.ptsFor ?? stats?.pf ?? stats?.totalPointsFor ?? stats?.totalPoints ?? null,
+      pointsAgainst: stats?.pointsAgainst ?? stats?.ptsAgainst ?? stats?.pa ?? stats?.totalPointsAgainst ?? null,
       pointDiff:
         stats?.pointDifferential ??
         stats?.pointDiff ??
-        (stats?.pointsFor != null && stats?.pointsAgainst != null
-          ? stats.pointsFor - stats.pointsAgainst
+        stats?.pointsDifferential ??
+        stats?.pDiff ??
+        ((stats?.pointsFor ?? stats?.ptsFor ?? stats?.pf ?? stats?.totalPointsFor) != null &&
+         (stats?.pointsAgainst ?? stats?.ptsAgainst ?? stats?.pa ?? stats?.totalPointsAgainst) != null
+          ? (stats?.pointsFor ?? stats?.ptsFor ?? stats?.pf ?? stats?.totalPointsFor) -
+            (stats?.pointsAgainst ?? stats?.ptsAgainst ?? stats?.pa ?? stats?.totalPointsAgainst)
           : null),
     }
   })
