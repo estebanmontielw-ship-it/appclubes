@@ -164,16 +164,12 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
     })
   )
 
-  // Accumulate totals per player — only periodNumber 0 (game total), only participated
-  const totals = new Map<number, {
-    personId: number; playerName: string; teamName: string
-    teamSigla: string | null; teamLogo: string | null; photoUrl: string | null
-    games: number; pts: number; reb: number; ast: number; threePt: number
-  }>()
+  // A player "played" if participated=1 OR has minutes > 0 (flag sometimes incorrect in LiveStats)
+  const didPlay = (p: any) => p.periodNumber === 0 && (p.participated === 1 || p.participated === "1" || (p.sMinutes != null && p.sMinutes > 0))
 
   for (const players of playerDataArrays) {
     for (const p of players) {
-      if (p.periodNumber !== 0 || !p.participated) continue
+      if (!didPlay(p)) continue
       const id: number = p.personId
       if (!totals.has(id)) {
         totals.set(id, {
@@ -308,10 +304,13 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   const playerMap = new Map<number, Acc>()
   const teamMap = new Map<number, Acc & { teamGames: Set<number> }>()
 
+  // A player "played" if participated=1 OR has minutes > 0 (flag sometimes incorrect in LiveStats)
+  const didPlay = (p: any) => p.periodNumber === 0 && (p.participated === 1 || p.participated === "1" || (p.sMinutes != null && p.sMinutes > 0))
+
   for (let i = 0; i < playerDataArrays.length; i++) {
     const matchId = completed[i].matchId
     for (const p of playerDataArrays[i]) {
-      if (p.periodNumber !== 0 || !p.participated) continue
+      if (!didPlay(p)) continue
       const pid: number = p.personId
       const tid: number = p.teamId
       if (!playerMap.has(pid)) {
