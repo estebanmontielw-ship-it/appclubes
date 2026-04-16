@@ -7,28 +7,35 @@ export async function GET() {
     const { id } = await resolveLnbCompetitionIdPublic()
     if (!id) return NextResponse.json({ error: "No competition ID" }, { status: 404 })
 
-    // Try different stats endpoints to see which ones exist and what they return
-    const results: Record<string, any> = {}
+    // Get completed matches to find a valid matchId
+    const schedule = await geniusFetch(`/competitions/${id}/matches?limit=100`, "short")
+    const matches: any[] = schedule?.response?.data ?? schedule?.data ?? []
+    const completed = matches.filter((m: any) => m.matchStatus === "COMPLETE")
 
-    const endpoints = [
-      `/competitions/${id}/statistics`,
-      `/competitions/${id}/player-statistics`,
-      `/competitions/${id}/playerstats`,
-    ]
-
-    for (const ep of endpoints) {
-      try {
-        const data = await geniusFetch(ep, "short")
-        results[ep] = {
-          topLevelKeys: Object.keys(data ?? {}),
-          preview: JSON.stringify(data).slice(0, 500),
-        }
-      } catch (e: any) {
-        results[ep] = { error: e.message }
-      }
+    if (!completed.length) {
+      return NextResponse.json({ error: "No completed matches yet", total: matches.length })
     }
 
-    return NextResponse.json({ competitionId: id, results })
+    // Fetch stats for the first completed match
+    const sample = completed[0]
+    const matchId = sample.matchId
+    let matchStats: any = null
+    let matchStatsError: string | null = null
+
+    try {
+      matchStats = await geniusFetch(`/matches/${matchId}/statistics`, "short")
+    } catch (e: any) {
+      matchStatsError = e.message
+    }
+
+    return NextResponse.json({
+      competitionId: id,
+      completedMatchCount: completed.length,
+      sampleMatchId: matchId,
+      matchStatsError,
+      matchStats,
+      matchStatsTopKeys: matchStats ? Object.keys(matchStats) : [],
+    })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
