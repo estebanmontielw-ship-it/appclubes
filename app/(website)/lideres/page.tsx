@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
-import { getLeaders } from "@/lib/genius-sports"
+import { getLeadersFromMatches, type LeaderEntry } from "@/lib/genius-sports"
 import { TrendingUp, Activity, Users, BarChart2 } from "lucide-react"
 
 export const revalidate = 300
@@ -17,47 +17,6 @@ export const metadata: Metadata = {
   },
 }
 
-interface LeaderRow {
-  rank: number
-  playerName: string
-  teamName: string
-  teamSigla: string | null
-  teamLogo: string | null
-  value: number
-}
-
-function extractCategory(raw: any, statKey: string): LeaderRow[] {
-  const section = raw?.response?.data ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
-  let entries: any[] = []
-  if (Array.isArray(section)) {
-    const found = section.find((s: any) =>
-      String(s.statName ?? s.stat ?? s.category ?? "").toLowerCase().includes(statKey.toLowerCase())
-    )
-    entries = found?.leaders ?? found?.players ?? found?.data ?? []
-    if (!entries.length && section.length > 0 && section[0]?.player) entries = section
-  }
-  return entries.slice(0, 10).map((e: any, idx: number): LeaderRow => {
-    const player = e.player ?? e.competitor ?? e
-    const team = e.team ?? e.competitor?.team ?? {}
-    return {
-      rank: e.rank ?? idx + 1,
-      playerName:
-        player?.playerName ??
-        player?.name ??
-        [player?.firstName, player?.lastName].filter(Boolean).join(" ") ??
-        "Jugador",
-      teamName: team?.teamName ?? team?.name ?? team?.competitorName ?? "",
-      teamSigla: team?.teamCode ?? team?.sigla ?? null,
-      teamLogo:
-        team?.images?.logo?.T1?.url ??
-        team?.images?.logo?.S1?.url ??
-        team?.logoUrl ??
-        null,
-      value: typeof e.average === "number" ? e.average : typeof e.value === "number" ? e.value : parseFloat(e[statKey] ?? "0") || 0,
-    }
-  })
-}
-
 function LeaderTable({
   title,
   icon,
@@ -67,7 +26,7 @@ function LeaderTable({
   title: string
   icon: React.ReactNode
   unit: string
-  rows: LeaderRow[]
+  rows: LeaderEntry[]
 }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -86,11 +45,11 @@ function LeaderTable({
       ) : (
         <ul className="divide-y divide-gray-50">
           {rows.map((r) => (
-            <li key={r.rank} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/40 transition-colors">
+            <li key={r.personId} className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50/40 transition-colors">
               <span className="w-6 text-center text-xs font-black text-gray-200">{r.rank}</span>
-              {r.teamLogo ? (
+              {r.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={r.teamLogo} alt={r.teamName} className="w-8 h-8 object-contain rounded-full border border-gray-100" />
+                <img src={r.photoUrl} alt={r.playerName} className="w-8 h-8 object-cover rounded-full border border-gray-100" />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[9px] font-black text-gray-400">
                   {(r.teamSigla ?? r.teamName).slice(0, 2)}
@@ -114,16 +73,16 @@ function LeaderTable({
 export default async function LideresPage() {
   const { id: competitionId } = await resolveLnbCompetitionIdPublic()
 
-  let scoring: LeaderRow[] = []
-  let rebounds: LeaderRow[] = []
-  let assists: LeaderRow[] = []
+  let scoring: LeaderEntry[] = []
+  let rebounds: LeaderEntry[] = []
+  let assists: LeaderEntry[] = []
 
   if (competitionId) {
     try {
-      const raw = await getLeaders(competitionId)
-      scoring = extractCategory(raw, "points")
-      rebounds = extractCategory(raw, "rebounds")
-      assists = extractCategory(raw, "assists")
+      const leaders = await getLeadersFromMatches(competitionId)
+      scoring = leaders.scoring
+      rebounds = leaders.rebounds
+      assists = leaders.assists
     } catch {
       // show empty state
     }

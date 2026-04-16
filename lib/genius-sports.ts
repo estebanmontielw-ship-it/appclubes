@@ -113,8 +113,96 @@ export async function getTeam(teamId: string | number) {
   return geniusFetch(`/teams/${teamId}`, "long")
 }
 
-export async function getLeaders(competitionId: string | number) {
-  return geniusFetch(`/competitions/${competitionId}/leaders`, "medium")
+export interface LeaderEntry {
+  rank: number
+  personId: number
+  playerName: string
+  teamName: string
+  teamSigla: string | null
+  photoUrl: string | null
+  value: number
+  games: number
+}
+
+export interface LeaderStats {
+  scoring: LeaderEntry[]
+  rebounds: LeaderEntry[]
+  assists: LeaderEntry[]
+}
+
+// /competitions/{id}/leaders and /personstatistics return 500 in the v1 API.
+// We aggregate from /matches/{matchId}/players for each completed match instead.
+export async function getLeadersFromMatches(competitionId: string | number): Promise<LeaderStats> {
+  const matchesRaw = await geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "medium")
+  const matches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
+  const completed = matches.filter((m: any) => m.matchStatus === "COMPLETE")
+
+  if (completed.length === 0) return { scoring: [], rebounds: [], assists: [] }
+
+  const playerDataArrays = await Promise.all(
+    completed.map(async (m: any) => {
+      try {
+        const raw = await geniusFetch(`/matches/${m.matchId}/players`, "medium")
+        return raw?.response?.data ?? raw?.data ?? []
+      } catch {
+        return []
+      }
+    })
+  )
+
+  // Accumulate totals per player — only periodNumber 0 (game total), only participated
+  const totals = new Map<number, {
+    personId: number; playerName: string; teamName: string
+    teamSigla: string | null; photoUrl: string | null
+    games: number; pts: number; reb: number; ast: number
+  }>()
+
+  for (const players of playerDataArrays) {
+    for (const p of players) {
+      if (p.periodNumber !== 0 || !p.participated) continue
+      const id: number = p.personId
+      if (!totals.has(id)) {
+        totals.set(id, {
+          personId: id,
+          playerName: p.personName ?? `${p.firstName ?? ""} ${p.familyName ?? ""}`.trim(),
+          teamName: p.teamName ?? "",
+          teamSigla: p.teamCode ?? null,
+          photoUrl: p.images?.photo?.T1?.url ?? null,
+          games: 0, pts: 0, reb: 0, ast: 0,
+        })
+      }
+      const e = totals.get(id)!
+      e.games++
+      e.pts += p.sPoints ?? 0
+      e.reb += p.sReboundsTotal ?? 0
+      e.ast += p.sAssists ?? 0
+    }
+  }
+
+  const all = Array.from(totals.values()).filter(p => p.games > 0)
+
+  function toLeaders(key: "pts" | "reb" | "ast"): LeaderEntry[] {
+    return all
+      .map(p => ({ ...p, avg: p[key] / p.games }))
+      .sort((a, b) => b.avg - a.avg)
+      .slice(0, 10)
+      .map((p, i) => ({
+        rank: i + 1,
+        personId: p.personId,
+        playerName: p.playerName,
+        teamName: p.teamName,
+        teamSigla: p.teamSigla,
+        photoUrl: p.photoUrl,
+        value: Math.round(p.avg * 10) / 10,
+        games: p.games,
+      }))
+  }
+
+  return {
+    scoring: toLeaders("pts"),
+    rebounds: toLeaders("reb"),
+    assists: toLeaders("ast"),
+  }
 }
 
 export async function getMatchStatistics(matchId: string | number) {
