@@ -53,9 +53,9 @@ export async function GET() {
     ])
 
     const standings = normalizeStandings(sRaw).sort((a, b) => a.rank - b.rank)
-    const scoringLeaders = leaderStats.scoring.map(e => ({ ...e, teamLogo: null, statLabel: "Puntos" }))
-    const reboundsLeaders = leaderStats.rebounds.map(e => ({ ...e, teamLogo: null, statLabel: "Rebotes" }))
-    const assistsLeaders = leaderStats.assists.map(e => ({ ...e, teamLogo: null, statLabel: "Asistencias" }))
+    const scoringLeaders = leaderStats.scoring.map(e => ({ ...e, statLabel: "Puntos" }))
+    const reboundsLeaders = leaderStats.rebounds.map(e => ({ ...e, statLabel: "Rebotes" }))
+    const assistsLeaders = leaderStats.assists.map(e => ({ ...e, statLabel: "Asistencias" }))
 
     return NextResponse.json(
       {

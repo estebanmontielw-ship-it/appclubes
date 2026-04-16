@@ -119,6 +119,7 @@ export interface LeaderEntry {
   playerName: string
   teamName: string
   teamSigla: string | null
+  teamLogo: string | null
   photoUrl: string | null
   value: number
   games: number
@@ -128,6 +129,9 @@ export interface LeaderStats {
   scoring: LeaderEntry[]
   rebounds: LeaderEntry[]
   assists: LeaderEntry[]
+  totalScoring: LeaderEntry[]
+  totalThreePointers: LeaderEntry[]
+  totalAssists: LeaderEntry[]
 }
 
 // /competitions/{id}/leaders and /personstatistics return 500 in the v1 API.
@@ -137,7 +141,17 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
   const matches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
   const completed = matches.filter((m: any) => m.matchStatus === "COMPLETE")
 
-  if (completed.length === 0) return { scoring: [], rebounds: [], assists: [] }
+  const empty = { scoring: [], rebounds: [], assists: [], totalScoring: [], totalThreePointers: [], totalAssists: [] }
+  if (completed.length === 0) return empty
+
+  // Build teamId → logo map from match competitors
+  const teamLogoMap = new Map<number, string>()
+  for (const m of matches) {
+    for (const c of m.competitors ?? []) {
+      const logo = c.images?.logo?.T1?.url ?? c.images?.logo?.S1?.url ?? null
+      if (c.teamId && logo) teamLogoMap.set(c.teamId, logo)
+    }
+  }
 
   const playerDataArrays = await Promise.all(
     completed.map(async (m: any) => {
@@ -153,8 +167,8 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
   // Accumulate totals per player — only periodNumber 0 (game total), only participated
   const totals = new Map<number, {
     personId: number; playerName: string; teamName: string
-    teamSigla: string | null; photoUrl: string | null
-    games: number; pts: number; reb: number; ast: number
+    teamSigla: string | null; teamLogo: string | null; photoUrl: string | null
+    games: number; pts: number; reb: number; ast: number; threePt: number
   }>()
 
   for (const players of playerDataArrays) {
@@ -167,8 +181,9 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
           playerName: p.personName ?? `${p.firstName ?? ""} ${p.familyName ?? ""}`.trim(),
           teamName: p.teamName ?? "",
           teamSigla: p.teamCode ?? null,
+          teamLogo: teamLogoMap.get(p.teamId) ?? null,
           photoUrl: p.images?.photo?.T1?.url ?? null,
-          games: 0, pts: 0, reb: 0, ast: 0,
+          games: 0, pts: 0, reb: 0, ast: 0, threePt: 0,
         })
       }
       const e = totals.get(id)!
@@ -176,32 +191,49 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
       e.pts += p.sPoints ?? 0
       e.reb += p.sReboundsTotal ?? 0
       e.ast += p.sAssists ?? 0
+      e.threePt += p.sThreePointersMade ?? 0
     }
   }
 
   const all = Array.from(totals.values()).filter(p => p.games > 0)
 
-  function toLeaders(key: "pts" | "reb" | "ast"): LeaderEntry[] {
+  function toEntry(p: typeof all[0], value: number, rank: number): LeaderEntry {
+    return {
+      rank,
+      personId: p.personId,
+      playerName: p.playerName,
+      teamName: p.teamName,
+      teamSigla: p.teamSigla,
+      teamLogo: p.teamLogo,
+      photoUrl: p.photoUrl,
+      value,
+      games: p.games,
+    }
+  }
+
+  function byAvg(key: "pts" | "reb" | "ast"): LeaderEntry[] {
     return all
-      .map(p => ({ ...p, avg: p[key] / p.games }))
-      .sort((a, b) => b.avg - a.avg)
+      .map(p => ({ p, v: Math.round((p[key] / p.games) * 10) / 10 }))
+      .sort((a, b) => b.v - a.v)
       .slice(0, 10)
-      .map((p, i) => ({
-        rank: i + 1,
-        personId: p.personId,
-        playerName: p.playerName,
-        teamName: p.teamName,
-        teamSigla: p.teamSigla,
-        photoUrl: p.photoUrl,
-        value: Math.round(p.avg * 10) / 10,
-        games: p.games,
-      }))
+      .map(({ p, v }, i) => toEntry(p, v, i + 1))
+  }
+
+  function byTotal(key: "pts" | "ast" | "threePt"): LeaderEntry[] {
+    return all
+      .map(p => ({ p, v: p[key] }))
+      .sort((a, b) => b.v - a.v)
+      .slice(0, 10)
+      .map(({ p, v }, i) => toEntry(p, v, i + 1))
   }
 
   return {
-    scoring: toLeaders("pts"),
-    rebounds: toLeaders("reb"),
-    assists: toLeaders("ast"),
+    scoring: byAvg("pts"),
+    rebounds: byAvg("reb"),
+    assists: byAvg("ast"),
+    totalScoring: byTotal("pts"),
+    totalThreePointers: byTotal("threePt"),
+    totalAssists: byTotal("ast"),
   }
 }
 

@@ -75,9 +75,9 @@ export default async function PosicionesPage() {
     ])
 
     standings = normalizeStandings(sRaw).sort((a, b) => a.rank - b.rank)
-    scoringLeaders = leaderStats.scoring.map(e => ({ ...e, teamLogo: null, statLabel: "Puntos" }))
-    reboundsLeaders = leaderStats.rebounds.map(e => ({ ...e, teamLogo: null, statLabel: "Rebotes" }))
-    assistsLeaders = leaderStats.assists.map(e => ({ ...e, teamLogo: null, statLabel: "Asistencias" }))
+    scoringLeaders = leaderStats.scoring.map(e => ({ ...e, statLabel: "Puntos" }))
+    reboundsLeaders = leaderStats.rebounds.map(e => ({ ...e, statLabel: "Rebotes" }))
+    assistsLeaders = leaderStats.assists.map(e => ({ ...e, statLabel: "Asistencias" }))
   } catch (e: any) {
     error = e?.message ?? "Error desconocido"
   }
