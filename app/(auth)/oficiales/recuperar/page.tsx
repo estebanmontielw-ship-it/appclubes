@@ -30,8 +30,9 @@ export default function RecuperarPage() {
     setLoading(true)
     try {
       const supabase = createClient()
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
       const { error } = await supabase.auth.resetPasswordForEmail(data.email, {
-        redirectTo: `${window.location.origin}/api/auth/callback`,
+        redirectTo: `${siteUrl}/api/auth/callback?next=/oficiales/nueva-contrasena`,
       })
 
       if (error) {
