@@ -38,7 +38,7 @@ export default function PublicNavbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 shrink-0">
-            <img src="/favicon-cpb.png" alt="CPB" className="h-10 w-10 object-contain" />
+            <img src="/favicon-cpb.png" alt="CPB" width={40} height={40} className="h-10 w-10 object-contain" />
             <div className="hidden sm:block">
               <p className="font-heading text-lg text-white lg:text-gray-900 leading-tight tracking-wide">CPB</p>
               <p className="text-[10px] text-blue-300 lg:text-gray-400 leading-tight -mt-0.5">Confederación Paraguaya de Básquetbol</p>

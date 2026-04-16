@@ -1,10 +1,25 @@
 import type { Metadata } from "next"
 import Script from "next/script"
+import { Bebas_Neue, Source_Sans_3 } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import PWARegister from "@/components/PWARegister"
 import ManifestSwitcher from "@/components/ManifestSwitcher"
 import PushNotifications from "@/components/PushNotifications"
+
+const bebasNeue = Bebas_Neue({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bebas",
+  display: "swap",
+})
+
+const sourceSans = Source_Sans_3({
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-source-sans",
+  display: "swap",
+})
 
 export const viewport = {
   width: "device-width",
@@ -31,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="es">
+    <html lang="es" className={`${bebasNeue.variable} ${sourceSans.variable}`}>
       <head>
         {/* Viewport */}
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
@@ -41,10 +56,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="APP CPB" />
-        {/* Google Fonts - Bebas Neue (headings) + Source Sans 3 (body) */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
         {/* Google Tag Manager */}
         <Script id="gtm-init" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':

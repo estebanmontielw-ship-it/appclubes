@@ -8,7 +8,7 @@ export default function PublicFooter() {
           {/* About */}
           <div>
             <div className="flex items-center gap-3 mb-4">
-              <img src="/favicon-cpb.png" alt="CPB" className="h-10 w-10 object-contain" />
+              <img src="/favicon-cpb.png" alt="CPB" width={40} height={40} className="h-10 w-10 object-contain" />
               <div>
                 <p className="font-heading text-xl text-white tracking-wide">CPB</p>
                 <p className="text-[10px] text-gray-500">Confederación Paraguaya de Básquetbol</p>

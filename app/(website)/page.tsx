@@ -123,7 +123,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <SectionTitle title="Seguinos en Redes" subtitle="Las últimas publicaciones de la CPB" />
         </div>
-        <div className="pb-12">
+        <div className="pb-12 min-h-[340px]">
           <SocialCarousel />
         </div>
       </section>
