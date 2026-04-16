@@ -99,3 +99,128 @@ GENIUS_LNB_COMPETITION_ID=48603  # ID fijo de la competencia LNB 2026 (opcional,
 ### Endpoint de debug
 `GET /api/genius/debug-match` → devuelve los primeros 2 partidos con todos sus campos crudos.
 Útil para diagnosticar cuando algo nuevo falla en producción (el sandbox no tiene API key).
+
+---
+
+## Genius Sports — Livestream READ API (datos en tiempo real)
+
+Base URL: `https://live.wh.sportingpulseinternational.com/v2/basketball/read/{matchId}`
+Auth: `x-api-key` header (misma API key)
+
+### Uso
+- Conexión **long-running GET** — una sola conexión por partido, no hacer polling.
+- Conectar ANTES del inicio del partido.
+- Los mensajes se delimitan con `\r\n`.
+- Desconectar cuando llega `status: "complete"`.
+
+### Tipos de mensajes del stream
+| Tipo | Descripción | Cuándo llega |
+|------|-------------|--------------|
+| `connection` | Estado de la conexión | Cada 10 seg si no hay datos |
+| `matchInformation` | Info del partido (competición, venue) | Al conectar |
+| `setup` | Configuración (períodos, shot clock, timeouts) | Al conectar |
+| `teams` | Equipos y jugadores con sus SPI IDs | Al conectar + updates |
+| `officials` | Árbitros | Al conectar |
+| `status` | Marcador, reloj, período actual | Cada cambio |
+| `action` | Acción individual (canasta, falta, etc.) | Tiempo real |
+| `boxscore` | Estadísticas acumuladas por jugador/equipo | Cada acción |
+| `playbyplay` | Play-by-play con coordenadas en cancha | Cada acción |
+| `standings` | Clasificación actualizada | Cada partido |
+| `schedule` | Calendario de partidos | Al conectar |
+
+### Endpoints adicionales del Livestream
+```
+# Stream en tiempo real
+GET https://live.wh.sportingpulseinternational.com/v2/basketball/read/{matchId}
+  ?types=se,ac,mi,te,box,pbp&fromMessageId=0
+
+# Replay de mensajes pasados (partidos ya jugados)
+GET https://live.wh.sportingpulseinternational.com/v2/basketball/readlog/{matchId}
+  ?fromMessageId=0&toMessageId=9999
+```
+
+### Estructura del mensaje `action`
+```json
+{
+  "type": "action",
+  "actionNumber": 712,
+  "actionType": "2pt|3pt|freethrow|foul|rebound|turnover|assist|block|steal|substitution|timeout",
+  "success": 1,
+  "teamNumber": 1,
+  "pno": 3,
+  "personId": 7039114,
+  "period": { "current": 2, "periodType": "REGULAR" },
+  "clock": "05:32:00",
+  "x": 24.1,
+  "y": 50.0,
+  "area": "paint"
+}
+```
+
+### Coordenadas de cancha
+- Origen (0,0) = esquina inferior izquierda
+- (100, 100) = esquina superior derecha
+- Porcentaje del ancho/alto total de la cancha
+
+---
+
+## Genius Sports — Relación de IDs con FIBA Organizer
+
+| Campo en FIBA Organizer | Campo en Genius Sports | Descripción |
+|-------------------------|------------------------|-------------|
+| `spi_id` (persona) | `personId` en teams / action messages | **Mismo ID** |
+| `team_id` | `teamId` en detail | ID del equipo |
+| `competition_id` | `competitionId` | ID de la competencia |
+| `league_id` | `leagueId` | ID de la liga |
+| `game_id` | `matchId` | ID del partido |
+
+**CRÍTICO:** `personId` en el stream de LiveStats = `spi_id` en FIBA Organizer. Si ese ID no existe en FO → error "Person with SPI id XXXXXXX cannot be found".
+
+### IDs de la LNB APERTURA 2026
+```
+competitionId:  48603   ← el que usa la app (v1 API)
+leagueId:       48110
+tournamentId:   41808
+```
+
+---
+
+## Error frecuente: "Person with SPI id XXXXXXX cannot be found"
+
+**Causa:** El jugador tiene `personId` en el XML de LiveStats pero no existe en FIBA Organizer con ese `spi_id`.
+
+**Solución en FIBA Organizer:**
+1. Ir a Contenido → Personas → Añadir
+2. Crear el perfil con nombre, fecha de nacimiento, nacionalidad
+3. FO asignará automáticamente el SPI ID en el Person Matching (Mapa de Jugadores)
+4. En Mapa de Jugadores seleccionar manualmente el nuevo perfil
+
+**Verificación:** Tools → Person Merging para detectar duplicados después de crear perfiles nuevos.
+
+**Caso conocido:** SEBASTIAN PAREDES (SPI ID 1678949, Colonias Gold) — ticket GS #468016.
+
+---
+
+## Campos de estadísticas individuales (Livestream / Box Score)
+
+```
+sPoints                  Puntos totales
+sTwoPointersMade         Tiros de 2 anotados
+sTwoPointersAttempted    Tiros de 2 intentados
+sThreePointersMade       Triples anotados
+sThreePointersAttempted  Triples intentados
+sFreeThrowsMade          Tiros libres anotados
+sFreeThrowsAttempted     Tiros libres intentados
+sReboundsOffensive       Rebotes ofensivos
+sReboundsDefensive       Rebotes defensivos
+sReboundsTotal           Rebotes totales
+sAssists                 Asistencias
+sSteals                  Robos
+sBlocks                  Tapones
+sTurnovers               Pérdidas
+sFoulsPersonal           Faltas personales
+sFoulsTechnical          Faltas técnicas
+sFoulsOn                 Faltas recibidas
+sMinutes                 Minutos jugados
+sEfficiency              Eficiencia
+```
