@@ -15,6 +15,9 @@ export const metadata: Metadata = {
     description: "Últimas noticias del básquetbol paraguayo - Confederación Paraguaya de Básquetbol",
     url: "/noticias",
   },
+  alternates: {
+    canonical: "/noticias",
+  },
 }
 
 const ITEMS_PER_PAGE = 12

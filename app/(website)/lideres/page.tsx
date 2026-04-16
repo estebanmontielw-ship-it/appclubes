@@ -15,6 +15,7 @@ export const metadata: Metadata = {
     description: "Los mejores jugadores en cada categoría estadística.",
     url: "/lideres",
   },
+  alternates: { canonical: "/lideres" },
 }
 
 interface LeaderRow {

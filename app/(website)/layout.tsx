@@ -37,6 +37,9 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
+  alternates: {
+    canonical: baseUrl,
+  },
 }
 
 const organizationSchema = {

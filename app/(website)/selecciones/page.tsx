@@ -12,6 +12,7 @@ export const metadata: Metadata = {
     description: "Selecciones nacionales de básquetbol de Paraguay 2026 - Calendario internacional",
     url: "/selecciones",
   },
+  alternates: { canonical: "/selecciones" },
 }
 
 interface Evento {

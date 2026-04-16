@@ -16,6 +16,7 @@ export const metadata: Metadata = {
     description: "Tabla de posiciones del básquetbol paraguayo.",
     url: "/posiciones",
   },
+  alternates: { canonical: "/posiciones" },
 }
 
 // Normalize raw standings response (handles both `response.data[]` and `data[]` shapes)

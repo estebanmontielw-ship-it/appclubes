@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     description: "Contacto con la Confederación Paraguaya de Básquetbol. Escribinos o visitanos en Asunción, Paraguay.",
     url: "/contacto",
   },
+  alternates: { canonical: "/contacto" },
 }
 
 export default function ContactoPage() {

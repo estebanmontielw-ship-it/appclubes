@@ -76,6 +76,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         url: `/clubes/${params.slug}`,
         images: club.logoUrl ? [{ url: club.logoUrl }] : undefined,
       },
+      alternates: {
+        canonical: `/clubes/${params.slug}`,
+      },
     }
   } catch {
     return { title: "Club" }

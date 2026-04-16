@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     description: "Reglamentos, estatutos y documentos oficiales de la Confederación Paraguaya de Básquetbol",
     url: "/reglamentos",
   },
+  alternates: { canonical: "/reglamentos" },
 }
 
 const categoryLabels: Record<string, string> = {

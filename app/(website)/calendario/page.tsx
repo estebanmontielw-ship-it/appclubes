@@ -14,6 +14,7 @@ export const metadata: Metadata = {
     description: "Calendario completo de partidos del básquetbol paraguayo.",
     url: "/calendario",
   },
+  alternates: { canonical: "/calendario" },
 }
 
 export default async function CalendarioPage() {

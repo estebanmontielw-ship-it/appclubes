@@ -4,6 +4,7 @@ import SectionTitle from "@/components/website/SectionTitle"
 export const metadata: Metadata = {
   title: "Términos y Condiciones",
   description: "Términos y condiciones de uso del sitio web y portal de la Confederación Paraguaya de Básquetbol",
+  alternates: { canonical: "/terminos" },
 }
 
 export default function TerminosPage() {

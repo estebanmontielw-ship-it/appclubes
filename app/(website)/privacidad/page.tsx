@@ -4,6 +4,7 @@ import SectionTitle from "@/components/website/SectionTitle"
 export const metadata: Metadata = {
   title: "Política de Privacidad",
   description: "Política de privacidad y protección de datos personales de la Confederación Paraguaya de Básquetbol",
+  alternates: { canonical: "/privacidad" },
 }
 
 export default function PrivacidadPage() {

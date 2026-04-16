@@ -13,6 +13,9 @@ export const metadata: Metadata = {
     description: "Clubes afiliados a la Confederación Paraguaya de Básquetbol",
     url: "/clubes",
   },
+  alternates: {
+    canonical: "/clubes",
+  },
 }
 
 interface Equipo {

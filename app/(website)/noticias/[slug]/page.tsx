@@ -58,6 +58,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       description: noticia.extracto,
       ...(ogImage && { images: [ogImage] }),
     },
+    alternates: {
+      canonical: `/noticias/${params.slug}`,
+    },
   }
 }
 

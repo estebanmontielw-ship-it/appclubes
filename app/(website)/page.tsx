@@ -23,6 +23,9 @@ export const metadata: Metadata = {
       "Sitio oficial de la Confederación Paraguaya de Básquetbol. Calendario, posiciones, estadísticas, noticias y toda la información del básquetbol paraguayo.",
     url: "/",
   },
+  alternates: {
+    canonical: "/",
+  },
 }
 
 export default async function HomePage() {

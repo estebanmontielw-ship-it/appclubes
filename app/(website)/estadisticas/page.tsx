@@ -11,6 +11,7 @@ export const metadata: Metadata = {
     description: "Estadísticas detalladas de jugadores y equipos del básquetbol paraguayo.",
     url: "/estadisticas",
   },
+  alternates: { canonical: "/estadisticas" },
 }
 
 export default function EstadisticasPage() {

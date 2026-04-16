@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     description: "Sobre la Confederación Paraguaya de Básquetbol - Historia, autoridades e información institucional",
     url: "/institucional",
   },
+  alternates: { canonical: "/institucional" },
 }
 
 export default async function InstitucionalPage() {
