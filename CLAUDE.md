@@ -83,12 +83,25 @@ Match {
 }
 ```
 
+### Endpoint de jugadores por partido — CRÍTICO
+- `GET /matches/{matchId}/players` **sin parámetros solo devuelve los jugadores del equipo LOCAL**.
+- Para obtener ambos equipos, llamar **una vez por competidor** con `?teamId={teamId}` y combinar:
+  ```typescript
+  const teamIds = m.competitors.map(c => c.teamId)
+  const arrays = await Promise.all(
+    teamIds.map(tid => geniusFetch(`/matches/${matchId}/players?teamId=${tid}`))
+  )
+  return arrays.flat()
+  ```
+- Sin esto, los equipos visitantes tienen 0 stats aunque hayan jugado.
+
 ### Errores comunes a evitar
 1. **No asumir `competitors[0]` = local.** Usar `isHomeCompetitor`.
 2. **No usar `matchTime.slice(0,5)` directo.** El string incluye la fecha — siempre hacer split primero.
 3. **No usar `roundNumber` como jornada.** Siempre es `"0"`. Calcular con `matchNumber / matchesPerJornada`.
 4. **No pasar objetos anidados (como `venue`) directo al JSX.** React crashea al intentar renderizar un object. Extraer siempre el string antes.
 5. **`scoreString`** puede ser `""` (vacío) para partidos no jugados. Tratar string vacío como null.
+6. **No usar `for...of` sobre Map/Set ni spread `[...Set]`.** TypeScript target ES5 no lo soporta. Usar siempre `Array.from(map.entries())` y `Array.from(new Set(...))`.
 
 ### Variables de entorno requeridas
 ```
