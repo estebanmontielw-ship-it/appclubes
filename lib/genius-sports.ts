@@ -155,12 +155,18 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
 
   const playerDataArrays = await Promise.all(
     completed.map(async (m: any) => {
-      try {
-        const raw = await geniusFetch(`/matches/${m.matchId}/players`, "medium")
-        return raw?.response?.data ?? raw?.data ?? []
-      } catch {
-        return []
-      }
+      const teamIds: number[] = (m.competitors ?? [])
+        .map((c: any) => c.teamId ?? c.competitorId)
+        .filter(Boolean)
+      const perTeam = await Promise.all(
+        teamIds.map(async (tid: number) => {
+          try {
+            const raw = await geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "medium")
+            return raw?.response?.data ?? raw?.data ?? []
+          } catch { return [] }
+        })
+      )
+      return perTeam.flat()
     })
   )
 
@@ -313,8 +319,18 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   const playerDataArrays = await Promise.all(
     completed.map(async (m: any) => {
       try {
-        const raw = await geniusFetch(`/matches/${m.matchId}/players`, "medium")
-        return raw?.response?.data ?? raw?.data ?? []
+        const teamIds: number[] = (m.competitors ?? [])
+          .map((c: any) => c.teamId ?? c.competitorId)
+          .filter(Boolean)
+        const perTeam = await Promise.all(
+          teamIds.map(async (tid: number) => {
+            try {
+              const raw = await geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "medium")
+              return raw?.response?.data ?? raw?.data ?? []
+            } catch { return [] }
+          })
+        )
+        return perTeam.flat()
       } catch { return [] }
     })
   )
