@@ -167,6 +167,12 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
   // A player "played" if participated=1 OR has minutes > 0 (flag sometimes incorrect in LiveStats)
   const didPlay = (p: any) => p.periodNumber === 0 && (p.participated === 1 || p.participated === "1" || (p.sMinutes != null && p.sMinutes > 0))
 
+  const totals = new Map<number, {
+    personId: number; playerName: string; teamName: string
+    teamSigla: string | null; teamLogo: string | null; photoUrl: string | null
+    games: number; pts: number; reb: number; ast: number; threePt: number
+  }>()
+
   for (const players of playerDataArrays) {
     for (const p of players) {
       if (!didPlay(p)) continue
@@ -273,14 +279,35 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   const matches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
   const completed = matches.filter((m: any) => m.matchStatus === "COMPLETE")
 
-  if (completed.length === 0) return { players: [], teams: [] }
-
   const teamLogoMap = new Map<number, string>()
+  const allTeamsMap = new Map<number, { teamId: number; teamName: string; teamSigla: string | null; teamLogo: string | null }>()
   for (const m of matches) {
     for (const c of m.competitors ?? []) {
       const logo = c.images?.logo?.T1?.url ?? c.images?.logo?.S1?.url ?? null
-      if (c.teamId && logo) teamLogoMap.set(c.teamId, logo)
+      const tid = c.teamId ?? c.competitorId
+      if (tid && logo) teamLogoMap.set(tid, logo)
+      if (tid && !allTeamsMap.has(tid)) {
+        allTeamsMap.set(tid, {
+          teamId: tid,
+          teamName: c.competitorName ?? c.teamName ?? "",
+          teamSigla: c.teamCode ?? null,
+          teamLogo: logo,
+        })
+      }
     }
+  }
+  Array.from(allTeamsMap.entries()).forEach(([tid, t]) => {
+    if (!t.teamLogo && teamLogoMap.has(tid)) t.teamLogo = teamLogoMap.get(tid)!
+  })
+
+  if (completed.length === 0) {
+    const teams: TeamStatFull[] = Array.from(allTeamsMap.values()).map(t => ({
+      teamId: t.teamId, teamName: t.teamName, teamSigla: t.teamSigla,
+      teamLogo: t.teamLogo, games: 0,
+      ptsAvg: 0, rebAvg: 0, astAvg: 0, stlAvg: 0, blkAvg: 0, toAvg: 0,
+      fgPct: null, threePtPct: null, ftPct: null,
+    }))
+    return { players: [], teams }
   }
 
   const playerDataArrays = await Promise.all(
@@ -373,7 +400,7 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
     }))
     .sort((a, b) => b.ptsAvg - a.ptsAvg)
 
-  const teams: TeamStatFull[] = Array.from(teamMap.values()).map(t => {
+  const teamsFromStats: TeamStatFull[] = Array.from(teamMap.values()).map(t => {
     const g = t.teamGames.size
     return {
       teamId: t.teamId, teamName: t.teamName, teamSigla: t.teamSigla,
@@ -382,7 +409,20 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
       stlAvg: avg(t.stl, g), blkAvg: avg(t.blk, g), toAvg: avg(t.to, g),
       fgPct: pct(t.fgm, t.fga), threePtPct: pct(t.threePtM, t.threePtA), ftPct: pct(t.ftm, t.fta),
     }
-  }).sort((a, b) => b.ptsAvg - a.ptsAvg)
+  })
+
+  const statsTeamIds = new Set(teamsFromStats.map(t => t.teamId))
+  const teamsWithNoStats: TeamStatFull[] = Array.from(allTeamsMap.values())
+    .filter(t => !statsTeamIds.has(t.teamId))
+    .map(t => ({
+      teamId: t.teamId, teamName: t.teamName, teamSigla: t.teamSigla,
+      teamLogo: t.teamLogo, games: 0,
+      ptsAvg: 0, rebAvg: 0, astAvg: 0, stlAvg: 0, blkAvg: 0, toAvg: 0,
+      fgPct: null, threePtPct: null, ftPct: null,
+    }))
+
+  const teams: TeamStatFull[] = [...teamsFromStats, ...teamsWithNoStats]
+    .sort((a, b) => b.ptsAvg - a.ptsAvg)
 
   return { players, teams }
 }
