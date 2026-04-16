@@ -45,7 +45,7 @@ export async function GET() {
       })),
       withoutTeamId: {
         totalPlayers: allPlayers.length,
-        teams: [...new Set(allPlayers.map((p: any) => p.teamName))],
+        teams: Array.from(new Set(allPlayers.map((p: any) => p.teamName))),
       },
       perTeam: perTeamPlayers,
     })
