@@ -117,20 +117,20 @@ export default async function LideresPage() {
           subtitle="Los mejores jugadores de la LNB 2026 en cada categoría"
         />
 
-        {/* Promedios */}
-        <p className="mt-6 mb-3 text-[11px] font-black uppercase tracking-widest text-gray-400">Promedios por partido</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <LeaderTable title="Anotación" icon={<Activity className="w-4 h-4" />} unit="pts/partido" rows={scoring} />
-          <LeaderTable title="Rebotes" icon={<Users className="w-4 h-4" />} unit="reb/partido" rows={rebounds} />
-          <LeaderTable title="Asistencias" icon={<TrendingUp className="w-4 h-4" />} unit="ast/partido" rows={assists} />
-        </div>
-
         {/* Totales */}
-        <p className="mt-8 mb-3 text-[11px] font-black uppercase tracking-widest text-gray-400">Totales en la temporada</p>
+        <p className="mt-6 mb-3 text-[11px] font-black uppercase tracking-widest text-gray-400">Totales en la temporada</p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <LeaderTable title="Puntos Totales" icon={<Star className="w-4 h-4" />} unit="pts totales" rows={totalScoring} valueDecimals={0} />
           <LeaderTable title="Triples" icon={<Hash className="w-4 h-4" />} unit="3pt totales" rows={totalThreePointers} valueDecimals={0} />
           <LeaderTable title="Asistencias Tot." icon={<TrendingUp className="w-4 h-4" />} unit="ast totales" rows={totalAssists} valueDecimals={0} />
+        </div>
+
+        {/* Promedios */}
+        <p className="mt-8 mb-3 text-[11px] font-black uppercase tracking-widest text-gray-400">Promedios por partido</p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <LeaderTable title="Anotación" icon={<Activity className="w-4 h-4" />} unit="pts/partido" rows={scoring} />
+          <LeaderTable title="Rebotes" icon={<Users className="w-4 h-4" />} unit="reb/partido" rows={rebounds} />
+          <LeaderTable title="Asistencias" icon={<TrendingUp className="w-4 h-4" />} unit="ast/partido" rows={assists} />
         </div>
       </div>
     </div>

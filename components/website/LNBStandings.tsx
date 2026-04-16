@@ -22,6 +22,7 @@ export interface LeaderEntry {
   teamName: string
   teamSigla: string | null
   teamLogo: string | null
+  photoUrl?: string | null
   value: number
   statLabel: string
 }
@@ -88,7 +89,10 @@ function LeadersCard({
               <span className="w-5 text-center text-xs font-black text-gray-300">
                 {l.rank}
               </span>
-              <TeamLogo logo={l.teamLogo} name={l.teamName} size={28} />
+              {l.photoUrl
+                ? <img src={l.photoUrl} alt={l.playerName} width={28} height={28} className="rounded-full object-cover border border-gray-100 shrink-0" style={{width:28,height:28}} />
+                : <TeamLogo logo={l.teamLogo} name={l.teamName} size={28} />
+              }
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-[#0a1628] truncate">{l.playerName}</p>
                 <p className="text-[10px] text-gray-400 font-semibold">{l.teamSigla ?? l.teamName}</p>

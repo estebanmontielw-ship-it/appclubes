@@ -237,6 +237,157 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
   }
 }
 
+export interface PlayerStatFull {
+  personId: number
+  playerName: string
+  teamName: string
+  teamId: number
+  teamSigla: string | null
+  teamLogo: string | null
+  photoUrl: string | null
+  games: number
+  // totals
+  pts: number; reb: number; rebOff: number; rebDef: number
+  ast: number; stl: number; blk: number; to: number
+  min: number
+  fgm: number; fga: number
+  threePtM: number; threePtA: number
+  ftm: number; fta: number
+  fouls: number; eff: number
+  // averages
+  ptsAvg: number; rebAvg: number; astAvg: number
+  stlAvg: number; blkAvg: number; toAvg: number; minAvg: number; effAvg: number
+  // percentages (null if 0 attempts)
+  fgPct: number | null; threePtPct: number | null; ftPct: number | null
+}
+
+export interface TeamStatFull {
+  teamId: number
+  teamName: string
+  teamSigla: string | null
+  teamLogo: string | null
+  games: number
+  ptsAvg: number; rebAvg: number; astAvg: number
+  stlAvg: number; blkAvg: number; toAvg: number
+  fgPct: number | null; threePtPct: number | null; ftPct: number | null
+}
+
+export async function getAllPlayerStats(competitionId: string | number): Promise<{ players: PlayerStatFull[], teams: TeamStatFull[] }> {
+  const matchesRaw = await geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "medium")
+  const matches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
+  const completed = matches.filter((m: any) => m.matchStatus === "COMPLETE")
+
+  if (completed.length === 0) return { players: [], teams: [] }
+
+  const teamLogoMap = new Map<number, string>()
+  for (const m of matches) {
+    for (const c of m.competitors ?? []) {
+      const logo = c.images?.logo?.T1?.url ?? c.images?.logo?.S1?.url ?? null
+      if (c.teamId && logo) teamLogoMap.set(c.teamId, logo)
+    }
+  }
+
+  const playerDataArrays = await Promise.all(
+    completed.map(async (m: any) => {
+      try {
+        const raw = await geniusFetch(`/matches/${m.matchId}/players`, "medium")
+        return raw?.response?.data ?? raw?.data ?? []
+      } catch { return [] }
+    })
+  )
+
+  type Acc = {
+    personId: number; playerName: string; teamName: string; teamId: number
+    teamSigla: string | null; teamLogo: string | null; photoUrl: string | null
+    games: number; pts: number; reb: number; rebOff: number; rebDef: number
+    ast: number; stl: number; blk: number; to: number; min: number
+    fgm: number; fga: number; threePtM: number; threePtA: number
+    ftm: number; fta: number; fouls: number; eff: number
+  }
+
+  const playerMap = new Map<number, Acc>()
+  const teamMap = new Map<number, Acc & { teamGames: Set<number> }>()
+
+  for (let i = 0; i < playerDataArrays.length; i++) {
+    const matchId = completed[i].matchId
+    for (const p of playerDataArrays[i]) {
+      if (p.periodNumber !== 0 || !p.participated) continue
+      const pid: number = p.personId
+      const tid: number = p.teamId
+      if (!playerMap.has(pid)) {
+        playerMap.set(pid, {
+          personId: pid,
+          playerName: p.personName ?? `${p.firstName ?? ""} ${p.familyName ?? ""}`.trim(),
+          teamName: p.teamName ?? "", teamId: tid,
+          teamSigla: p.teamCode ?? null,
+          teamLogo: teamLogoMap.get(tid) ?? null,
+          photoUrl: p.images?.photo?.T1?.url ?? null,
+          games: 0, pts: 0, reb: 0, rebOff: 0, rebDef: 0,
+          ast: 0, stl: 0, blk: 0, to: 0, min: 0,
+          fgm: 0, fga: 0, threePtM: 0, threePtA: 0,
+          ftm: 0, fta: 0, fouls: 0, eff: 0,
+        })
+      }
+      const pe = playerMap.get(pid)!
+      pe.games++; pe.pts += p.sPoints ?? 0; pe.reb += p.sReboundsTotal ?? 0
+      pe.rebOff += p.sReboundsOffensive ?? 0; pe.rebDef += p.sReboundsDefensive ?? 0
+      pe.ast += p.sAssists ?? 0; pe.stl += p.sSteals ?? 0; pe.blk += p.sBlocks ?? 0
+      pe.to += p.sTurnovers ?? 0; pe.min += p.sMinutes ?? 0
+      pe.fgm += p.sFieldGoalsMade ?? 0; pe.fga += p.sFieldGoalsAttempted ?? 0
+      pe.threePtM += p.sThreePointersMade ?? 0; pe.threePtA += p.sThreePointersAttempted ?? 0
+      pe.ftm += p.sFreeThrowsMade ?? 0; pe.fta += p.sFreeThrowsAttempted ?? 0
+      pe.fouls += p.sFoulsPersonal ?? 0; pe.eff += p.sEfficiency ?? 0
+
+      if (!teamMap.has(tid)) {
+        teamMap.set(tid, {
+          personId: tid, playerName: "", teamName: p.teamName ?? "", teamId: tid,
+          teamSigla: p.teamCode ?? null, teamLogo: teamLogoMap.get(tid) ?? null,
+          photoUrl: null, games: 0, pts: 0, reb: 0, rebOff: 0, rebDef: 0,
+          ast: 0, stl: 0, blk: 0, to: 0, min: 0,
+          fgm: 0, fga: 0, threePtM: 0, threePtA: 0,
+          ftm: 0, fta: 0, fouls: 0, eff: 0, teamGames: new Set(),
+        })
+      }
+      const te = teamMap.get(tid)!
+      te.pts += p.sPoints ?? 0; te.reb += p.sReboundsTotal ?? 0
+      te.ast += p.sAssists ?? 0; te.stl += p.sSteals ?? 0; te.blk += p.sBlocks ?? 0
+      te.to += p.sTurnovers ?? 0
+      te.fgm += p.sFieldGoalsMade ?? 0; te.fga += p.sFieldGoalsAttempted ?? 0
+      te.threePtM += p.sThreePointersMade ?? 0; te.threePtA += p.sThreePointersAttempted ?? 0
+      te.ftm += p.sFreeThrowsMade ?? 0; te.fta += p.sFreeThrowsAttempted ?? 0
+      te.teamGames.add(matchId)
+    }
+  }
+
+  const avg = (total: number, games: number) => games > 0 ? Math.round((total / games) * 10) / 10 : 0
+  const pct = (made: number, att: number) => att > 0 ? Math.round((made / att) * 1000) / 10 : null
+
+  const players: PlayerStatFull[] = Array.from(playerMap.values())
+    .filter(p => p.games > 0)
+    .map(p => ({
+      ...p,
+      ptsAvg: avg(p.pts, p.games), rebAvg: avg(p.reb, p.games),
+      astAvg: avg(p.ast, p.games), stlAvg: avg(p.stl, p.games),
+      blkAvg: avg(p.blk, p.games), toAvg: avg(p.to, p.games),
+      minAvg: avg(p.min, p.games), effAvg: avg(p.eff, p.games),
+      fgPct: pct(p.fgm, p.fga), threePtPct: pct(p.threePtM, p.threePtA), ftPct: pct(p.ftm, p.fta),
+    }))
+    .sort((a, b) => b.ptsAvg - a.ptsAvg)
+
+  const teams: TeamStatFull[] = Array.from(teamMap.values()).map(t => {
+    const g = t.teamGames.size
+    return {
+      teamId: t.teamId, teamName: t.teamName, teamSigla: t.teamSigla,
+      teamLogo: t.teamLogo, games: g,
+      ptsAvg: avg(t.pts, g), rebAvg: avg(t.reb, g), astAvg: avg(t.ast, g),
+      stlAvg: avg(t.stl, g), blkAvg: avg(t.blk, g), toAvg: avg(t.to, g),
+      fgPct: pct(t.fgm, t.fga), threePtPct: pct(t.threePtM, t.threePtA), ftPct: pct(t.ftm, t.fta),
+    }
+  }).sort((a, b) => b.ptsAvg - a.ptsAvg)
+
+  return { players, teams }
+}
+
 export async function getMatchStatistics(matchId: string | number) {
   return geniusFetch(`/matches/${matchId}/statistics`, "short")
 }
