@@ -296,9 +296,9 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
       }
     }
   }
-  for (const [tid, t] of allTeamsMap) {
+  Array.from(allTeamsMap.entries()).forEach(([tid, t]) => {
     if (!t.teamLogo && teamLogoMap.has(tid)) t.teamLogo = teamLogoMap.get(tid)!
-  }
+  })
 
   if (completed.length === 0) {
     const teams: TeamStatFull[] = Array.from(allTeamsMap.values()).map(t => ({
