@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowLeft, Loader2, BarChart2 } from "lucide-react"
 
@@ -62,8 +62,8 @@ function fmtDate(d: string | null): string {
   return `${parseInt(day)} ${MONTHS[parseInt(m) - 1]}`
 }
 
-export default function PartidosPage({ params }: { params: Promise<{ personId: string }> }) {
-  const { personId } = use(params)
+export default function PartidosPage({ params }: { params: { personId: string } }) {
+  const { personId } = params
   const [games, setGames] = useState<GameLog[] | null>(null)
   const [loading, setLoading] = useState(true)
   const [playerName, setPlayerName] = useState<string | null>(null)

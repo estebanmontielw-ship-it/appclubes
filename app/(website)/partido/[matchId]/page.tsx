@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, use } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import {
   ArrowLeft, MapPin, Calendar, Loader2, BarChart2,
@@ -178,8 +178,8 @@ function LivestatsButton({ isoDateTime, statsUrl, status }: {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function PartidoPreviaPage({ params }: { params: Promise<{ matchId: string }> }) {
-  const { matchId } = use(params)
+export default function PartidoPreviaPage({ params }: { params: { matchId: string } }) {
+  const { matchId } = params
   const [data, setData] = useState<PreviaData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)

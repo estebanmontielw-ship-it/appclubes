@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { ArrowLeft, BarChart2, ListOrdered } from "lucide-react"
+import { ArrowLeft, BarChart2, FileText } from "lucide-react"
 import { getAllPlayerStats } from "@/lib/genius-sports"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 
@@ -96,7 +96,7 @@ export default async function JugadorPage({ params }: Props) {
             href={`/jugador/${pid}/partidos`}
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#0a1628] text-white text-sm font-bold hover:bg-[#0a1628]/90 transition-colors mb-6"
           >
-            <ListOrdered className="w-4 h-4" />
+            <FileText className="w-4 h-4" />
             Ver registro completo de juegos
           </Link>
         )}
