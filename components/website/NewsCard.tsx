@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { Eye } from "lucide-react"
 import { parseFocalPoint } from "@/lib/image"
 
 interface NewsCardProps {
@@ -8,6 +9,12 @@ interface NewsCardProps {
   imagenUrl?: string | null
   categoria: string
   publicadaEn: Date | string | null
+  vistas?: number
+}
+
+function fmtViews(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
 }
 
 const categoryLabels: Record<string, string> = {
@@ -19,7 +26,7 @@ const categoryLabels: Record<string, string> = {
   CLUBES: "Clubes",
 }
 
-export default function NewsCard({ titulo, slug, extracto, imagenUrl, categoria, publicadaEn }: NewsCardProps) {
+export default function NewsCard({ titulo, slug, extracto, imagenUrl, categoria, publicadaEn, vistas }: NewsCardProps) {
   const fecha = publicadaEn
     ? new Date(publicadaEn).toLocaleDateString("es-PY", { day: "numeric", month: "long", year: "numeric" })
     : null
@@ -49,6 +56,12 @@ export default function NewsCard({ titulo, slug, extracto, imagenUrl, categoria,
               {categoryLabels[categoria] ?? categoria}
             </span>
             {fecha && <span className="text-xs text-gray-400">{fecha}</span>}
+            {typeof vistas === "number" && vistas > 0 && (
+              <span className="inline-flex items-center gap-1 text-xs text-gray-400 ml-auto">
+                <Eye className="h-3 w-3" />
+                {fmtViews(vistas)}
+              </span>
+            )}
           </div>
           <h3 className="font-bold text-gray-900 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
             {titulo}

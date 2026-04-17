@@ -2,8 +2,10 @@ import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { cache } from "react"
+import { Eye } from "lucide-react"
 import prisma from "@/lib/prisma"
 import { parseFocalPoint } from "@/lib/image"
+import { getPageViews, isGa4Configured } from "@/lib/ga4"
 
 // Deduplicate DB call between generateMetadata and page component
 const getNoticia = cache(async (slug: string) => {
@@ -61,6 +63,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
+function fmtViews(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
 export default async function NoticiaDetailPage({ params }: { params: { slug: string } }) {
   const noticia = await getNoticia(params.slug)
   if (!noticia) notFound()
@@ -72,6 +79,23 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
         year: "numeric",
       })
     : null
+
+  const hora = noticia.publicadaEn
+    ? new Date(noticia.publicadaEn).toLocaleTimeString("es-PY", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+    : null
+
+  let vistas: number | null = null
+  if (isGa4Configured()) {
+    try {
+      vistas = await getPageViews(`/noticias/${params.slug}`, 90)
+    } catch {
+      // GA4 fail → ignore
+    }
+  }
 
   const galeria: string[] = noticia.galeria ? JSON.parse(noticia.galeria) : []
   const cover = parseFocalPoint(noticia.imagenUrl)
@@ -114,11 +138,22 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
 
       {/* Header */}
       <header className="mb-8">
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex flex-wrap items-center gap-2 mb-3">
           <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
             {categoryLabels[noticia.categoria] ?? noticia.categoria}
           </span>
-          {fecha && <span className="text-sm text-gray-400">{fecha}</span>}
+          {fecha && (
+            <span className="text-sm text-gray-400">
+              {fecha}
+              {hora && <span className="text-gray-300"> · {hora}</span>}
+            </span>
+          )}
+          {vistas != null && vistas > 0 && (
+            <span className="inline-flex items-center gap-1 text-sm text-gray-400">
+              <Eye className="h-3.5 w-3.5" />
+              {fmtViews(vistas)} {vistas === 1 ? "vista" : "vistas"}
+            </span>
+          )}
         </div>
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
           {noticia.titulo}

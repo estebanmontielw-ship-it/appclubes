@@ -3,6 +3,7 @@ import SectionTitle from "@/components/website/SectionTitle"
 import NewsCard from "@/components/website/NewsCard"
 import prisma from "@/lib/prisma"
 import Link from "next/link"
+import { getNoticiasViews, isGa4Configured } from "@/lib/ga4"
 
 // Revalidate news list every 5 minutes
 export const revalidate = 300
@@ -67,6 +68,15 @@ export default async function NoticiasPage({
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE)
 
+  let views: Record<string, number> = {}
+  if (isGa4Configured()) {
+    try {
+      views = await getNoticiasViews(90)
+    } catch {
+      // GA4 fail → ignore, no mostrar vistas
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <SectionTitle
@@ -109,6 +119,7 @@ export default async function NoticiasPage({
               imagenUrl={noticia.imagenUrl}
               categoria={noticia.categoria}
               publicadaEn={noticia.publicadaEn}
+              vistas={views[noticia.slug]}
             />
           ))}
         </div>
