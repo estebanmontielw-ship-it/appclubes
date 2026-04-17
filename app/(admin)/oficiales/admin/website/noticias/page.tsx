@@ -21,7 +21,7 @@ function fmtViews(n: number): string {
 export default function AdminNoticiasPage() {
   const [noticias, setNoticias] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [viewsData, setViewsData] = useState<{ views: Record<string, number>; totalViews: number; configured: boolean; daysBack: number } | null>(null)
+  const [viewsData, setViewsData] = useState<{ views: Record<string, number>; totalViews: number; configured: boolean; daysBack: number; reason?: string; envStatus?: { propertyId: boolean; clientEmail: boolean; privateKey: boolean } } | null>(null)
 
   useEffect(() => {
     fetch("/api/website/noticias?admin=true&limite=50")
@@ -83,6 +83,20 @@ export default function AdminNoticiasPage() {
             {fmtViews(viewsData.totalViews)} visualizaciones totales en los últimos {viewsData.daysBack} días
           </p>
           <span className="text-[10px] text-blue-500 ml-auto">Google Analytics</span>
+        </div>
+      )}
+
+      {viewsData && !viewsData.configured && (
+        <div className="mb-4 px-4 py-3 rounded-lg bg-amber-50 border border-amber-200">
+          <p className="text-xs font-bold text-amber-800 mb-1">⚠ Google Analytics no configurado</p>
+          {viewsData.reason && <p className="text-xs text-amber-700">{viewsData.reason}</p>}
+          {viewsData.envStatus && (
+            <p className="text-[10px] text-amber-600 mt-1 font-mono">
+              GA4_PROPERTY_ID: {viewsData.envStatus.propertyId ? "✓" : "✗ faltante"} ·
+              GA4_CLIENT_EMAIL: {viewsData.envStatus.clientEmail ? "✓" : "✗ faltante"} ·
+              GA4_PRIVATE_KEY: {viewsData.envStatus.privateKey ? "✓" : "✗ faltante"}
+            </p>
+          )}
         </div>
       )}
 
