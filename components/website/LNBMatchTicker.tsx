@@ -99,10 +99,10 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
     <div className="bg-[#0a1628] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex items-center gap-1">
-          {/* Mobile scroll: left arrow */}
+          {/* Scroll: left arrow */}
           <button
             onClick={() => scroll("left")}
-            className="md:hidden shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
+            className="shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
             aria-label="Anterior"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -136,10 +136,10 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
             ))}
           </div>
 
-          {/* Mobile scroll: right arrow */}
+          {/* Scroll: right arrow */}
           <button
             onClick={() => scroll("right")}
-            className="md:hidden shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
+            className="shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
             aria-label="Siguiente"
           >
             <ChevronRight className="w-4 h-4" />
