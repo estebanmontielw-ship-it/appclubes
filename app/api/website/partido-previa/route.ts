@@ -90,12 +90,17 @@ export async function GET(request: Request) {
     const currentComp = allCompsList.find((c: any) => String(c.competitionId) === String(competitionId))
     const currentYear: number = currentComp?.year ?? new Date().getFullYear()
 
+    const parseScore = (s: string | null | undefined) => {
+      const v = parseInt(s ?? "")
+      return isNaN(v) ? null : v
+    }
+
     const mapH2HEntry = (m: any, season: number | null, competitionName: string | null) => {
       const comps: any[] = m.competitors ?? []
       const hc = comps.find((c: any) => Number(c.isHomeCompetitor) === 1) ?? comps[0]
       const ac = comps.find((c: any) => Number(c.isHomeCompetitor) === 0) ?? comps[1]
-      const homeScoreVal = parseInt(hc?.scoreString ?? "") || null
-      const awayScoreVal = parseInt(ac?.scoreString ?? "") || null
+      const homeScoreVal = parseScore(hc?.scoreString)
+      const awayScoreVal = parseScore(ac?.scoreString)
       const hcId = String(hc?.teamId ?? hc?.competitorId ?? "")
       const previewHomeIsMatchHome = String(homeId) === hcId
       let previewHomeWon: boolean | null = null
@@ -118,9 +123,18 @@ export async function GET(request: Request) {
 
     const currentCompName = currentComp?.competitionName ?? `LNB ${currentYear}`
 
+    const hasFullScores = (m: any) => {
+      const comps: any[] = m.competitors ?? []
+      return comps.length >= 2 && comps.every((c: any) => {
+        const v = parseInt(c.scoreString ?? "")
+        return !isNaN(v)
+      })
+    }
+
     // Head-to-head current season
     const h2hCurrent = completed
       .filter((m: any) => {
+        if (!hasFullScores(m)) return false
         const ids = (m.competitors ?? []).map((c: any) => String(c.teamId ?? c.competitorId))
         return ids.includes(String(homeId)) && ids.includes(String(awayId))
       })
@@ -146,6 +160,7 @@ export async function GET(request: Request) {
         pastMatches
           .filter((m: any) => {
             if (m.matchStatus !== "COMPLETE") return false
+            if (!hasFullScores(m)) return false
             const ids = (m.competitors ?? []).map((c: any) => String(c.teamId ?? c.competitorId))
             return ids.includes(String(homeId)) && ids.includes(String(awayId))
           })

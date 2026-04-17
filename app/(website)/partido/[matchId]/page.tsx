@@ -99,6 +99,13 @@ function fmtDate(d: string | null) {
   return `${DAYS[dt.getDay()]} ${dt.getDate()} ${MONTHS[dt.getMonth()]}`
 }
 
+function fmtDateWithYear(d: string | null) {
+  if (!d) return "Sin fecha"
+  const dt = new Date(d + "T12:00:00")
+  if (isNaN(dt.getTime())) return d
+  return `${DAYS[dt.getDay()]} ${dt.getDate()} ${MONTHS[dt.getMonth()]} ${dt.getFullYear()}`
+}
+
 function TeamLogo({ logo, name, size = 56 }: { logo: string | null; name: string; size?: number }) {
   if (logo) return <img src={logo} alt={name} style={{ width: size, height: size }} className="object-contain" />
   return (
@@ -320,9 +327,9 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
           </div>
         </div>
 
-        {/* Standings comparison */}
-        {(home.standing || away.standing) && (
-          <Section icon={<TrendingUp className="w-4 h-4 text-blue-500" />} title="Clasificación">
+        {/* Standings + Recent form — merged panel */}
+        {(home.standing || away.standing || home.recentForm.length > 0 || away.recentForm.length > 0) && (
+          <Section icon={<TrendingUp className="w-4 h-4 text-blue-500" />} title="Clasificación y forma reciente">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-2">
               <StandingBlock st={home.standing} align="left" />
               <div className="text-[10px] font-black uppercase tracking-wider text-gray-400 text-center whitespace-nowrap">
@@ -330,23 +337,25 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
               </div>
               <StandingBlock st={away.standing} align="right" />
             </div>
-          </Section>
-        )}
-
-        {/* Recent form */}
-        {(home.recentForm.length > 0 || away.recentForm.length > 0) && (
-          <Section icon={<Calendar className="w-4 h-4 text-blue-500" />} title="Forma reciente (últimos 5)">
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 py-1">
-              <div className="flex gap-1.5">
-                {home.recentForm.map((r, i) => <FormBadge key={i} r={r} />)}
-                {home.recentForm.length === 0 && <span className="text-xs text-gray-400">Sin datos</span>}
-              </div>
-              <div />
-              <div className="flex gap-1.5 justify-end">
-                {away.recentForm.map((r, i) => <FormBadge key={i} r={r} />)}
-                {away.recentForm.length === 0 && <span className="text-xs text-gray-400">Sin datos</span>}
-              </div>
-            </div>
+            {(home.recentForm.length > 0 || away.recentForm.length > 0) && (
+              <>
+                <div className="border-t border-gray-50 my-3" />
+                <div className="flex items-center justify-between px-1 mb-1">
+                  <span className="text-[9px] font-black uppercase tracking-widest text-gray-300">Últimos partidos</span>
+                </div>
+                <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4">
+                  <div className="flex gap-1.5">
+                    {home.recentForm.map((r, i) => <FormBadge key={i} r={r} />)}
+                    {home.recentForm.length === 0 && <span className="text-xs text-gray-400">Sin datos</span>}
+                  </div>
+                  <div />
+                  <div className="flex gap-1.5 justify-end">
+                    {away.recentForm.map((r, i) => <FormBadge key={i} r={r} />)}
+                    {away.recentForm.length === 0 && <span className="text-xs text-gray-400">Sin datos</span>}
+                  </div>
+                </div>
+              </>
+            )}
           </Section>
         )}
 
@@ -373,7 +382,7 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
                   <p className="text-[9px] text-gray-300 mt-0.5">
                     {h2hSummary.total} partidos
                     {h2hSummary.firstMatchDate && (
-                      <span> · desde {fmtDate(h2hSummary.firstMatchDate)}</span>
+                      <span> · desde {fmtDateWithYear(h2hSummary.firstMatchDate)}</span>
                     )}
                   </p>
                 </div>
