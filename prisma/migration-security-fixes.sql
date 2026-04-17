@@ -9,10 +9,13 @@
 DROP EXTENSION IF EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS unaccent SCHEMA extensions;
 
--- Keep a public wrapper so existing queries still work without schema prefix
+-- Keep a public wrapper so existing queries still work without schema prefix.
+-- SET search_path makes it immune to the function_search_path_mutable linter.
 CREATE OR REPLACE FUNCTION public.unaccent(text)
 RETURNS text
-LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+LANGUAGE sql
+IMMUTABLE STRICT PARALLEL SAFE
+SET search_path = extensions, pg_catalog
 AS $$
   SELECT extensions.unaccent($1);
 $$;
