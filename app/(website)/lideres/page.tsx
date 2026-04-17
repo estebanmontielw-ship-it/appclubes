@@ -4,7 +4,7 @@ import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { getLeadersFromMatches, type LeaderEntry } from "@/lib/genius-sports"
 import { TrendingUp, Activity, Users, BarChart2, Hash, Star } from "lucide-react"
 
-export const revalidate = 300
+export const revalidate = 600
 
 export const metadata: Metadata = {
   title: "Líderes | CPB - Confederación Paraguaya de Básquetbol",
