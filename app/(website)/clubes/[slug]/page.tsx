@@ -1,10 +1,12 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { Globe, AtSign, Share2, MapPin, Phone, Mail, ExternalLink, ChevronLeft, Trophy, Calendar, CheckCircle } from "lucide-react"
+import { Globe, AtSign, Share2, MapPin, Phone, Mail, ExternalLink, ChevronLeft, Trophy, Calendar, CheckCircle, BarChart2, Users } from "lucide-react"
 import prisma from "@/lib/prisma"
-import { loadLnbSchedule } from "@/lib/programacion-lnb"
+import { loadLnbSchedule, resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
+import { getAllPlayerStats } from "@/lib/genius-sports"
+import type { PlayerStatFull, TeamStatFull } from "@/lib/genius-sports"
 
 export const revalidate = 300
 
@@ -170,6 +172,9 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
   let lnbMatches: NormalizedMatch[] = []
   let teamLogo: string | null = null
   let standing: { wins: number; losses: number; gamesPlayed: number; winPct: number | null } | null = null
+  let lnbTeamId: number | null = null
+  let teamStats: TeamStatFull | null = null
+  let rosterPlayers: PlayerStatFull[] = []
 
   if (isLnbClub) {
     try {
@@ -179,6 +184,7 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
       const lnbTeam = teams.find((t) => namesMatch(t.name, club.nombre))
 
       if (lnbTeam) {
+        lnbTeamId = Number(lnbTeam.id)
         teamLogo = lnbTeam.logo
         // Filter matches for this club (by team ID or name)
         lnbMatches = matches.filter(
@@ -215,6 +221,22 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
       }
     } catch {
       // API unavailable — show club info only
+    }
+
+    // Fetch player stats separately so schedule failure doesn't block this
+    if (lnbTeamId !== null) {
+      try {
+        const { id: compId } = await resolveLnbCompetitionIdPublic()
+        if (compId) {
+          const { players, teams } = await getAllPlayerStats(compId)
+          teamStats = teams.find((t) => t.teamId === lnbTeamId) ?? null
+          rosterPlayers = players
+            .filter((p) => p.teamId === lnbTeamId)
+            .sort((a, b) => b.ptsAvg - a.ptsAvg)
+        }
+      } catch {
+        // Stats unavailable
+      }
     }
   }
 
@@ -447,6 +469,75 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
           )}
         </div>
       </div>
+
+      {/* Team stats — full width below grid */}
+      {teamStats && teamStats.games > 0 && (
+        <section className="mt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <BarChart2 className="w-4 h-4 text-blue-500" />
+            <h2 className="text-sm font-black uppercase tracking-wide text-[#0a1628]">Estadísticas LNB</h2>
+            <span className="text-[10px] text-gray-400 font-semibold ml-1">{teamStats.games} PJ</span>
+          </div>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+            {[
+              { label: "PTS/G", value: teamStats.ptsAvg.toFixed(1) },
+              { label: "REB/G", value: teamStats.rebAvg.toFixed(1) },
+              { label: "AST/G", value: teamStats.astAvg.toFixed(1) },
+              { label: "%TC",   value: teamStats.fgPct != null ? `${teamStats.fgPct.toFixed(1)}%` : "—" },
+              { label: "%T3",   value: teamStats.threePtPct != null ? `${teamStats.threePtPct.toFixed(1)}%` : "—" },
+              { label: "%TL",   value: teamStats.ftPct != null ? `${teamStats.ftPct.toFixed(1)}%` : "—" },
+            ].map((s) => (
+              <div key={s.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
+                <p className="text-[10px] font-black uppercase tracking-wide text-gray-400">{s.label}</p>
+                <p className="text-xl font-black text-[#0a1628] mt-1">{s.value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Roster / Plantel — full width */}
+      {rosterPlayers.length > 0 && (
+        <section className="mt-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Users className="w-4 h-4 text-blue-500" />
+            <h2 className="text-sm font-black uppercase tracking-wide text-[#0a1628]">Plantel LNB</h2>
+            <span className="text-[10px] text-gray-400 font-semibold ml-1">{rosterPlayers.length} jugadores</span>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="text-left px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-gray-400">Jugador</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-black uppercase tracking-wide text-gray-400">PJ</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-black uppercase tracking-wide text-gray-400">PTS/P</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-black uppercase tracking-wide text-gray-400">REB/P</th>
+                  <th className="text-center px-3 py-2.5 text-[10px] font-black uppercase tracking-wide text-gray-400">AST/P</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rosterPlayers.map((p, i) => (
+                  <tr key={p.personId} className={`${i % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-blue-50/40 transition-colors`}>
+                    <td className="px-4 py-2.5">
+                      <Link href={`/jugador/${p.personId}`} className="flex items-center gap-2 group">
+                        {p.photoUrl
+                          ? <img src={p.photoUrl} alt={p.playerName} className="w-7 h-7 rounded-full object-cover border border-gray-100 shrink-0" />
+                          : <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-[8px] font-black text-gray-400 shrink-0">{p.playerName.split(" ").map((w: string) => w[0]).join("").slice(0,2).toUpperCase()}</div>
+                        }
+                        <span className="font-bold text-[#0a1628] group-hover:text-blue-600 transition-colors">{p.playerName}</span>
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-gray-500">{p.games}</td>
+                    <td className="px-3 py-2.5 text-center font-black text-[#0a1628]">{p.ptsAvg.toFixed(1)}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.rebAvg.toFixed(1)}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.astAvg.toFixed(1)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

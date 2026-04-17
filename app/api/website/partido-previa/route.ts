@@ -90,19 +90,33 @@ export async function GET(request: Request) {
     const currentComp = allCompsList.find((c: any) => String(c.competitionId) === String(competitionId))
     const currentYear: number = currentComp?.year ?? new Date().getFullYear()
 
-    const mapH2HEntry = (m: any, season: number | null) => {
+    const mapH2HEntry = (m: any, season: number | null, competitionName: string | null) => {
       const comps: any[] = m.competitors ?? []
       const hc = comps.find((c: any) => Number(c.isHomeCompetitor) === 1) ?? comps[0]
       const ac = comps.find((c: any) => Number(c.isHomeCompetitor) === 0) ?? comps[1]
+      const homeScoreVal = parseInt(hc?.scoreString ?? "") || null
+      const awayScoreVal = parseInt(ac?.scoreString ?? "") || null
+      const hcId = String(hc?.teamId ?? hc?.competitorId ?? "")
+      const previewHomeIsMatchHome = String(homeId) === hcId
+      let previewHomeWon: boolean | null = null
+      if (homeScoreVal != null && awayScoreVal != null && homeScoreVal !== awayScoreVal) {
+        previewHomeWon = previewHomeIsMatchHome ? homeScoreVal > awayScoreVal : awayScoreVal > homeScoreVal
+      }
+      const rawStage = m.roundName ?? m.stageName ?? m.phaseName ?? m.phase?.name ?? null
       return {
         date: (m.matchTime ?? "").split(" ")[0] ?? null,
         season,
+        competitionName,
+        stageName: typeof rawStage === "string" && rawStage ? rawStage : null,
         homeName: hc?.competitorName ?? "", homeSigla: hc?.teamCode ?? null, homeLogo: getLogo(hc),
-        homeScore: parseInt(hc?.scoreString ?? "") || null,
+        homeScore: homeScoreVal,
         awayName: ac?.competitorName ?? "", awaySigla: ac?.teamCode ?? null, awayLogo: getLogo(ac),
-        awayScore: parseInt(ac?.scoreString ?? "") || null,
+        awayScore: awayScoreVal,
+        previewHomeWon,
       }
     }
+
+    const currentCompName = currentComp?.competitionName ?? `LNB ${currentYear}`
 
     // Head-to-head current season
     const h2hCurrent = completed
@@ -110,7 +124,7 @@ export async function GET(request: Request) {
         const ids = (m.competitors ?? []).map((c: any) => String(c.teamId ?? c.competitorId))
         return ids.includes(String(homeId)) && ids.includes(String(awayId))
       })
-      .map((m: any) => mapH2HEntry(m, currentYear))
+      .map((m: any) => mapH2HEntry(m, currentYear, currentCompName))
 
     // Historical H2H from past LNB (primera) seasons
     const pastLnbComps = allCompsList
@@ -135,12 +149,15 @@ export async function GET(request: Request) {
             const ids = (m.competitors ?? []).map((c: any) => String(c.teamId ?? c.competitorId))
             return ids.includes(String(homeId)) && ids.includes(String(awayId))
           })
-          .forEach((m: any) => historyEntries.push(mapH2HEntry(m, comp.year ?? null)))
+          .forEach((m: any) => historyEntries.push(mapH2HEntry(m, comp.year ?? null, comp.competitionName ?? null)))
       } catch { /* skip season on error */ }
     }))
 
     const h2h = [...h2hCurrent, ...historyEntries]
       .sort((a: any, b: any) => (b.date ?? "").localeCompare(a.date ?? ""))
+
+    const h2hHomeWins = h2h.filter((e: any) => e.previewHomeWon === true).length
+    const h2hAwayWins = h2h.filter((e: any) => e.previewHomeWon === false).length
 
     // Top players per team
     const getTopPlayers = (tid: any, limit = 3) => {
@@ -179,6 +196,12 @@ export async function GET(request: Request) {
         teamStats: statsData.teams.find(t => String(t.teamId) === String(awayId)) ?? null,
       },
       h2h,
+      h2hSummary: {
+        total: h2h.length,
+        homeWins: h2hHomeWins,
+        awayWins: h2hAwayWins,
+        firstMatchDate: h2h.length > 0 ? h2h[h2h.length - 1]?.date : null,
+      },
     }, { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } })
   } catch (error) {
     return handleApiError(error, { context: "website/partido-previa" })

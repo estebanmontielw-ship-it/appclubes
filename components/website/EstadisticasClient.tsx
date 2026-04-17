@@ -9,6 +9,14 @@ type Tab = "jugadores" | "equipos"
 type SortDir = "asc" | "desc"
 interface SortState { col: string; dir: SortDir }
 
+function normalizeName(s: string) {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
+}
+function namesMatch(a: string, b: string) {
+  const na = normalizeName(a), nb = normalizeName(b)
+  return na === nb || na.includes(nb) || nb.includes(na)
+}
+
 // ─── Hero cards ───────────────────────────────────────────────────────────────
 
 const HERO_CONFIGS = [
@@ -184,8 +192,12 @@ const TEAM_COLS = [
   { key: "ftPct",      label: "%TL",   title: "% Tiros libres", pct: true },
 ]
 
-function TeamTable({ teams, sort, onSort }: {
-  teams: TeamStatFull[]; sort: SortState; onSort: (c: string) => void
+function TeamTable({ teams, sort, onSort, slugMap, onClickTeam }: {
+  teams: TeamStatFull[]
+  sort: SortState
+  onSort: (c: string) => void
+  slugMap: Map<number, string>
+  onClickTeam: (slug: string) => void
 }) {
   if (!teams.length) return (
     <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">Sin datos de equipos.</div>
@@ -205,8 +217,9 @@ function TeamTable({ teams, sort, onSort }: {
           <tbody>
             {teams.map((t, i) => {
               const rowBg = ROW_BG[i % 2]
+              const slug = slugMap.get(t.teamId)
               return (
-                <tr key={t.teamId} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
+                <tr key={t.teamId} onClick={slug ? () => onClickTeam(slug) : undefined} className={`${rowBg} hover:bg-blue-50/40 transition-colors ${slug ? "cursor-pointer" : ""}`}>
                   <td className={`sticky left-0 z-10 px-4 py-3 ${rowBg}`}>
                     <div className="flex items-center gap-2.5">
                       <span className="text-[10px] font-black text-gray-200 w-4">{i + 1}</span>
@@ -250,13 +263,26 @@ export default function EstadisticasClient() {
   const [teamFilter, setTeamFilter] = useState("all")
   const [playerSort, setPlayerSort] = useState<SortState>({ col: "ptsAvg", dir: "desc" })
   const [teamSort, setTeamSort] = useState<SortState>({ col: "ptsAvg", dir: "desc" })
+  const [clubSlugMap, setClubSlugMap] = useState<Map<number, string>>(new Map())
 
   const goToPlayer = (personId: number) => router.push(`/jugador/${personId}`)
+  const goToTeam = (slug: string) => router.push(`/clubes/${slug}`)
 
   useEffect(() => {
-    fetch("/api/genius/full-stats")
-      .then(r => r.json())
-      .then(d => setData(d))
+    Promise.all([
+      fetch("/api/genius/full-stats").then(r => r.json()),
+      fetch("/api/website/clubes").then(r => r.json()).catch(() => ({ clubes: [] })),
+    ])
+      .then(([statsData, clubsData]) => {
+        setData(statsData)
+        const clubs: { nombre: string; slug: string }[] = clubsData.clubes ?? []
+        const map = new Map<number, string>()
+        for (const t of (statsData.teams ?? [])) {
+          const club = clubs.find((c: { nombre: string; slug: string }) => namesMatch(c.nombre, t.teamName))
+          if (club) map.set(t.teamId, club.slug)
+        }
+        setClubSlugMap(map)
+      })
       .catch(() => setData({ players: [], teams: [] }))
       .finally(() => setLoading(false))
   }, [])
@@ -389,7 +415,7 @@ export default function EstadisticasClient() {
       {tab === "equipos" && (
         <div className="space-y-3">
           <p className="text-[10px] text-gray-300 md:hidden text-right">← deslizá para ver más stats</p>
-          <TeamTable teams={sortedTeams} sort={teamSort} onSort={handleTeamSort} />
+          <TeamTable teams={sortedTeams} sort={teamSort} onSort={handleTeamSort} slugMap={clubSlugMap} onClickTeam={goToTeam} />
           <p className="text-[10px] text-gray-400 italic text-center">
             Estadísticas de equipo agregadas de todos los partidos disputados.
           </p>

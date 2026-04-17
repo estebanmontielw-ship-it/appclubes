@@ -63,6 +63,9 @@ interface TeamPrevia {
 interface H2HEntry {
   date: string | null
   season: number | null
+  competitionName: string | null
+  stageName: string | null
+  previewHomeWon: boolean | null
   homeName: string; homeSigla: string | null; homeLogo: string | null; homeScore: number | null
   awayName: string; awaySigla: string | null; awayLogo: string | null; awayScore: number | null
 }
@@ -76,6 +79,12 @@ interface PreviaData {
   home: TeamPrevia
   away: TeamPrevia
   h2h: H2HEntry[]
+  h2hSummary: {
+    total: number
+    homeWins: number
+    awayWins: number
+    firstMatchDate: string | null
+  }
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -184,6 +193,7 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
   const [data, setData] = useState<PreviaData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [h2hExpanded, setH2hExpanded] = useState(false)
 
   useEffect(() => {
     fetch(`/api/website/partido-previa?matchId=${matchId}`)
@@ -217,7 +227,7 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
     </div>
   )
 
-  const { match, home, away, h2h } = data
+  const { match, home, away, h2h, h2hSummary } = data
   const isComplete = match.status === "COMPLETE"
   const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
   const homeWins = isComplete && (home.standing?.wins ?? 0) > (away.standing?.wins ?? 0)
@@ -345,36 +355,81 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
           {h2h.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-4">Sin enfrentamientos previos registrados.</p>
           ) : (
-            <div className="space-y-2">
-              {h2h.map((m, i) => {
-                const homeWin = (m.homeScore ?? 0) > (m.awayScore ?? 0)
-                return (
-                  <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-2.5 text-sm">
-                    <div className="flex items-center gap-2">
-                      {m.homeLogo && <img src={m.homeLogo} alt="" className="w-5 h-5 object-contain" />}
-                      <span className={`font-bold ${homeWin ? "text-[#0a1628]" : "text-gray-400"}`}>{m.homeSigla ?? m.homeName}</span>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className="text-[9px] text-gray-400 font-semibold">{fmtDate(m.date)}</span>
-                        {m.season && (
-                          <span className="text-[8px] font-black bg-gray-200 text-gray-500 px-1 py-0.5 rounded-full leading-none">
-                            {m.season}
-                          </span>
-                        )}
-                      </div>
-                      <span className="font-black text-[#0a1628] tabular-nums">
-                        {m.homeScore ?? "—"} – {m.awayScore ?? "—"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`font-bold ${!homeWin ? "text-[#0a1628]" : "text-gray-400"}`}>{m.awaySigla ?? m.awayName}</span>
-                      {m.awayLogo && <img src={m.awayLogo} alt="" className="w-5 h-5 object-contain" />}
-                    </div>
+            <>
+              {/* H2H summary header — logos, win counts */}
+              <div className="flex items-center gap-3 mb-5 px-1">
+                <div className="flex flex-col items-center gap-1.5 min-w-[56px]">
+                  <TeamLogo logo={home.logo} name={home.name} size={40} />
+                  <span className="text-[9px] font-black text-[#0a1628] uppercase tracking-wide text-center leading-tight">{home.sigla ?? home.name}</span>
+                </div>
+                <div className="flex-1 flex flex-col items-center gap-0.5">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Partidos entre sí</p>
+                  <div className="flex items-baseline gap-3">
+                    <span className="text-3xl font-black text-[#0a1628] tabular-nums">{h2hSummary.homeWins}</span>
+                    <span className="text-lg font-black text-gray-200">|</span>
+                    <span className="text-3xl font-black text-[#0a1628] tabular-nums">{h2hSummary.awayWins}</span>
                   </div>
-                )
-              })}
-            </div>
+                  <p className="text-[9px] text-gray-400 font-semibold">Victorias</p>
+                  <p className="text-[9px] text-gray-300 mt-0.5">
+                    {h2hSummary.total} partidos
+                    {h2hSummary.firstMatchDate && (
+                      <span> · desde {fmtDate(h2hSummary.firstMatchDate)}</span>
+                    )}
+                  </p>
+                </div>
+                <div className="flex flex-col items-center gap-1.5 min-w-[56px]">
+                  <TeamLogo logo={away.logo} name={away.name} size={40} />
+                  <span className="text-[9px] font-black text-[#0a1628] uppercase tracking-wide text-center leading-tight">{away.sigla ?? away.name}</span>
+                </div>
+              </div>
+
+              {/* Match list */}
+              <div className="space-y-2">
+                {(h2hExpanded ? h2h : h2h.slice(0, 4)).map((m, i) => {
+                  const homeWin = (m.homeScore ?? 0) > (m.awayScore ?? 0)
+                  const awayWin = (m.awayScore ?? 0) > (m.homeScore ?? 0)
+                  return (
+                    <div key={i} className="bg-gray-50 rounded-xl px-3.5 py-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          {m.homeLogo && <img src={m.homeLogo} alt="" className="w-5 h-5 object-contain shrink-0" />}
+                          <span className={`font-bold text-xs ${homeWin ? "text-[#0a1628]" : "text-gray-400"}`}>{m.homeSigla ?? m.homeName}</span>
+                        </div>
+                        <div className="text-center px-2">
+                          <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                            <span className="text-[9px] text-gray-400 font-semibold">{fmtDate(m.date)}</span>
+                            {m.season && (
+                              <span className="text-[8px] font-black bg-gray-200 text-gray-500 px-1 py-0.5 rounded-full leading-none">{m.season}</span>
+                            )}
+                          </div>
+                          <span className="font-black text-sm text-[#0a1628] tabular-nums">
+                            {m.homeScore ?? "—"} – {m.awayScore ?? "—"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`font-bold text-xs ${awayWin ? "text-[#0a1628]" : "text-gray-400"}`}>{m.awaySigla ?? m.awayName}</span>
+                          {m.awayLogo && <img src={m.awayLogo} alt="" className="w-5 h-5 object-contain shrink-0" />}
+                        </div>
+                      </div>
+                      {(m.competitionName || m.stageName) && (
+                        <p className="text-center text-[9px] text-gray-300 font-semibold mt-1 uppercase tracking-wide">
+                          {[m.competitionName, m.stageName].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {h2h.length > 4 && (
+                <button
+                  onClick={() => setH2hExpanded(!h2hExpanded)}
+                  className="mt-3 w-full py-2 rounded-xl text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"
+                >
+                  {h2hExpanded ? "Ver menos ▲" : `Ver todos los partidos (${h2h.length}) ▼`}
+                </button>
+              )}
+            </>
           )}
         </Section>
 
