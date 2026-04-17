@@ -3,7 +3,7 @@ import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { geniusFetch } from "@/lib/genius-sports"
 import { handleApiError } from "@/lib/api-errors"
 
-export const revalidate = 600
+export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   try {

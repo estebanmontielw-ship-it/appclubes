@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
 
+export const dynamic = "force-dynamic"
+
 // GET - Aggregated HonorarioPropio stats per official (SUPER_ADMIN only)
 export async function GET(request: Request) {
   try {
