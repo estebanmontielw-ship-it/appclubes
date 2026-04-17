@@ -76,7 +76,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         title: `${club.nombre} | CPB`,
         description: club.descripcion || `${club.nombre} — ${club.ciudad}`,
         url: `/clubes/${params.slug}`,
-        images: club.logoUrl ? [{ url: club.logoUrl }] : undefined,
       },
     }
   } catch {
