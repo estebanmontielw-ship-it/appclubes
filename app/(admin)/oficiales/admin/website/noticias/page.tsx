@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Plus, Edit2, Trash2, Eye, EyeOff, Star } from "lucide-react"
+import { Plus, Edit2, Trash2, Eye, EyeOff, Star, BarChart3 } from "lucide-react"
 
 const categoryLabels: Record<string, string> = {
   GENERAL: "General",
@@ -13,15 +13,26 @@ const categoryLabels: Record<string, string> = {
   CLUBES: "Clubes",
 }
 
+function fmtViews(n: number): string {
+  if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
+  return String(n)
+}
+
 export default function AdminNoticiasPage() {
   const [noticias, setNoticias] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [viewsData, setViewsData] = useState<{ views: Record<string, number>; totalViews: number; configured: boolean; daysBack: number } | null>(null)
 
   useEffect(() => {
     fetch("/api/website/noticias?admin=true&limite=50")
       .then((r) => r.json())
       .then((data) => setNoticias(data.noticias ?? []))
       .finally(() => setLoading(false))
+
+    fetch("/api/admin/noticias-stats")
+      .then((r) => r.json())
+      .then((data) => setViewsData(data))
+      .catch(() => setViewsData(null))
   }, [])
 
   async function handleDelete(id: string) {
@@ -42,6 +53,13 @@ export default function AdminNoticiasPage() {
     }
   }
 
+  const sortedNoticias = [...noticias].sort((a, b) => {
+    const va = viewsData?.views?.[a.slug] ?? -1
+    const vb = viewsData?.views?.[b.slug] ?? -1
+    if (va !== vb) return vb - va
+    return new Date(b.publicadaEn ?? b.createdAt).getTime() - new Date(a.publicadaEn ?? a.createdAt).getTime()
+  })
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -58,6 +76,16 @@ export default function AdminNoticiasPage() {
         </Link>
       </div>
 
+      {viewsData?.configured && (
+        <div className="flex items-center gap-2 mb-4 px-4 py-2.5 rounded-lg bg-blue-50 border border-blue-100">
+          <BarChart3 className="h-4 w-4 text-blue-600 shrink-0" />
+          <p className="text-xs text-blue-700 font-semibold">
+            {fmtViews(viewsData.totalViews)} visualizaciones totales en los últimos {viewsData.daysBack} días
+          </p>
+          <span className="text-[10px] text-blue-500 ml-auto">Google Analytics</span>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-12 text-gray-400">Cargando...</div>
       ) : noticias.length === 0 ? (
@@ -73,20 +101,43 @@ export default function AdminNoticiasPage() {
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left px-4 py-3 font-medium text-gray-500">Título</th>
+                {viewsData?.configured && (
+                  <th className="text-right px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Vistas</th>
+                )}
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden md:table-cell">Categoría</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-500 hidden sm:table-cell">Estado</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-500">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {noticias.map((noticia) => (
+              {sortedNoticias.map((noticia) => {
+                const views = viewsData?.views?.[noticia.slug]
+                return (
                 <tr key={noticia.id} className="hover:bg-gray-50/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       {noticia.destacada && <Star className="h-3.5 w-3.5 text-amber-500 fill-amber-500 shrink-0" />}
                       <span className="font-medium text-gray-900 line-clamp-1">{noticia.titulo}</span>
                     </div>
+                    {viewsData?.configured && views != null && (
+                      <p className="text-[10px] text-gray-400 mt-0.5 sm:hidden">
+                        <BarChart3 className="h-2.5 w-2.5 inline mr-0.5" />
+                        {fmtViews(views)} vistas
+                      </p>
+                    )}
                   </td>
+                  {viewsData?.configured && (
+                    <td className="px-4 py-3 text-right hidden sm:table-cell">
+                      {views != null ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-blue-700 tabular-nums">
+                          <BarChart3 className="h-3 w-3 text-blue-500" />
+                          {fmtViews(views)}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </td>
+                  )}
                   <td className="px-4 py-3 hidden md:table-cell">
                     <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
                       {categoryLabels[noticia.categoria] ?? noticia.categoria}
@@ -121,7 +172,7 @@ export default function AdminNoticiasPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
