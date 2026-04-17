@@ -62,6 +62,7 @@ interface TeamPrevia {
 
 interface H2HEntry {
   date: string | null
+  season: number | null
   homeName: string; homeSigla: string | null; homeLogo: string | null; homeScore: number | null
   awayName: string; awaySigla: string | null; awayLogo: string | null; awayScore: number | null
 }
@@ -340,9 +341,9 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
         )}
 
         {/* Head to head */}
-        <Section icon={<Activity className="w-4 h-4 text-blue-500" />} title="Enfrentamientos directos">
+        <Section icon={<Activity className="w-4 h-4 text-blue-500" />} title="Historial de enfrentamientos">
           {h2h.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-4">Primer enfrentamiento de la temporada.</p>
+            <p className="text-sm text-gray-400 text-center py-4">Sin enfrentamientos previos registrados.</p>
           ) : (
             <div className="space-y-2">
               {h2h.map((m, i) => {
@@ -354,7 +355,14 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
                       <span className={`font-bold ${homeWin ? "text-[#0a1628]" : "text-gray-400"}`}>{m.homeSigla ?? m.homeName}</span>
                     </div>
                     <div className="text-center">
-                      <span className="text-[9px] text-gray-400 font-semibold block">{fmtDate(m.date)}</span>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-[9px] text-gray-400 font-semibold">{fmtDate(m.date)}</span>
+                        {m.season && (
+                          <span className="text-[8px] font-black bg-gray-200 text-gray-500 px-1 py-0.5 rounded-full leading-none">
+                            {m.season}
+                          </span>
+                        )}
+                      </div>
                       <span className="font-black text-[#0a1628] tabular-nums">
                         {m.homeScore ?? "—"} – {m.awayScore ?? "—"}
                       </span>

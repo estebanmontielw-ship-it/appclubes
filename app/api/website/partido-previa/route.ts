@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
-import { geniusFetch, getStandings, getAllPlayerStats } from "@/lib/genius-sports"
+import { geniusFetch, getStandings, getAllPlayerStats, getCompetitions } from "@/lib/genius-sports"
 import { handleApiError } from "@/lib/api-errors"
 
 export const dynamic = "force-dynamic"
@@ -14,10 +14,11 @@ export async function GET(request: Request) {
     const { id: competitionId } = await resolveLnbCompetitionIdPublic()
     if (!competitionId) return NextResponse.json({ error: "Sin competencia activa" }, { status: 404 })
 
-    const [matchesRaw, standingsRaw, statsData] = await Promise.all([
+    const [matchesRaw, standingsRaw, statsData, allCompsRaw] = await Promise.all([
       geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "medium"),
       getStandings(competitionId).catch(() => null),
       getAllPlayerStats(competitionId).catch(() => ({ players: [], teams: [] })),
+      getCompetitions().catch(() => null),
     ])
 
     const allMatches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
@@ -84,25 +85,62 @@ export async function GET(request: Request) {
         })
     }
 
-    // Head-to-head
-    const h2h = completed
+    // Current competition year
+    const allCompsList: any[] = allCompsRaw?.response?.data ?? allCompsRaw?.data ?? []
+    const currentComp = allCompsList.find((c: any) => String(c.competitionId) === String(competitionId))
+    const currentYear: number = currentComp?.year ?? new Date().getFullYear()
+
+    const mapH2HEntry = (m: any, season: number | null) => {
+      const comps: any[] = m.competitors ?? []
+      const hc = comps.find((c: any) => Number(c.isHomeCompetitor) === 1) ?? comps[0]
+      const ac = comps.find((c: any) => Number(c.isHomeCompetitor) === 0) ?? comps[1]
+      return {
+        date: (m.matchTime ?? "").split(" ")[0] ?? null,
+        season,
+        homeName: hc?.competitorName ?? "", homeSigla: hc?.teamCode ?? null, homeLogo: getLogo(hc),
+        homeScore: parseInt(hc?.scoreString ?? "") || null,
+        awayName: ac?.competitorName ?? "", awaySigla: ac?.teamCode ?? null, awayLogo: getLogo(ac),
+        awayScore: parseInt(ac?.scoreString ?? "") || null,
+      }
+    }
+
+    // Head-to-head current season
+    const h2hCurrent = completed
       .filter((m: any) => {
         const ids = (m.competitors ?? []).map((c: any) => String(c.teamId ?? c.competitorId))
         return ids.includes(String(homeId)) && ids.includes(String(awayId))
       })
-      .sort((a: any, b: any) => (b.matchTime ?? "").localeCompare(a.matchTime ?? ""))
-      .map((m: any) => {
-        const comps: any[] = m.competitors ?? []
-        const hc = comps.find((c: any) => Number(c.isHomeCompetitor) === 1) ?? comps[0]
-        const ac = comps.find((c: any) => Number(c.isHomeCompetitor) === 0) ?? comps[1]
-        return {
-          date: (m.matchTime ?? "").split(" ")[0] ?? null,
-          homeName: hc?.competitorName ?? "", homeSigla: hc?.teamCode ?? null, homeLogo: getLogo(hc),
-          homeScore: parseInt(hc?.scoreString ?? "") || null,
-          awayName: ac?.competitorName ?? "", awaySigla: ac?.teamCode ?? null, awayLogo: getLogo(ac),
-          awayScore: parseInt(ac?.scoreString ?? "") || null,
-        }
+      .map((m: any) => mapH2HEntry(m, currentYear))
+
+    // Historical H2H from past LNB (primera) seasons
+    const pastLnbComps = allCompsList
+      .filter((c: any) => {
+        const name = String(c.competitionName ?? "").toUpperCase()
+        const isLnb = name.includes("LNB") || (name.includes("LIGA") && name.includes("NACIONAL"))
+        const isInferior = ["FEM", "MUJER", "WOMEN", "DAMAS", "U22", "U19", "U17", "U15", "U13"]
+          .some(t => name.includes(t))
+        return isLnb && !isInferior && String(c.competitionId) !== String(competitionId)
       })
+      .sort((a: any, b: any) => (b.year ?? 0) - (a.year ?? 0))
+      .slice(0, 4)
+
+    const historyEntries: any[] = []
+    await Promise.all(pastLnbComps.map(async (comp: any) => {
+      try {
+        const raw = await geniusFetch(`/competitions/${comp.competitionId}/matches?limit=100`, "long")
+        const pastMatches: any[] = raw?.response?.data ?? raw?.data ?? []
+        pastMatches
+          .filter((m: any) => {
+            if (m.matchStatus !== "COMPLETE") return false
+            const ids = (m.competitors ?? []).map((c: any) => String(c.teamId ?? c.competitorId))
+            return ids.includes(String(homeId)) && ids.includes(String(awayId))
+          })
+          .forEach((m: any) => historyEntries.push(mapH2HEntry(m, comp.year ?? null)))
+      } catch { /* skip season on error */ }
+    }))
+
+    const h2h = [...h2hCurrent, ...historyEntries]
+      .sort((a: any, b: any) => (b.date ?? "").localeCompare(a.date ?? ""))
 
     // Top players per team
     const getTopPlayers = (tid: any, limit = 3) => {
