@@ -18,7 +18,7 @@ interface CompData {
 
 const TABS: { key: CompKey; label: string; endpoint: string }[] = [
   { key: "lnb",  label: "LNB",           endpoint: "" },
-  { key: "lnbf", label: "LNB Femenino",  endpoint: "/api/website/posiciones-lnbf" },
+  { key: "lnbf", label: "LNBF",           endpoint: "/api/website/posiciones-lnbf" },
   { key: "u22m", label: "U22 Masc",      endpoint: "/api/website/posiciones-u22m" },
   { key: "u22f", label: "U22 Fem",       endpoint: "/api/website/posiciones-u22f" },
 ]
@@ -37,8 +37,7 @@ export default function PosicionesClient({ standings, error, showCompetitionSwit
     setLoading(key)
     try {
       const res = await fetch(tab.endpoint, { cache: "no-store" })
-      if (!res.ok) return
-      const data = await res.json()
+      const data = res.ok ? await res.json() : {}
       setCache((prev) => ({
         ...prev,
         [key]: {
@@ -46,11 +45,11 @@ export default function PosicionesClient({ standings, error, showCompetitionSwit
           competitionLabel: data.competition?.name ?? tab.label,
         },
       }))
-      setActiveComp(key)
     } catch {
-      // keep current tab on error
+      setCache((prev) => ({ ...prev, [key]: { standings: [], competitionLabel: tab.label } }))
     } finally {
       setLoading(null)
+      setActiveComp(key)
     }
   }
 

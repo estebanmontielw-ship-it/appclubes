@@ -76,7 +76,7 @@ export interface CpbCompetition {
 
 function categoriaFromCompName(name: string): string {
   const u = name.toUpperCase()
-  const hasFem = u.includes("FEM") || u.includes("MUJER") || u.includes("WOMEN")
+  const hasFem = u.includes("LNBF") || u.includes("FEM") || u.includes("MUJER") || u.includes("WOMEN")
   if (u.includes("U22") || u.includes("U-22") || u.includes("SUB-22") || u.includes("SUB 22") || u.includes("DESARROLLO"))
     return hasFem ? "U22_FEM" : "U22_MASC"
   if (u.includes("U19") || u.includes("U-19") || u.includes("SUB-19") || u.includes("SUB 19"))
@@ -482,7 +482,8 @@ async function resolveLnbfCompetitionId(): Promise<{ id: string | null; name: st
     const candidates = comps
       .filter((c) => {
         const name = String(c.competitionName || "").toUpperCase()
-        const hasFem = name.includes("FEM") || name.includes("MUJER") || name.includes("WOMEN") || name.includes("DAMAS")
+        // "LNBF APERTURA 2026" — el nombre contiene "LNBF" pero no "FEM"
+        const hasFem = name.includes("LNBF") || name.includes("FEM") || name.includes("MUJER") || name.includes("WOMEN") || name.includes("DAMAS")
         const isLnb = name.includes("LNB") || (name.includes("LIGA") && name.includes("NACIONAL"))
         const isYouth = name.includes("U22") || name.includes("U-22") || name.includes("DESARROLLO")
         return hasFem && isLnb && !isYouth

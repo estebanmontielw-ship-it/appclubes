@@ -250,7 +250,7 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
   type CompKey = "lnb" | "lnbf" | "u22m" | "u22f"
   const COMP_TABS: { key: CompKey; label: string; endpoint: string; headerLabel: JSX.Element }[] = [
     { key: "lnb",  label: "LNB",          endpoint: "/api/website/programacion-lnb",  headerLabel: <><span className="text-white">Programación </span><span className="text-red-500">LNB</span></> },
-    { key: "lnbf", label: "LNB Femenino", endpoint: "/api/website/programacion-lnbf", headerLabel: <><span className="text-white">Programación </span><span className="text-rose-400">LNBF</span></> },
+    { key: "lnbf", label: "LNBF", endpoint: "/api/website/programacion-lnbf", headerLabel: <><span className="text-white">Programación </span><span className="text-rose-400">LNBF</span></> },
     { key: "u22m", label: "U22 Masc",     endpoint: "/api/website/programacion-u22m", headerLabel: <><span className="text-white">Programación </span><span className="text-blue-400">U22</span><span className="text-white text-2xl sm:text-3xl"> Masculino</span></> },
     { key: "u22f", label: "U22 Fem",      endpoint: "/api/website/programacion-u22f", headerLabel: <><span className="text-white">Programación </span><span className="text-rose-400">U22</span><span className="text-rose-300 text-2xl sm:text-3xl"> Femenino</span></> },
   ]
@@ -321,19 +321,20 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
     setLoadingComp(key)
     try {
       const res = await fetch(tab.endpoint, { cache: "no-store" })
-      if (!res.ok) return
-      const data = await res.json()
-      if (Array.isArray(data.matches)) {
-        setCompCache(prev => ({
-          ...prev,
-          [key]: { matches: data.matches, teams: data.teams ?? [], competitionName: data.competition?.name ?? tab.label },
-        }))
-        setActiveComp(key)
-      }
+      const data = res.ok ? await res.json() : {}
+      setCompCache(prev => ({
+        ...prev,
+        [key]: {
+          matches: Array.isArray(data.matches) ? data.matches : [],
+          teams: data.teams ?? [],
+          competitionName: data.competition?.name ?? tab.label,
+        },
+      }))
     } catch {
-      // keep current comp on error
+      setCompCache(prev => ({ ...prev, [key]: { matches: [], teams: [], competitionName: tab.label } }))
     } finally {
       setLoadingComp(null)
+      setActiveComp(key)
     }
   }
 
