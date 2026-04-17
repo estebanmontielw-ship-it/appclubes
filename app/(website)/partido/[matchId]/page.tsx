@@ -394,7 +394,7 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
 
               {/* Match list */}
               <div className="space-y-2">
-                {(h2hExpanded ? h2h : h2h.slice(0, 4)).map((m, i) => {
+                {(h2hExpanded ? h2h : h2h.slice(0, 10)).map((m, i) => {
                   const homeWin = (m.homeScore ?? 0) > (m.awayScore ?? 0)
                   const awayWin = (m.awayScore ?? 0) > (m.homeScore ?? 0)
                   return (
@@ -430,7 +430,7 @@ export default function PartidoPreviaPage({ params }: { params: { matchId: strin
                 })}
               </div>
 
-              {h2h.length > 4 && (
+              {h2h.length > 10 && (
                 <button
                   onClick={() => setH2hExpanded(!h2hExpanded)}
                   className="mt-3 w-full py-2 rounded-xl text-xs font-bold text-blue-600 hover:text-blue-800 hover:bg-blue-50 transition-colors"

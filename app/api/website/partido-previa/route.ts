@@ -140,17 +140,17 @@ export async function GET(request: Request) {
       })
       .map((m: any) => mapH2HEntry(m, currentYear, currentCompName))
 
-    // Historical H2H from past LNB (primera) seasons
+    // Historical H2H from past LNB primera masculino seasons — full history, no limit
     const pastLnbComps = allCompsList
       .filter((c: any) => {
         const name = String(c.competitionName ?? "").toUpperCase()
         const isLnb = name.includes("LNB") || (name.includes("LIGA") && name.includes("NACIONAL"))
-        const isInferior = ["FEM", "MUJER", "WOMEN", "DAMAS", "U22", "U19", "U17", "U15", "U13"]
+        const isPrimeraMasc = name.includes("PRIMERA") && (name.includes("MASCULIN") || name.includes("MASC"))
+        const isInferior = ["FEM", "MUJER", "WOMEN", "DAMAS", "FEMENIN", "U22", "U19", "U17", "U15", "U13"]
           .some(t => name.includes(t))
-        return isLnb && !isInferior && String(c.competitionId) !== String(competitionId)
+        return (isLnb || isPrimeraMasc) && !isInferior && String(c.competitionId) !== String(competitionId)
       })
       .sort((a: any, b: any) => (b.year ?? 0) - (a.year ?? 0))
-      .slice(0, 4)
 
     const historyEntries: any[] = []
     await Promise.all(pastLnbComps.map(async (comp: any) => {
