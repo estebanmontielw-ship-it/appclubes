@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     // Standings helper
     const standingItems: any[] = standingsRaw?.response?.data ?? standingsRaw?.data ?? []
-    function extractStanding(tid: any) {
+    const extractStanding = (tid: any) => {
       const row = standingItems.find((s: any) => {
         const c = s.competitor ?? s.team ?? s
         return String(c.competitorId ?? c.teamId ?? c.id) === String(tid)
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
     // Recent form helper
     const completed = allMatches.filter((m: any) => m.matchStatus === "COMPLETE")
 
-    function getForm(tid: any, limit = 5) {
+    const getForm = (tid: any, limit = 5) => {
       return completed
         .filter((m: any) => m.competitors?.some((c: any) => String(c.teamId ?? c.competitorId) === String(tid)))
         .sort((a: any, b: any) => (b.matchTime ?? "").localeCompare(a.matchTime ?? ""))
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
       })
 
     // Top players per team
-    function getTopPlayers(tid: any, limit = 3) {
+    const getTopPlayers = (tid: any, limit = 3) => {
       return statsData.players
         .filter(p => String(p.teamId) === String(tid))
         .sort((a, b) => b.ptsAvg - a.ptsAvg)
