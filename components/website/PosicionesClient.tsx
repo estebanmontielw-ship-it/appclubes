@@ -1,30 +1,21 @@
 "use client"
 
 import { useState } from "react"
-import LNBStandings, { type StandingRow, type LeaderEntry } from "@/components/website/LNBStandings"
+import LNBStandings, { type StandingRow } from "@/components/website/LNBStandings"
 
 interface Props {
   standings: StandingRow[]
-  scoringLeaders: LeaderEntry[]
-  reboundsLeaders: LeaderEntry[]
-  assistsLeaders: LeaderEntry[]
   error: string | null
   showCompetitionSwitch?: boolean
 }
 
 interface U22FData {
   standings: StandingRow[]
-  scoringLeaders: LeaderEntry[]
-  reboundsLeaders: LeaderEntry[]
-  assistsLeaders: LeaderEntry[]
   competitionLabel: string
 }
 
 export default function PosicionesClient({
   standings,
-  scoringLeaders,
-  reboundsLeaders,
-  assistsLeaders,
   error,
   showCompetitionSwitch = false,
 }: Props) {
@@ -43,9 +34,6 @@ export default function PosicionesClient({
       const data = await res.json()
       setU22fData({
         standings: data.standings ?? [],
-        scoringLeaders: data.scoringLeaders ?? [],
-        reboundsLeaders: data.reboundsLeaders ?? [],
-        assistsLeaders: data.assistsLeaders ?? [],
         competitionLabel: data.competition?.name ?? "U22 Femenino",
       })
       setActiveComp("u22f")
@@ -57,14 +45,8 @@ export default function PosicionesClient({
   }
 
   const active = activeComp === "lnb"
-    ? { standings, scoringLeaders, reboundsLeaders, assistsLeaders, label: "LNB 2026" }
-    : {
-        standings: u22fData?.standings ?? [],
-        scoringLeaders: u22fData?.scoringLeaders ?? [],
-        reboundsLeaders: u22fData?.reboundsLeaders ?? [],
-        assistsLeaders: u22fData?.assistsLeaders ?? [],
-        label: u22fData?.competitionLabel ?? "U22 Femenino",
-      }
+    ? { standings, label: "LNB 2026" }
+    : { standings: u22fData?.standings ?? [], label: u22fData?.competitionLabel ?? "U22 Femenino" }
 
   return (
     <div>
@@ -99,9 +81,6 @@ export default function PosicionesClient({
 
       <LNBStandings
         standings={active.standings}
-        scoringLeaders={active.scoringLeaders}
-        reboundsLeaders={active.reboundsLeaders}
-        assistsLeaders={active.assistsLeaders}
         error={activeComp === "lnb" ? error : null}
         competitionLabel={active.label}
       />

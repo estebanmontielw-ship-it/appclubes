@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Search, ChevronUp, ChevronDown, ChevronsUpDown, Loader2, BarChart2 } from "lucide-react"
 import type { PlayerStatFull, TeamStatFull } from "@/lib/genius-sports"
 
@@ -18,13 +19,13 @@ const HERO_CONFIGS = [
   { key: "fgPct",   label: "Mejor % Tiro",     unit: "% TC",   gradient: "from-rose-500 to-red-600"      },
 ]
 
-function HeroCard({ config, player }: { config: typeof HERO_CONFIGS[0]; player: PlayerStatFull | null }) {
+function HeroCard({ config, player, onClick }: { config: typeof HERO_CONFIGS[0]; player: PlayerStatFull | null; onClick?: () => void }) {
   if (!player) return null
   const val = config.key === "fgPct"
     ? `${(player.fgPct ?? 0).toFixed(1)}%`
     : `${(player[config.key as keyof PlayerStatFull] as number).toFixed(1)}`
   return (
-    <div className={`relative rounded-2xl bg-gradient-to-br ${config.gradient} p-4 text-white overflow-hidden flex flex-col gap-2.5 shadow-lg min-w-[200px] sm:min-w-[220px] md:min-w-0 snap-start shrink-0 md:shrink`}>
+    <div onClick={onClick} className={`relative rounded-2xl bg-gradient-to-br ${config.gradient} p-4 text-white overflow-hidden flex flex-col gap-2.5 shadow-lg min-w-[200px] sm:min-w-[220px] md:min-w-0 snap-start shrink-0 md:shrink ${onClick ? "cursor-pointer active:scale-[0.98] transition-transform" : ""}`}>
       <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_70%_20%,white,transparent)]" />
       <span className="text-[9px] font-black uppercase tracking-widest opacity-80 leading-tight">{config.label}</span>
       <div className="flex items-center gap-2.5">
@@ -73,25 +74,25 @@ function Pct({ v }: { v: number | null }) {
 // ─── Player table ─────────────────────────────────────────────────────────────
 
 const PLAYER_COLS = [
-  { key: "ptsAvg",     label: "PTS",  title: "Puntos por partido" },
-  { key: "rebAvg",     label: "REB",  title: "Rebotes por partido" },
-  { key: "astAvg",     label: "AST",  title: "Asistencias por partido" },
-  { key: "stlAvg",     label: "ROB",  title: "Robos por partido" },
-  { key: "blkAvg",     label: "TAP",  title: "Tapones por partido" },
-  { key: "toAvg",      label: "PÉR",  title: "Pérdidas por partido" },
-  { key: "minAvg",     label: "MIN",  title: "Minutos por partido" },
-  { key: "fgPct",      label: "%TC",  title: "% Tiro de campo", pct: true },
-  { key: "threePtPct", label: "%T3",  title: "% Triples", pct: true },
-  { key: "ftPct",      label: "%TL",  title: "% Tiros libres", pct: true },
-  { key: "effAvg",     label: "EFF",  title: "Eficiencia por partido" },
-  { key: "games",      label: "PJ",   title: "Partidos jugados" },
+  { key: "ptsAvg",     label: "PTS/p",  title: "Promedio de puntos por partido" },
+  { key: "rebAvg",     label: "REB/p",  title: "Promedio de rebotes por partido" },
+  { key: "astAvg",     label: "AST/p",  title: "Promedio de asistencias por partido" },
+  { key: "stlAvg",     label: "ROB/p",  title: "Promedio de robos por partido" },
+  { key: "blkAvg",     label: "TAP/p",  title: "Promedio de tapones por partido" },
+  { key: "toAvg",      label: "PÉR/p",  title: "Promedio de pérdidas por partido" },
+  { key: "minAvg",     label: "MIN/p",  title: "Promedio de minutos por partido" },
+  { key: "fgPct",      label: "%TC",    title: "% Tiro de campo", pct: true },
+  { key: "threePtPct", label: "%T3",    title: "% Triples", pct: true },
+  { key: "ftPct",      label: "%TL",    title: "% Tiros libres", pct: true },
+  { key: "effAvg",     label: "EFF/p",  title: "Promedio de eficiencia por partido" },
+  { key: "games",      label: "PJ",     title: "Partidos jugados" },
 ]
 
 // Row bg colors — solid (no opacity) so sticky column shows correctly on iOS Safari
 const ROW_BG = ["bg-white", "bg-gray-50"]
 
-function PlayerTable({ players, sort, onSort }: {
-  players: PlayerStatFull[]; sort: SortState; onSort: (c: string) => void
+function PlayerTable({ players, sort, onSort, onClickPlayer }: {
+  players: PlayerStatFull[]; sort: SortState; onSort: (c: string) => void; onClickPlayer: (id: number) => void
 }) {
   if (!players.length) return (
     <div className="py-12 text-center text-gray-400 text-sm bg-white rounded-2xl border border-gray-100">
@@ -123,7 +124,7 @@ function PlayerTable({ players, sort, onSort }: {
               const rowBg = ROW_BG[i % 2]
               const isActive = (col: string) => sort.col === col
               return (
-                <tr key={p.personId} className={`${rowBg} hover:bg-blue-50/40 transition-colors`}>
+                <tr key={p.personId} onClick={() => onClickPlayer(p.personId)} className={`${rowBg} hover:bg-blue-50/40 active:bg-blue-100/60 transition-colors cursor-pointer`}>
                   {/* sticky player name cell — explicit bg matches row */}
                   <td className={`sticky left-0 z-10 px-3 py-3 ${rowBg}`}>
                     <div className="flex items-center gap-2">
@@ -241,6 +242,7 @@ function TeamTable({ teams, sort, onSort }: {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 
 export default function EstadisticasClient() {
+  const router = useRouter()
   const [data, setData] = useState<{ players: PlayerStatFull[]; teams: TeamStatFull[] } | null>(null)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>("jugadores")
@@ -248,6 +250,8 @@ export default function EstadisticasClient() {
   const [teamFilter, setTeamFilter] = useState("all")
   const [playerSort, setPlayerSort] = useState<SortState>({ col: "ptsAvg", dir: "desc" })
   const [teamSort, setTeamSort] = useState<SortState>({ col: "ptsAvg", dir: "desc" })
+
+  const goToPlayer = (personId: number) => router.push(`/jugador/${personId}`)
 
   useEffect(() => {
     fetch("/api/genius/full-stats")
@@ -328,7 +332,7 @@ export default function EstadisticasClient() {
           <p className="text-[10px] text-gray-300 md:hidden">← deslizá</p>
         </div>
         <div className="flex md:grid md:grid-cols-5 gap-3 overflow-x-auto pb-3 md:pb-0 md:overflow-visible snap-x snap-mandatory -mx-4 px-4 md:mx-0 md:px-0">
-          {heroes.map(h => <HeroCard key={h.config.key} config={h.config} player={h.player} />)}
+          {heroes.map(h => <HeroCard key={h.config.key} config={h.config} player={h.player} onClick={h.player ? () => goToPlayer(h.player!.personId) : undefined} />)}
         </div>
         <p className="text-[10px] text-gray-400 mt-2 italic">
           Promedios en base a partidos disputados. % tiro de campo: mín. 10 intentos.
@@ -368,9 +372,15 @@ export default function EstadisticasClient() {
             <p className="text-xs text-gray-400">{filteredPlayers.length} jugadores</p>
             <p className="text-[10px] text-gray-300 md:hidden">← deslizá para ver más stats</p>
           </div>
-          <PlayerTable players={filteredPlayers} sort={playerSort} onSort={handlePlayerSort} />
+          <div className="flex items-center justify-between">
+            <p className="text-[10px] font-semibold text-blue-500 bg-blue-50 px-2.5 py-1 rounded-full">
+              Valores: promedios por partido (columnas con /p)
+            </p>
+            <p className="text-[10px] text-gray-400">Tocá el nombre del jugador para ver su perfil</p>
+          </div>
+          <PlayerTable players={filteredPlayers} sort={playerSort} onSort={handlePlayerSort} onClickPlayer={goToPlayer} />
           <p className="text-[10px] text-gray-400 italic text-center">
-            Tocá los encabezados para ordenar. Valores: promedios por partido (salvo PJ).
+            Tocá los encabezados para ordenar · % tiro de campo: mín. 10 intentos.
           </p>
         </div>
       )}

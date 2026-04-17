@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { resolveU22FCompetitionIdPublic } from "@/lib/programacion-lnb"
-import { getStandings, getLeadersFromMatches } from "@/lib/genius-sports"
+import { getStandings } from "@/lib/genius-sports"
 import { handleApiError } from "@/lib/api-errors"
-import type { StandingRow, LeaderEntry } from "@/components/website/LNBStandings"
+import type { StandingRow } from "@/components/website/LNBStandings"
 
 function normalizeStandings(raw: any): StandingRow[] {
   const items: any[] = raw?.response?.data ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
@@ -47,24 +47,11 @@ export async function GET() {
       throw new Error("No se encontró la competencia U22 Femenino. Definí GENIUS_U22F_COMPETITION_ID.")
     }
 
-    const [sRaw, leaderStats] = await Promise.all([
-      getStandings(competitionId),
-      getLeadersFromMatches(competitionId).catch(() => ({ scoring: [], rebounds: [], assists: [] })),
-    ])
-
+    const sRaw = await getStandings(competitionId)
     const standings = normalizeStandings(sRaw).sort((a, b) => a.rank - b.rank)
-    const scoringLeaders = leaderStats.scoring.map(e => ({ ...e, statLabel: "Puntos" }))
-    const reboundsLeaders = leaderStats.rebounds.map(e => ({ ...e, statLabel: "Rebotes" }))
-    const assistsLeaders = leaderStats.assists.map(e => ({ ...e, statLabel: "Asistencias" }))
 
     return NextResponse.json(
-      {
-        competition: { id: competitionId, name: competitionName ?? "U22 Femenino" },
-        standings,
-        scoringLeaders,
-        reboundsLeaders,
-        assistsLeaders,
-      },
+      { competition: { id: competitionId, name: competitionName ?? "U22 Femenino" }, standings },
       { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } }
     )
   } catch (error: any) {

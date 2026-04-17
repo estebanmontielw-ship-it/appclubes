@@ -1,5 +1,5 @@
-import Image from "next/image"
-import { Trophy, TrendingUp, Users, Activity } from "lucide-react"
+import Link from "next/link"
+import { Trophy, TrendingUp, Activity } from "lucide-react"
 
 export interface StandingRow {
   rank: number
@@ -29,9 +29,9 @@ export interface LeaderEntry {
 
 interface Props {
   standings: StandingRow[]
-  scoringLeaders: LeaderEntry[]
-  reboundsLeaders: LeaderEntry[]
-  assistsLeaders: LeaderEntry[]
+  scoringLeaders?: LeaderEntry[]
+  reboundsLeaders?: LeaderEntry[]
+  assistsLeaders?: LeaderEntry[]
   error: string | null
   /** Competition label shown in the table header. Default "LNB 2026". */
   competitionLabel?: string
@@ -61,59 +61,8 @@ function TeamLogo({ logo, name, size = 32 }: { logo: string | null; name: string
   )
 }
 
-function LeadersCard({
-  title,
-  icon,
-  leaders,
-  unit,
-}: {
-  title: string
-  icon: React.ReactNode
-  leaders: LeaderEntry[]
-  unit: string
-}) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-50 flex items-center gap-2">
-        <span className="text-blue-600">{icon}</span>
-        <h3 className="font-black text-sm uppercase tracking-wide text-[#0a1628]">{title}</h3>
-      </div>
-      {leaders.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-gray-400 text-center">
-          Estadísticas disponibles cuando haya partidos jugados.
-        </p>
-      ) : (
-        <ul className="divide-y divide-gray-50">
-          {leaders.map((l) => (
-            <li key={l.rank} className="flex items-center gap-3 px-4 py-2.5">
-              <span className="w-5 text-center text-xs font-black text-gray-300">
-                {l.rank}
-              </span>
-              {l.photoUrl
-                ? <img src={l.photoUrl} alt={l.playerName} width={28} height={28} className="rounded-full object-cover border border-gray-100 shrink-0" style={{width:28,height:28}} />
-                : <TeamLogo logo={l.teamLogo} name={l.teamName} size={28} />
-              }
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-[#0a1628] truncate">{l.playerName}</p>
-                <p className="text-[10px] text-gray-400 font-semibold">{l.teamSigla ?? l.teamName}</p>
-              </div>
-              <span className="text-base font-black text-[#0a1628] tabular-nums">
-                {l.value.toFixed(1)}
-                <span className="text-[9px] font-semibold text-gray-400 ml-0.5">{unit}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  )
-}
-
 export default function LNBStandings({
   standings,
-  scoringLeaders,
-  reboundsLeaders,
-  assistsLeaders,
   error,
   competitionLabel = "LNB 2026",
 }: Props) {
@@ -210,32 +159,22 @@ export default function LNBStandings({
         )}
       </div>
 
-      {/* Leaders */}
-      <div>
-        <h2 className="text-sm font-black uppercase tracking-wide text-gray-400 mb-3 flex items-center gap-2">
-          <TrendingUp className="w-4 h-4" />
-          Líderes estadísticos
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <LeadersCard
-            title="Anotación"
-            icon={<Activity className="w-4 h-4" />}
-            leaders={scoringLeaders}
-            unit="pts"
-          />
-          <LeadersCard
-            title="Rebotes"
-            icon={<Users className="w-4 h-4" />}
-            leaders={reboundsLeaders}
-            unit="reb"
-          />
-          <LeadersCard
-            title="Asistencias"
-            icon={<TrendingUp className="w-4 h-4" />}
-            leaders={assistsLeaders}
-            unit="ast"
-          />
+      {/* Link to full leaders page */}
+      <div className="flex items-center justify-between bg-white rounded-2xl border border-gray-100 shadow-sm px-5 py-4">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4 text-blue-500 shrink-0" />
+          <div>
+            <p className="text-sm font-black text-[#0a1628]">Líderes estadísticos</p>
+            <p className="text-[10px] text-gray-400">Mejores anotadores, reboteadores y asistidores</p>
+          </div>
         </div>
+        <Link
+          href="/lideres"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#0a1628] text-white text-xs font-bold hover:bg-[#1a2f4a] transition-colors shrink-0"
+        >
+          Ver líderes
+          <Activity className="w-3 h-3" />
+        </Link>
       </div>
     </div>
   )

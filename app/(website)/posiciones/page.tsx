@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
 import PosicionesClient from "@/components/website/PosicionesClient"
-import { type StandingRow, type LeaderEntry } from "@/components/website/LNBStandings"
+import { type StandingRow } from "@/components/website/LNBStandings"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
-import { getStandings, getLeadersFromMatches } from "@/lib/genius-sports"
+import { getStandings } from "@/lib/genius-sports"
 
 export const revalidate = 300
 
@@ -61,23 +61,12 @@ export default async function PosicionesPage() {
   const { id: competitionId } = await resolveLnbCompetitionIdPublic()
 
   let standings: StandingRow[] = []
-  let scoringLeaders: LeaderEntry[] = []
-  let reboundsLeaders: LeaderEntry[] = []
-  let assistsLeaders: LeaderEntry[] = []
   let error: string | null = null
 
   try {
     if (!competitionId) throw new Error("No se encontró la competencia LNB activa.")
-
-    const [sRaw, leaderStats] = await Promise.all([
-      getStandings(competitionId),
-      getLeadersFromMatches(competitionId).catch(() => ({ scoring: [], rebounds: [], assists: [] })),
-    ])
-
+    const sRaw = await getStandings(competitionId)
     standings = normalizeStandings(sRaw).sort((a, b) => a.rank - b.rank)
-    scoringLeaders = leaderStats.scoring.map(e => ({ ...e, statLabel: "Puntos" }))
-    reboundsLeaders = leaderStats.rebounds.map(e => ({ ...e, statLabel: "Rebotes" }))
-    assistsLeaders = leaderStats.assists.map(e => ({ ...e, statLabel: "Asistencias" }))
   } catch (e: any) {
     error = e?.message ?? "Error desconocido"
   }
@@ -92,9 +81,6 @@ export default async function PosicionesPage() {
         <div className="mt-6">
           <PosicionesClient
             standings={standings}
-            scoringLeaders={scoringLeaders}
-            reboundsLeaders={reboundsLeaders}
-            assistsLeaders={assistsLeaders}
             error={error}
             showCompetitionSwitch={true}
           />
