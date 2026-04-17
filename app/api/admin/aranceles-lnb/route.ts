@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { handleApiError } from "@/lib/api-errors"
 
+export const dynamic = "force-dynamic"
+
 const FASE_ORDER_MAP: Record<string, string[]> = {
   LNB_MASC: [
     "LNB_ETAPA1_ASU", "LNB_ETAPA1_INT",
