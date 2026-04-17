@@ -86,7 +86,7 @@ export async function GET(request: Request) {
     }
 
     // Current competition year
-    const allCompsList: any[] = allCompsRaw?.response?.data ?? allCompsRaw?.data ?? []
+    const allCompsList: any[] = allCompsRaw?.response?.data ?? []
     const currentComp = allCompsList.find((c: any) => String(c.competitionId) === String(competitionId))
     const currentYear: number = currentComp?.year ?? new Date().getFullYear()
 
