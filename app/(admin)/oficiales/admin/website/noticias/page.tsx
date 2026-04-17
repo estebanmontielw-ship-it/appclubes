@@ -30,9 +30,15 @@ export default function AdminNoticiasPage() {
       .finally(() => setLoading(false))
 
     fetch("/api/admin/noticias-stats")
-      .then((r) => r.json())
-      .then((data) => setViewsData(data))
-      .catch(() => setViewsData(null))
+      .then(async (r) => {
+        const data = await r.json()
+        if (typeof data.configured === "boolean") {
+          setViewsData(data)
+        } else {
+          setViewsData({ configured: false, views: {}, totalViews: 0, daysBack: 90, reason: data.error ?? `HTTP ${r.status}` })
+        }
+      })
+      .catch((e) => setViewsData({ configured: false, views: {}, totalViews: 0, daysBack: 90, reason: e?.message ?? "Error de red" }))
   }, [])
 
   async function handleDelete(id: string) {
