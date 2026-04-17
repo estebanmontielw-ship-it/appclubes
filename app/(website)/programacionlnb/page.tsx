@@ -46,6 +46,7 @@ export default async function ProgramacionLNBPage() {
             teams={data.teams}
             matches={data.matches}
             updatedAt={data.updatedAt}
+            showCompetitionSwitch={true}
           />
         )}
       </div>

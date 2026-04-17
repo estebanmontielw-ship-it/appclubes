@@ -9,7 +9,7 @@ interface Props {
   showCompetitionSwitch?: boolean
 }
 
-type CompKey = "lnb" | "lnbf" | "u22f"
+type CompKey = "lnb" | "lnbf" | "u22m" | "u22f"
 
 interface CompData {
   standings: StandingRow[]
@@ -19,7 +19,8 @@ interface CompData {
 const TABS: { key: CompKey; label: string; endpoint: string }[] = [
   { key: "lnb",  label: "LNB",           endpoint: "" },
   { key: "lnbf", label: "LNB Femenino",  endpoint: "/api/website/posiciones-lnbf" },
-  { key: "u22f", label: "U22 Femenino",  endpoint: "/api/website/posiciones-u22f" },
+  { key: "u22m", label: "U22 Masc",      endpoint: "/api/website/posiciones-u22m" },
+  { key: "u22f", label: "U22 Fem",       endpoint: "/api/website/posiciones-u22f" },
 ]
 
 export default function PosicionesClient({ standings, error, showCompetitionSwitch = false }: Props) {

@@ -501,6 +501,37 @@ async function resolveLnbfCompetitionId(): Promise<{ id: string | null; name: st
   return { id: null, name: null }
 }
 
+async function resolveU22MCompetitionId(): Promise<{ id: string | null; name: string | null }> {
+  const envId = process.env.GENIUS_U22M_COMPETITION_ID
+  if (envId) return { id: envId, name: null }
+
+  try {
+    const raw: any = await getCompetitions()
+    const comps: any[] = raw?.response?.data || raw?.data || []
+    const now = new Date().getFullYear()
+    const candidates = comps
+      .filter((c) => {
+        const name = String(c.competitionName || "").toUpperCase()
+        const hasFem = name.includes("FEM") || name.includes("MUJER") || name.includes("WOMEN") || name.includes("DAMAS")
+        return (
+          !hasFem &&
+          (name.includes("U22") || name.includes("U-22") || name.includes("DESARROLLO"))
+        )
+      })
+      .sort((a, b) => (b.year || 0) - (a.year || 0))
+
+    const current =
+      candidates.find((c) => c.year === now) ??
+      candidates.find((c) => c.year === now - 1) ??
+      candidates[0]
+
+    if (current) return { id: String(current.competitionId), name: current.competitionName ?? null }
+  } catch {
+    // fall through
+  }
+  return { id: null, name: null }
+}
+
 async function resolveU22FCompetitionId(): Promise<{ id: string | null; name: string | null }> {
   const envId = process.env.GENIUS_U22F_COMPETITION_ID
   if (envId) return { id: envId, name: null }
@@ -533,6 +564,7 @@ async function resolveU22FCompetitionId(): Promise<{ id: string | null; name: st
 
 export async function resolveLnbCompetitionIdPublic() { return resolveLnbCompetitionId() }
 export async function resolveLnbfCompetitionIdPublic() { return resolveLnbfCompetitionId() }
+export async function resolveU22MCompetitionIdPublic() { return resolveU22MCompetitionId() }
 export async function resolveU22FCompetitionIdPublic() { return resolveU22FCompetitionId() }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -596,6 +628,29 @@ export async function loadLnbfSchedule(): Promise<LnbSchedulePayload> {
 
   return {
     competition: { id: competitionId, name: competitionName || "LNB Femenino" },
+    teams,
+    matches,
+    updatedAt: new Date().toISOString(),
+  }
+}
+
+export async function loadU22MSchedule(): Promise<LnbSchedulePayload> {
+  const { id: competitionId, name: competitionName } = await resolveU22MCompetitionId()
+  if (!competitionId) {
+    throw new Error(
+      "No se encontró la competencia U22 Masculino. Definí GENIUS_U22M_COMPETITION_ID en las variables de entorno."
+    )
+  }
+
+  const [rawMatches, rawTeams] = await Promise.all([
+    getSchedule(competitionId),
+    getTeams(competitionId).catch(() => null),
+  ])
+
+  const { matches, teams } = processScheduleData(rawMatches, rawTeams, false)
+
+  return {
+    competition: { id: competitionId, name: competitionName || "U22 Masculino" },
     teams,
     matches,
     updatedAt: new Date().toISOString(),
