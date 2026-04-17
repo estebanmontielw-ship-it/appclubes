@@ -1,0 +1,14 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.py.com.cpb.app",
+        "paths": ["*"]
+      }
+    ]
+  },
+  "webcredentials": {
+    "apps": ["TEAMID.py.com.cpb.app"]
+  }
+}
