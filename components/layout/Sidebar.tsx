@@ -63,6 +63,7 @@ function getNavSections(
               { label: "Dashboard", href: "/oficiales/admin/usuarios/dashboard" },
               { label: "Todos", href: "/oficiales/admin/usuarios" },
               { label: "Pendientes", href: "/oficiales/admin/usuarios?estado=PENDIENTE", badge: badges.pendientesUsuarios },
+              { label: "Honorarios", href: "/oficiales/admin/honorarios-propios" },
             ],
           },
           {
