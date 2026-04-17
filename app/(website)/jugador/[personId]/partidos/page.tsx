@@ -14,7 +14,7 @@ interface GameLog {
   oppScore: number | null
   result: "W" | "L" | "E" | null
   pos: string | null
-  min: string | null
+  min: string | number | null
   pts: number
   lcM: number; lcA: number; lcPct: number | null
   twoM: number; twoA: number; twoPct: number | null
@@ -33,21 +33,15 @@ interface GameLog {
 
 function ResultBadge({ result }: { result: "W" | "L" | "E" | null }) {
   if (!result) return <span className="text-gray-300">—</span>
-  const styles = {
-    W: "bg-green-100 text-green-700",
-    L: "bg-red-100 text-red-600",
-    E: "bg-gray-100 text-gray-500",
-  }
-  return (
-    <span className={`inline-block text-[9px] font-black px-1.5 py-0.5 rounded-full ${styles[result]}`}>
-      {result}
-    </span>
-  )
+  const styles = { W: "bg-green-100 text-green-700", L: "bg-red-100 text-red-600", E: "bg-gray-100 text-gray-500" }
+  return <span className={`inline-block text-[9px] font-black px-1.5 py-0.5 rounded-full ${styles[result]}`}>{result}</span>
 }
 
-function fmt(val: number | null | undefined, dec = 0): string {
+function fmt(val: number | string | null | undefined, dec = 0): string {
   if (val == null) return "—"
-  return dec > 0 ? val.toFixed(dec) : String(val)
+  const n = typeof val === "string" ? parseFloat(val) : val
+  if (isNaN(n)) return String(val)
+  return dec > 0 ? n.toFixed(dec) : String(Math.round(n))
 }
 
 function pct(val: number | null | undefined): string {
@@ -55,29 +49,38 @@ function pct(val: number | null | undefined): string {
   return `${val.toFixed(1)}%`
 }
 
+function fmtMin(val: string | number | null): string {
+  if (val == null) return "—"
+  const s = String(val)
+  // If it's "MM:SS" format, take first 5 chars; if decimal/integer, show as-is
+  return s.includes(":") ? s.slice(0, 5) : s.slice(0, 5)
+}
+
 const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 function fmtDate(d: string | null): string {
   if (!d) return "—"
-  const [, m, day] = d.split("-")
-  return `${parseInt(day)} ${MONTHS[parseInt(m) - 1]}`
+  const parts = d.split("-")
+  if (parts.length < 3) return d
+  const day = parseInt(parts[2])
+  const monthIdx = parseInt(parts[1]) - 1
+  const monthName = MONTHS[monthIdx] ?? ""
+  return `${day} ${monthName}`
 }
 
 export default function PartidosPage({ params }: { params: { personId: string } }) {
   const { personId } = params
   const [games, setGames] = useState<GameLog[] | null>(null)
   const [loading, setLoading] = useState(true)
-  const [playerName, setPlayerName] = useState<string | null>(null)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
-    // Fetch player name from stats endpoint
-    fetch(`/api/website/estadisticas?personId=${personId}`)
-      .then(r => r.ok ? r.json() : null)
-      .catch(() => null)
-
     fetch(`/api/website/jugador-partidos?personId=${personId}`)
-      .then(r => r.json())
-      .then(d => setGames(d.games ?? []))
-      .catch(() => setGames([]))
+      .then(r => {
+        if (!r.ok) throw new Error("error")
+        return r.json()
+      })
+      .then(d => setGames(Array.isArray(d.games) ? d.games : []))
+      .catch(() => { setGames([]); setError(true) })
       .finally(() => setLoading(false))
   }, [personId])
 
@@ -110,7 +113,9 @@ export default function PartidosPage({ params }: { params: { personId: string } 
         {!games || games.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-14 text-center">
             <BarChart2 className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-            <p className="text-gray-500 font-semibold text-sm">Sin partidos registrados aún.</p>
+            <p className="text-gray-500 font-semibold text-sm">
+              {error ? "No se pudo cargar el registro." : "Sin partidos registrados aún."}
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -145,47 +150,49 @@ export default function PartidosPage({ params }: { params: { personId: string } 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
-                  {games.map((g) => (
-                    <tr key={g.matchId} className="hover:bg-blue-50/30 transition-colors">
-                      {/* Partido */}
-                      <td className="sticky left-0 bg-white hover:bg-blue-50/30 z-10 px-3 py-2 min-w-[110px]">
-                        <div className="font-semibold text-gray-700 leading-tight">
-                          {g.isHome ? "vs" : "en"} {g.oppSigla ?? g.oppName}
-                        </div>
-                        <div className="text-[9px] text-gray-400">{fmtDate(g.date)}</div>
-                        {g.myScore != null && g.oppScore != null && (
-                          <div className="text-[9px] text-gray-500 font-semibold tabular-nums">
-                            {g.myScore}–{g.oppScore}
+                  {games.map((g) => {
+                    const pm = g.plusMinus
+                    return (
+                      <tr key={g.matchId} className="hover:bg-blue-50/30 transition-colors">
+                        <td className="sticky left-0 bg-white z-10 px-3 py-2 min-w-[110px]">
+                          <div className="font-semibold text-gray-700 leading-tight">
+                            {g.isHome ? "vs" : "en"} {g.oppSigla ?? g.oppName}
                           </div>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 text-center"><ResultBadge result={g.result} /></td>
-                      <td className="px-2 py-2 text-center text-gray-500">{g.pos ?? "—"}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.min ? g.min.slice(0, 5) : "—"}</td>
-                      <td className="px-2 py-2 text-center font-black text-[#0a1628] tabular-nums">{g.pts}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.lcM}/{g.lcA}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.lcPct)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.twoM}/{g.twoA}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.twoPct)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.threeM}/{g.threeA}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.threePct)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.ftM}/{g.ftA}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.ftPct)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.rebOff}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.rebDef}</td>
-                      <td className="px-2 py-2 text-center font-bold tabular-nums text-gray-700">{g.reb}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.ast}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{fmt(g.eff)}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.stl}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.blk}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.to}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.fp}</td>
-                      <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.fr}</td>
-                      <td className={`px-2 py-2 text-center font-bold tabular-nums ${g.plusMinus == null ? "text-gray-300" : g.plusMinus > 0 ? "text-green-600" : g.plusMinus < 0 ? "text-red-500" : "text-gray-400"}`}>
-                        {g.plusMinus == null ? "—" : g.plusMinus > 0 ? `+${g.plusMinus}` : String(g.plusMinus)}
-                      </td>
-                    </tr>
-                  ))}
+                          <div className="text-[9px] text-gray-400">{fmtDate(g.date)}</div>
+                          {g.myScore != null && g.oppScore != null && (
+                            <div className="text-[9px] text-gray-500 font-semibold tabular-nums">
+                              {g.myScore}–{g.oppScore}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-2 py-2 text-center"><ResultBadge result={g.result} /></td>
+                        <td className="px-2 py-2 text-center text-gray-500">{g.pos ?? "—"}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{fmtMin(g.min)}</td>
+                        <td className="px-2 py-2 text-center font-black text-[#0a1628] tabular-nums">{g.pts}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.lcM}/{g.lcA}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.lcPct)}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.twoM}/{g.twoA}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.twoPct)}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.threeM}/{g.threeA}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.threePct)}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.ftM}/{g.ftA}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-500">{pct(g.ftPct)}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.rebOff}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.rebDef}</td>
+                        <td className="px-2 py-2 text-center font-bold tabular-nums text-gray-700">{g.reb}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.ast}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{fmt(g.eff)}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.stl}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.blk}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.to}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.fp}</td>
+                        <td className="px-2 py-2 text-center tabular-nums text-gray-600">{g.fr}</td>
+                        <td className={`px-2 py-2 text-center font-bold tabular-nums ${pm == null ? "text-gray-300" : pm > 0 ? "text-green-600" : pm < 0 ? "text-red-500" : "text-gray-400"}`}>
+                          {pm == null ? "—" : pm > 0 ? `+${pm}` : String(pm)}
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
