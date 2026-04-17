@@ -5,7 +5,8 @@ import prisma from "@/lib/prisma"
 import { NextResponse } from "next/server"
 import { rateLimit } from "@/lib/rate-limit"
 import { handleApiError } from "@/lib/api-errors"
-import { getLnbScheduleContext } from "@/lib/programacion-lnb"
+import { getLnbScheduleContext, resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { getStandings, getLeadersFromMatches } from "@/lib/genius-sports"
 
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -374,9 +375,13 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
       let seleccionesContext = ""
       let reglamentosContext = ""
       let lnbContext = ""
+      let posicionesContext = ""
+      let estadisticasContext = ""
 
       try {
-        const [noticias, clubes, selecciones, reglamentos, lnbSchedule] = await Promise.all([
+        const { id: competitionId } = await resolveLnbCompetitionIdPublic()
+
+        const [noticias, clubes, selecciones, reglamentos, lnbSchedule, standingsRaw, leadersData] = await Promise.all([
           prisma.noticia.findMany({
             where: { publicada: true },
             orderBy: { publicadaEn: "desc" },
@@ -396,6 +401,8 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
             select: { titulo: true, categoria: true },
           }),
           getLnbScheduleContext().catch(() => ""),
+          competitionId ? getStandings(competitionId).catch(() => null) : null,
+          competitionId ? getLeadersFromMatches(competitionId).catch(() => null) : null,
         ])
 
         if (noticias.length > 0) {
@@ -413,6 +420,39 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks):
         }
         if (lnbSchedule) {
           lnbContext = "\n\n" + lnbSchedule
+        }
+
+        // Standings
+        const standingItems: any[] = standingsRaw?.response?.data ?? standingsRaw?.data ?? []
+        if (standingItems.length > 0) {
+          const rows = standingItems.map((s: any, i: number) => {
+            const team = s.competitor ?? s.team ?? s
+            const name = team.competitorName ?? team.teamName ?? team.name ?? "Equipo"
+            const st = s.stats ?? s
+            const wins = st.wins ?? st.won ?? 0
+            const losses = st.losses ?? st.lost ?? 0
+            return `${i + 1}. ${name} — ${wins}G ${losses}P`
+          }).join("\n")
+          posicionesContext = `\n\nTABLA DE POSICIONES LNB 2026:\n${rows}\n(Ver completa en cpb.com.py/posiciones)`
+        }
+
+        // Leaders
+        if (leadersData) {
+          const fmt = (entries: any[], label: string, unit: string) => {
+            const top = entries.slice(0, 5)
+            if (!top.length) return ""
+            return `${label}:\n` + top.map((e: any) => `  ${e.rank}. ${e.playerName} (${e.teamSigla ?? e.teamName}) — ${e.value.toFixed(1)} ${unit}`).join("\n")
+          }
+          const parts = [
+            fmt(leadersData.scoring, "Máximos anotadores (prom/partido)", "pts"),
+            fmt(leadersData.rebounds, "Máximos reboteadores (prom/partido)", "reb"),
+            fmt(leadersData.assists, "Máximos asistidores (prom/partido)", "ast"),
+            fmt(leadersData.totalScoring, "Máximos anotadores (total temporada)", "pts"),
+            fmt(leadersData.totalThreePointers, "Máximos triplistas (total temporada)", "3pts"),
+          ].filter(Boolean).join("\n\n")
+          if (parts) {
+            estadisticasContext = `\n\nESTADÍSTICAS LÍDERES LNB 2026:\n${parts}\n(Ver completo en cpb.com.py/lideres)`
+          }
         }
       } catch (error) {}
 
@@ -432,16 +472,16 @@ INFORMACIÓN DEL SITIO:
 - Contacto: cpb.com.py/contacto o cpb@cpb.com.py
 - Registrarse como árbitro/oficial: cpb.com.py/oficiales/registro
 - Registrarse como cuerpo técnico: cpb.com.py/cuerpotecnico/registro
-${noticiasContext}${clubesContext}${seleccionesContext}${reglamentosContext}${lnbContext}
+${noticiasContext}${clubesContext}${seleccionesContext}${reglamentosContext}${lnbContext}${posicionesContext}${estadisticasContext}
 
 INSTRUCCIONES:
 - Respondé con información concreta basada en los datos reales de arriba
 - Si preguntan por partidos, fixture, jornadas, horarios o resultados, usá la programación LNB
-- NOMBRES DE EQUIPOS: Cada equipo aparece como "NOMBRE (SIGLA)". Buscá coincidencias exactas o parciales tanto en el nombre como en la sigla. Ejemplos: "sanjose" → buscar "SAN JOSE" o "SJO"; "olimpia" → buscar "OLIMPIA"; "ciudad nueva" → "CIUDAD NUEVA" o "CIU". Si no encontrás el equipo, decí cuáles equipos hay disponibles en lugar de inventar uno similar.
+- Si preguntan por posiciones, tabla o clasificación, usá la TABLA DE POSICIONES
+- Si preguntan por estadísticas, líderes, máximos anotadores, triplistas, etc., usá ESTADÍSTICAS LÍDERES
+- NOMBRES DE EQUIPOS: Cada equipo aparece como "NOMBRE (SIGLA)". Buscá coincidencias exactas o parciales tanto en el nombre como en la sigla.
 - NUNCA confundas equipos con nombres parecidos. "San José" y "San Alfonso" son equipos distintos.
 - Si preguntan por una noticia específica, mencioná el título y el link
-- Si preguntan por un club, dales la info que tenés
-- Si preguntan por selecciones, mencioná las que existen
 - Sé breve, amigable y útil (máximo 4 oraciones)
 - Si no sabés algo, sugerí que contacten a cpb@cpb.com.py
 - No uses markdown, solo texto plano`

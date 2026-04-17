@@ -8,6 +8,13 @@ interface Message {
   text: string
 }
 
+const SUGGESTIONS = [
+  "¿Quién es el máximo anotador?",
+  "¿Cómo va la tabla de posiciones?",
+  "¿Cuándo es el próximo partido?",
+  "¿Quién lidera en triples?",
+]
+
 export default function ChatWidget() {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([
@@ -21,23 +28,18 @@ export default function ChatWidget() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [messages])
 
-  async function handleSend() {
-    const text = input.trim()
+  async function sendMessage(text: string) {
     if (!text || loading) return
-
     setInput("")
     setMessages((prev) => [...prev, { role: "user", text }])
     setLoading(true)
-
     try {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: text, tipo: "chatbot" }),
       })
-
       if (!res.ok) throw new Error()
-
       const { result } = await res.json()
       setMessages((prev) => [...prev, { role: "assistant", text: result.respuesta }])
     } catch {
@@ -49,6 +51,8 @@ export default function ChatWidget() {
       setLoading(false)
     }
   }
+
+  function handleSend() { sendMessage(input.trim()) }
 
   return (
     <>
@@ -95,6 +99,20 @@ export default function ChatWidget() {
                 </div>
               </div>
             ))}
+            {/* Suggestion chips — shown only while no user message yet */}
+            {messages.length === 1 && !loading && (
+              <div className="flex flex-col gap-2 pt-1">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => sendMessage(s)}
+                    className="text-left text-xs font-semibold text-primary bg-blue-50 hover:bg-blue-100 border border-blue-100 rounded-xl px-3 py-2 transition-colors"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            )}
             {loading && (
               <div className="flex justify-start">
                 <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-md">
