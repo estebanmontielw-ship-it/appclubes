@@ -136,6 +136,9 @@ export default function LNBMatchCards({
               const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
               const isNext = match.id === nextMatchId
               const homeWins = isComplete && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
+              const matchTime = match.isoDateTime ? new Date(match.isoDateTime).getTime() : null
+              const minsToStart = matchTime !== null ? (matchTime - Date.now()) / 60000 : null
+              const isPreLive = !isLive && !isComplete && minsToStart !== null && minsToStart <= 30
 
               const cardClass = isLive
                 ? "bg-white rounded-xl border border-red-200 shadow-md shadow-red-100/60"
@@ -222,22 +225,36 @@ export default function LNBMatchCards({
                         <span className="text-[10px] text-gray-400 truncate">{match.venue}</span>
                       </div>
                     ) : <span />}
-                    {match.statsUrl && (
-                      <div className="flex items-center gap-1 shrink-0 ml-2 text-[10px] font-semibold text-primary">
+                    {(isComplete || isLive || isPreLive) ? (
+                      match.statsUrl && (
+                        <div className={`flex items-center gap-1 shrink-0 ml-2 text-[10px] font-semibold ${isLive || isPreLive ? "text-red-600" : "text-blue-600"}`}>
+                          <ExternalLink className="h-3 w-3" />
+                          {isComplete ? "Estadísticas" : "Livestats"}
+                        </div>
+                      )
+                    ) : (
+                      <div className="flex items-center gap-1 shrink-0 ml-2 text-[10px] font-semibold text-gray-500">
                         <ExternalLink className="h-3 w-3" />
-                        {isLive ? "Ver en vivo" : isComplete ? "Estadísticas" : "Live stats"}
+                        Previa
                       </div>
                     )}
                   </div>
                 </div>
               )
 
-              return match.statsUrl ? (
-                <a key={match.id} href={match.statsUrl} target="_blank" rel="noopener noreferrer" className="block">
+              if (isComplete || isLive || isPreLive) {
+                return match.statsUrl ? (
+                  <a key={match.id} href={match.statsUrl} target="_blank" rel="noopener noreferrer" className="block">
+                    {inner}
+                  </a>
+                ) : (
+                  <div key={match.id}>{inner}</div>
+                )
+              }
+              return (
+                <Link key={match.id} href={`/partido/${match.id}`} className="block">
                   {inner}
-                </a>
-              ) : (
-                <div key={match.id}>{inner}</div>
+                </Link>
               )
             })}
           </div>

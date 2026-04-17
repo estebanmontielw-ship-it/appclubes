@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
 import { CalendarDays, Trophy, Users, Home as HomeIcon, Plane, LayoutGrid, Clock, MapPin, BarChart2, Radio } from "lucide-react"
 
 export interface LnbTeam {
@@ -100,6 +101,9 @@ function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
   const isComplete = match.status === "COMPLETE"
   const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
   const dateInfo = formatDate(match.date)
+  const matchTime = match.isoDateTime ? new Date(match.isoDateTime).getTime() : null
+  const minsToStart = matchTime !== null ? (matchTime - Date.now()) / 60000 : null
+  const isPreLive = !isLive && !isComplete && minsToStart !== null && minsToStart <= 30
 
   // Winner emphasis for completed matches
   const homeWins = isComplete && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
@@ -191,20 +195,30 @@ function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
               <span className="line-clamp-1">{match.venue}</span>
             </div>
           ) : <div />}
-          {match.statsUrl && (
-            <a
-              href={match.statsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-colors ${
-                isLive
-                  ? "bg-red-50 hover:bg-red-100 text-red-700"
-                  : "bg-blue-50 hover:bg-blue-100 text-blue-700"
-              }`}
+          {isComplete || isLive || isPreLive ? (
+            match.statsUrl && (
+              <a
+                href={match.statsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-colors ${
+                  isLive || isPreLive
+                    ? "bg-red-50 hover:bg-red-100 text-red-700"
+                    : "bg-blue-50 hover:bg-blue-100 text-blue-700"
+                }`}
+              >
+                <BarChart2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                {isComplete ? "Estadísticas" : "Livestats"}
+              </a>
+            )
+          ) : (
+            <Link
+              href={`/partido/${match.id}`}
+              className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] sm:text-xs font-bold transition-colors bg-gray-100 hover:bg-gray-200 text-gray-700"
             >
               <BarChart2 className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              {isComplete ? "Estadísticas" : isLive ? "Ver en vivo" : "Ver en vivo"}
-            </a>
+              Previa
+            </Link>
           )}
         </div>
       )}

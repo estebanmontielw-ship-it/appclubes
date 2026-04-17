@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import Link from "next/link"
 import SectionTitle from "@/components/website/SectionTitle"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { getLeadersFromMatches, type LeaderEntry } from "@/lib/genius-sports"
@@ -58,7 +59,7 @@ function LeaderTable({
       ) : (
         <ul className="divide-y divide-gray-50">
           {rows.map((r) => (
-            <li key={r.personId} className="flex items-center gap-2.5 px-4 py-2.5 active:bg-gray-50">
+            <Link key={r.personId} href={`/jugador/${r.personId}`} className="flex items-center gap-2.5 px-4 py-2.5 hover:bg-blue-50/50 active:bg-blue-50 transition-colors">
               <span className="w-5 text-center text-xs font-black text-gray-200 shrink-0">{r.rank}</span>
               <PlayerAvatar entry={r} />
               <div className="flex-1 min-w-0">
@@ -68,7 +69,7 @@ function LeaderTable({
               <span className="text-base font-black text-[#0a1628] tabular-nums shrink-0">
                 {valueDecimals === 0 ? r.value : r.value.toFixed(valueDecimals)}
               </span>
-            </li>
+            </Link>
           ))}
         </ul>
       )}
