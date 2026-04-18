@@ -4,6 +4,7 @@ import PublicFooter from "@/components/website/PublicFooter"
 import ChatWidget from "@/components/website/ChatWidget"
 import InstallPrompt from "@/components/website/InstallPrompt"
 import ServiceWorkerRegister from "@/components/website/ServiceWorkerRegister"
+import CapacitorInit from "@/components/website/CapacitorInit"
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
 
@@ -77,6 +78,7 @@ export default function WebsiteLayout({
       <ChatWidget />
       <InstallPrompt />
       <ServiceWorkerRegister />
+      <CapacitorInit />
     </div>
   )
 }

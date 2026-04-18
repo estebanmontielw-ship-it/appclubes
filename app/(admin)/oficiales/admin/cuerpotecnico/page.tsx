@@ -146,7 +146,7 @@ function AdminCTContent() {
   if (loading) return <PageSkeleton />
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-x-hidden">
       <div>
         <h1 className="text-2xl font-bold">Cuerpo Técnico</h1>
         <p className="text-sm text-muted-foreground">Habilitación anual de entrenadores, asistentes y staff</p>
@@ -163,9 +163,9 @@ function AdminCTContent() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 min-w-0">
         {/* Estado tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide w-full">
           {TABS.map(t => (
             <Button
               key={t.value}

@@ -1,11 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
-import { Menu, X, ChevronDown } from "lucide-react"
+import { Menu, X, ChevronDown, User, LogOut, LayoutDashboard } from "lucide-react"
 import SmartSearch from "./SmartSearch"
+import { createClient } from "@/utils/supabase/client"
 
 const navLinks = [
   { label: "Inicio", href: "/" },
@@ -27,10 +28,55 @@ const navLinks = [
   { label: "Contacto", href: "/contacto" },
 ]
 
+type SessionState = "loading" | "logged_in" | "logged_out"
+type UserInfo = { redirect: string; type: string } | null
+
 export default function PublicNavbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [sessionState, setSessionState] = useState<SessionState>("loading")
+  const [userInfo, setUserInfo] = useState<UserInfo>(null)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+
+    const checkSession = () =>
+      fetch("/api/auth/whoami")
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (cancelled) return
+          if (d) { setUserInfo(d); setSessionState("logged_in") }
+          else { setSessionState("logged_out"); setUserInfo(null) }
+        })
+        .catch(() => { if (!cancelled) setSessionState("logged_out") })
+
+    checkSession()
+
+    // Keep state in sync across tabs and after token refresh
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
+      if (event === "SIGNED_OUT") { if (!cancelled) { setSessionState("logged_out"); setUserInfo(null) } }
+      else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") { checkSession() }
+    })
+
+    return () => { cancelled = true; subscription.unsubscribe() }
+  }, [])
+
+  const handleLogout = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    setSessionState("logged_out")
+    setUserInfo(null)
+    setUserMenuOpen(false)
+    router.push("/")
+    router.refresh()
+  }
+
+  const portalLabel = userInfo?.type === "aficionado" ? "Mi cuenta" : "Mi portal"
+  const portalHref = userInfo?.redirect || "/mi-cuenta"
 
   return (
     <header className="sticky top-0 z-50 bg-gradient-to-r from-[#0a1628] to-[#132043] lg:bg-none lg:bg-white/95 backdrop-blur-md border-b border-white/10 lg:border-gray-100/80 shadow-sm">
@@ -109,9 +155,47 @@ export default function PublicNavbar() {
             })}
           </nav>
 
-          {/* Search + Mobile toggle */}
+          {/* Search + Auth + Mobile toggle */}
           <div className="flex items-center gap-1">
             <SmartSearch />
+
+            {/* Auth button — desktop */}
+            {sessionState === "loading" ? (
+              <div className="hidden lg:block h-8 w-8 rounded-full bg-gray-200 animate-pulse" />
+            ) : sessionState === "logged_out" ? (
+              <Link
+                href="/login"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-gray-900 border border-gray-200 rounded-lg hover:border-gray-300 transition-all"
+              >
+                <User className="h-4 w-4" />
+                Entrar
+              </Link>
+            ) : (
+              <div className="hidden lg:block relative">
+                <button
+                  onClick={() => setUserMenuOpen(o => !o)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-lg hover:border-gray-300 transition-all"
+                >
+                  <User className="h-4 w-4 text-primary" />
+                  {portalLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 top-full mt-1 w-44 bg-white rounded-lg shadow-lg border border-gray-100 py-1 z-50">
+                      <Link href={portalHref} onClick={() => setUserMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                        <LayoutDashboard className="h-4 w-4" /> {portalLabel}
+                      </Link>
+                      <button onClick={handleLogout} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50">
+                        <LogOut className="h-4 w-4" /> Cerrar sesión
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
               className="lg:hidden p-2 rounded-lg text-white/80 hover:bg-white/10"
@@ -172,6 +256,35 @@ export default function PublicNavbar() {
               </Link>
             )
           })}
+          {/* Mobile auth */}
+          <div className="pt-1 pb-2 border-t border-gray-100 mt-1">
+            {sessionState === "logged_out" && (
+              <Link
+                href="/login"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-primary hover:bg-primary/5"
+              >
+                <User className="h-4 w-4" /> Entrar al portal
+              </Link>
+            )}
+            {sessionState === "logged_in" && (
+              <>
+                <Link
+                  href={portalHref}
+                  onClick={() => setMobileOpen(false)}
+                  className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+                >
+                  <LayoutDashboard className="h-4 w-4" /> {portalLabel}
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50"
+                >
+                  <LogOut className="h-4 w-4" /> Cerrar sesión
+                </button>
+              </>
+            )}
+          </div>
         </nav>
       </div>
     </header>

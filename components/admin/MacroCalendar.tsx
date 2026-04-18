@@ -673,55 +673,114 @@ export default function MacroCalendar() {
 
           ) : (
             // ── Week view ───────────────────────────────────
-            // overflow-x-auto + min-w ensures columns don't collapse on mobile.
-            // Each column needs at least ~90px to be readable.
-            <div className="overflow-x-auto">
-              <div className="grid grid-cols-7 divide-x divide-gray-100 min-w-[560px] min-h-[300px]">
+            <>
+              {/* MOBILE: vertical list — one row per day */}
+              <div className="sm:hidden divide-y divide-gray-100">
                 {weekDates.map(day => {
                   const dateStr = toDateStr(day)
                   const entries = matchesByDate.get(dateStr) ?? []
                   const isToday = dateStr === todayStr
                   const isSelected = dateStr === selectedDate
-
                   return (
-                    <button
+                    <div
                       key={dateStr}
                       onClick={() => setSelectedDate(dateStr === selectedDate ? null : dateStr)}
-                      className={`p-2 flex flex-col gap-1 text-left w-full transition-colors ${
-                        isSelected ? "bg-blue-50/70" : "hover:bg-gray-50"
+                      className={`px-4 py-3 cursor-pointer transition-colors ${
+                        isSelected ? "bg-blue-50/70" : entries.length > 0 ? "hover:bg-gray-50" : ""
                       }`}
                     >
-                      <div className="flex flex-col items-center mb-1.5">
-                        <span className="text-[10px] text-gray-400 font-bold uppercase">{WEEK_DAYS[day.getDay()]}</span>
-                        <span className={`flex items-center justify-center w-7 h-7 rounded-full text-sm font-black ${
-                          isToday ? "bg-[#0a1628] text-white" : isSelected ? "bg-blue-500 text-white" : "text-gray-700"
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-black shrink-0 ${
+                          isToday ? "bg-[#0a1628] text-white" : isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-700"
                         }`}>
                           {day.getDate()}
                         </span>
-                      </div>
-                      <div className="space-y-1 w-full">
-                        {entries.map((e, idx) => (
-                          <div
-                            key={idx}
-                            className="w-full rounded-lg px-1.5 py-1.5 text-[10px] leading-tight"
-                            style={{ backgroundColor: COMP_CONFIG[e.comp].color + "15", color: COMP_CONFIG[e.comp].color }}
-                          >
-                            <div className="font-black text-[9px] uppercase mb-0.5">{COMP_CONFIG[e.comp].label}</div>
-                            <div className="font-bold truncate">
-                              {e.match.homeSigla ?? e.match.homeName.slice(0,3).toUpperCase()} — {e.match.awaySigla ?? e.match.awayName.slice(0,3).toUpperCase()}
-                            </div>
-                            {e.match.time && <div className="opacity-60 text-[9px] tabular-nums mt-0.5">{e.match.time.slice(0,5)}</div>}
+                        <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">
+                          {WEEK_DAYS[day.getDay()]}
+                        </span>
+                        {entries.length > 0 && (
+                          <div className="flex gap-1 ml-auto">
+                            {entries.slice(0, 4).map((e, idx) => (
+                              <span key={idx} className="w-2 h-2 rounded-full" style={{ backgroundColor: COMP_CONFIG[e.comp].color }} />
+                            ))}
+                            {entries.length > 4 && <span className="text-[10px] text-gray-400 font-bold">+{entries.length - 4}</span>}
                           </div>
-                        ))}
-                        {entries.length === 0 && (
-                          <div className="text-center py-4"><span className="text-[11px] text-gray-200">—</span></div>
                         )}
                       </div>
-                    </button>
+                      {entries.length > 0 && (
+                        <div className="space-y-1.5 ml-11">
+                          {entries.map((e, idx) => (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[11px]"
+                              style={{ backgroundColor: COMP_CONFIG[e.comp].color + "12", color: COMP_CONFIG[e.comp].color }}
+                            >
+                              <span className="font-black uppercase text-[9px] shrink-0 w-10">{COMP_CONFIG[e.comp].label}</span>
+                              <span className="font-bold truncate flex-1">
+                                {e.match.homeSigla ?? e.match.homeName.slice(0,3).toUpperCase()} vs {e.match.awaySigla ?? e.match.awayName.slice(0,3).toUpperCase()}
+                              </span>
+                              {e.match.time && <span className="tabular-nums opacity-60 shrink-0">{e.match.time.slice(0,5)}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {entries.length === 0 && (
+                        <p className="ml-11 text-xs text-gray-200">Sin partidos</p>
+                      )}
+                    </div>
                   )
                 })}
               </div>
-            </div>
+
+              {/* DESKTOP (sm+): horizontal 7-column grid */}
+              <div className="hidden sm:block overflow-x-auto">
+                <div className="grid grid-cols-7 divide-x divide-gray-100 min-w-[560px] min-h-[300px]">
+                  {weekDates.map(day => {
+                    const dateStr = toDateStr(day)
+                    const entries = matchesByDate.get(dateStr) ?? []
+                    const isToday = dateStr === todayStr
+                    const isSelected = dateStr === selectedDate
+
+                    return (
+                      <button
+                        key={dateStr}
+                        onClick={() => setSelectedDate(dateStr === selectedDate ? null : dateStr)}
+                        className={`p-2 flex flex-col gap-1 text-left w-full transition-colors ${
+                          isSelected ? "bg-blue-50/70" : "hover:bg-gray-50"
+                        }`}
+                      >
+                        <div className="flex flex-col items-center mb-1.5">
+                          <span className="text-[10px] text-gray-400 font-bold uppercase">{WEEK_DAYS[day.getDay()]}</span>
+                          <span className={`flex items-center justify-center w-7 h-7 rounded-full text-sm font-black ${
+                            isToday ? "bg-[#0a1628] text-white" : isSelected ? "bg-blue-500 text-white" : "text-gray-700"
+                          }`}>
+                            {day.getDate()}
+                          </span>
+                        </div>
+                        <div className="space-y-1 w-full">
+                          {entries.map((e, idx) => (
+                            <div
+                              key={idx}
+                              className="w-full rounded-lg px-1.5 py-1.5 text-[10px] leading-tight"
+                              style={{ backgroundColor: COMP_CONFIG[e.comp].color + "15", color: COMP_CONFIG[e.comp].color }}
+                            >
+                              <div className="font-black text-[9px] uppercase mb-0.5">{COMP_CONFIG[e.comp].label}</div>
+                              <div className="font-bold truncate">
+                                {e.match.homeSigla ?? e.match.homeName.slice(0,3).toUpperCase()} — {e.match.awaySigla ?? e.match.awayName.slice(0,3).toUpperCase()}
+                              </div>
+                              {e.match.time && <div className="opacity-60 text-[9px] tabular-nums mt-0.5">{e.match.time.slice(0,5)}</div>}
+                            </div>
+                          ))}
+                          {entries.length === 0 && (
+                            <div className="text-center py-4"><span className="text-[11px] text-gray-200">—</span></div>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </>
           )}
         </div>
 

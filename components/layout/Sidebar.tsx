@@ -204,6 +204,12 @@ function getNavSections(
           },
         ],
       },
+      {
+        label: "COMPETENCIAS",
+        items: [
+          { label: "Calendario Macro", href: "/oficiales/admin/calendario-macro", icon: Calendar },
+        ],
+      },
     ]
   }
 
@@ -258,6 +264,12 @@ function getNavSections(
           },
         ],
       },
+      {
+        label: "COMPETENCIAS",
+        items: [
+          { label: "Calendario Macro", href: "/oficiales/admin/calendario-macro", icon: Calendar },
+        ],
+      },
     ]
   }
 
@@ -290,6 +302,12 @@ function getNavSections(
       label: "CONSULTAS",
       items: [
         { label: "Verificar CT", href: "/oficiales/verificar-ct", icon: Search },
+      ],
+    },
+    {
+      label: "COMPETENCIAS",
+      items: [
+        { label: "Calendario Macro", href: "/oficiales/calendario-macro", icon: Calendar },
       ],
     },
   ]

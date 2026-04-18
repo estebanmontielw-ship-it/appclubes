@@ -1,4 +1,4 @@
-const CACHE_NAME = "cpb-v4"
+const CACHE_NAME = "cpb-20260418-1316"
 const OFFLINE_URL = "/"
 
 // Pages to pre-cache for offline support

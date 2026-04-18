@@ -1,0 +1,40 @@
+{
+  "app": {
+    "id": "py.com.cpb.app",
+    "name": "CPB",
+    "displayName": "CPB Básquetbol Paraguay",
+    "version": "1.0.0",
+    "build": "1"
+  },
+  "appStore": {
+    "bundleId": "py.com.cpb.app",
+    "teamId": "PENDIENTE - ver Apple Developer Portal",
+    "category": "Sports",
+    "subcategory": "Sports",
+    "rating": "4+",
+    "privacyPolicyUrl": "https://cpb.com.py/privacidad",
+    "supportUrl": "https://cpb.com.py/contacto",
+    "marketingUrl": "https://cpb.com.py",
+    "subtitle": "Liga Nacional de Básquetbol",
+    "description": "La app oficial de la Confederación Paraguaya de Básquetbol (CPB).\n\nSeguí la Liga Nacional de Básquetbol Masculina y Femenina con:\n• Calendario de partidos en tiempo real\n• Posiciones actualizadas\n• Estadísticas individuales y de equipos\n• Líderes de la temporada\n• Noticias y comunicados oficiales\n• Notificaciones de partidos de tu club favorito\n\nPara árbitros y oficiales: accedé a tu portal con tu cuenta oficial para consultar designaciones, honorarios y carnet digital.\n\nPara cuerpo técnico: accedé a estadísticas avanzadas y calendario de competencias.\n\nOficial CPB — Confederación Paraguaya de Básquetbol.",
+    "keywords": "basquetbol, basketball, paraguay, CPB, LNB, liga nacional, deportes, básquet",
+    "whatsNew": "Primera versión en App Store. Seguí el básquetbol paraguayo desde tu celular."
+  },
+  "playStore": {
+    "packageName": "py.com.cpb.app",
+    "category": "SPORTS",
+    "contentRating": "Everyone",
+    "shortDescription": "Liga Nacional de Básquetbol del Paraguay — app oficial CPB",
+    "fullDescription": "La app oficial de la Confederación Paraguaya de Básquetbol (CPB).\n\nCalendario, posiciones, estadísticas, noticias y notificaciones del básquetbol paraguayo."
+  },
+  "screenshots": {
+    "note": "Se requieren screenshots de 390x844 (iPhone 14) y 1290x2796 (iPhone 14 Pro Max) para App Store",
+    "pages": [
+      "/ — Inicio con calendario y noticias",
+      "/posiciones — Tabla de posiciones LNB",
+      "/estadisticas — Estadísticas individuales",
+      "/login — Pantalla de acceso",
+      "/mi-cuenta — Panel del aficionado"
+    ]
+  }
+}
