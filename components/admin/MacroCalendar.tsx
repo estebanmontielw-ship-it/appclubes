@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, X, MapPin } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { ChevronLeft, ChevronRight, X, MapPin, ChevronDown, Users } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
 
 type CompKey = "lnb" | "lnbf" | "u22m" | "u22f"
@@ -19,6 +19,131 @@ const WEEK_DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
 const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
 interface MatchEntry { comp: CompKey; match: NormalizedMatch }
+
+interface TeamOption {
+  key: string          // normalized name used as id
+  name: string
+  sigla: string | null
+  comps: CompKey[]     // competitions this team appears in
+}
+
+// ── Custom team dropdown ─────────────────────────────────────────────────────
+function TeamSelect({
+  teams,
+  value,
+  onChange,
+}: {
+  teams: TeamOption[]
+  value: string | null
+  onChange: (key: string | null) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState("")
+  const ref = useRef<HTMLDivElement>(null)
+
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim()
+    if (!q) return teams
+    return teams.filter(t =>
+      t.name.toLowerCase().includes(q) || (t.sigla ?? "").toLowerCase().includes(q)
+    )
+  }, [teams, search])
+
+  const selected = teams.find(t => t.key === value) ?? null
+
+  const COMP_COLORS: Record<CompKey, string> = {
+    lnb: "#ef4444", lnbf: "#ec4899", u22m: "#3b82f6", u22f: "#a855f7",
+  }
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all whitespace-nowrap ${
+          selected
+            ? "bg-[#0a1628] text-white border-[#0a1628] shadow-sm"
+            : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+        }`}
+      >
+        <Users className="h-3.5 w-3.5 shrink-0" />
+        <span className="max-w-[120px] truncate">
+          {selected ? (selected.sigla ?? selected.name) : "Equipo"}
+        </span>
+        <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-xl border border-gray-100 shadow-lg z-50 overflow-hidden">
+          {/* Search */}
+          <div className="p-2 border-b border-gray-100">
+            <input
+              autoFocus
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar equipo..."
+              className="w-full px-2.5 py-1.5 text-xs rounded-lg border border-gray-200 focus:outline-none focus:border-blue-300"
+            />
+          </div>
+
+          {/* Option list */}
+          <div className="overflow-y-auto max-h-64">
+            {/* "All teams" option */}
+            <button
+              onClick={() => { onChange(null); setOpen(false); setSearch("") }}
+              className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-gray-50 transition-colors ${
+                !value ? "font-bold text-[#0a1628]" : "text-gray-600"
+              }`}
+            >
+              <span className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                <Users className="h-3 w-3 text-gray-400" />
+              </span>
+              <span className="flex-1">Todos los equipos</span>
+              {!value && <span className="w-1.5 h-1.5 rounded-full bg-[#0a1628]" />}
+            </button>
+
+            {filtered.length === 0 && (
+              <p className="text-xs text-gray-400 text-center py-4">Sin resultados</p>
+            )}
+
+            {filtered.map(team => (
+              <button
+                key={team.key}
+                onClick={() => { onChange(team.key); setOpen(false); setSearch("") }}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-gray-50 transition-colors ${
+                  value === team.key ? "bg-blue-50/60" : ""
+                }`}
+              >
+                {/* Sigla badge */}
+                <span className="w-9 text-[10px] font-black text-gray-500 text-right shrink-0">
+                  {team.sigla ?? team.name.slice(0,3).toUpperCase()}
+                </span>
+                {/* Name */}
+                <span className={`flex-1 font-medium truncate ${value === team.key ? "text-[#0a1628] font-bold" : "text-gray-700"}`}>
+                  {team.name}
+                </span>
+                {/* Competition dots */}
+                <div className="flex gap-0.5 shrink-0">
+                  {team.comps.map(c => (
+                    <span key={c} className="w-2 h-2 rounded-full" style={{ backgroundColor: COMP_COLORS[c] }} title={c.toUpperCase()} />
+                  ))}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 function toDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`
@@ -130,6 +255,7 @@ export default function MacroCalendar() {
   const [view, setView] = useState<ViewMode>("month")
   const [refDate, setRefDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
   const [selectedDate, setSelectedDate] = useState<string | null>(todayStr)
+  const [selectedTeam, setSelectedTeam] = useState<string | null>(null)
 
   // Fetch all 4 competitions in parallel on mount
   useEffect(() => {
@@ -149,13 +275,42 @@ export default function MacroCalendar() {
     })
   }, [])
 
-  // All active matches indexed by date, sorted by time
+  // Deduplicated team list across all competitions, sorted alphabetically
+  const availableTeams = useMemo((): TeamOption[] => {
+    const map = new Map<string, TeamOption>()
+    for (const comp of ALL_COMPS) {
+      for (const match of (allMatches[comp] ?? [])) {
+        const pairs: [string, string | null][] = [
+          [match.homeName, match.homeSigla],
+          [match.awayName, match.awaySigla],
+        ]
+        for (const [name, sigla] of pairs) {
+          const key = name.toLowerCase().trim()
+          const existing = map.get(key)
+          if (existing) {
+            if (!existing.comps.includes(comp)) existing.comps.push(comp)
+          } else {
+            map.set(key, { key, name, sigla, comps: [comp] })
+          }
+        }
+      }
+    }
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "es"))
+  }, [allMatches])
+
+  // All active matches indexed by date, sorted by time — respects both comp and team filters
   const matchesByDate = useMemo(() => {
     const map = new Map<string, MatchEntry[]>()
     for (const comp of ALL_COMPS) {
       if (!activeComps.has(comp)) continue
       for (const match of (allMatches[comp] ?? [])) {
         if (!match.date) continue
+        // Team filter: skip if a team is selected and this match doesn't involve them
+        if (selectedTeam) {
+          const homeKey = match.homeName.toLowerCase().trim()
+          const awayKey = match.awayName.toLowerCase().trim()
+          if (homeKey !== selectedTeam && awayKey !== selectedTeam) continue
+        }
         const arr = map.get(match.date) ?? []
         arr.push({ comp, match })
         map.set(match.date, arr)
@@ -165,7 +320,7 @@ export default function MacroCalendar() {
       arr.sort((a, b) => (a.match.isoDateTime ?? "").localeCompare(b.match.isoDateTime ?? ""))
     }
     return map
-  }, [allMatches, activeComps])
+  }, [allMatches, activeComps, selectedTeam])
 
   const toggleComp = (key: CompKey) => {
     setActiveComps(prev => {
@@ -236,6 +391,13 @@ export default function MacroCalendar() {
         </div>
 
         <div className="flex-1" />
+
+        {/* Team filter dropdown */}
+        <TeamSelect
+          teams={availableTeams}
+          value={selectedTeam}
+          onChange={setSelectedTeam}
+        />
 
         {/* View switch */}
         <div className="flex bg-gray-100 rounded-lg p-1 shrink-0">
@@ -451,6 +613,29 @@ export default function MacroCalendar() {
           </div>
         )}
       </div>
+
+      {/* Active team filter pill */}
+      {selectedTeam && (() => {
+        const team = availableTeams.find(t => t.key === selectedTeam)
+        if (!team) return null
+        return (
+          <div className="flex items-center gap-2 text-xs text-[#0a1628] bg-blue-50 border border-blue-100 rounded-full px-3 py-1.5 self-start">
+            <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+            <span className="font-bold">{team.sigla ?? team.name}</span>
+            <span className="text-gray-400">·</span>
+            <div className="flex gap-1">
+              {team.comps.map(c => (
+                <span key={c} className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: COMP_CONFIG[c].color }}>
+                  {COMP_CONFIG[c].label}
+                </span>
+              ))}
+            </div>
+            <button onClick={() => setSelectedTeam(null)} className="ml-1 text-gray-400 hover:text-gray-600 transition-colors">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )
+      })()}
 
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-400 px-1">
