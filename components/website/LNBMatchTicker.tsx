@@ -54,12 +54,16 @@ function Separator() {
 }
 
 export default function LNBMatchTicker({ matches: initialMatches }: { matches: NormalizedMatch[] }) {
-  const [matches, setMatches] = useState<NormalizedMatch[]>(initialMatches)
+  const [lnbMatches, setLnbMatches] = useState<NormalizedMatch[]>(initialMatches)
+  const [lnbfMatches, setLnbfMatches] = useState<NormalizedMatch[] | null>(null)
+  const [lnbfLoading, setLnbfLoading] = useState(false)
+  const [activeLeague, setActiveLeague] = useState<"lnb" | "lnbf">("lnb")
   const scrollRef = useRef<HTMLDivElement>(null)
 
-  // Auto-poll when live matches are present
+  // Auto-poll when LNB has live matches
   useEffect(() => {
-    const hasLive = matches.some(
+    if (activeLeague !== "lnb") return
+    const hasLive = lnbMatches.some(
       (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
     )
     if (!hasLive) return
@@ -78,7 +82,7 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
               .sort((a, b) => (a.isoDateTime ?? "").localeCompare(b.isoDateTime ?? ""))
             const recent = all.filter((m) => m.status === "COMPLETE").slice(-4)
             startTransition(() => {
-              setMatches([...recent, ...live, ...upcoming].slice(0, 20))
+              setLnbMatches([...recent, ...live, ...upcoming].slice(0, 20))
             })
           }
         })
@@ -87,22 +91,42 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
 
     const id = setInterval(refresh, 30_000)
     return () => clearInterval(id)
-  }, [matches])
+  }, [activeLeague, lnbMatches])
+
+  async function handleSelectLeague(key: "lnb" | "lnbf") {
+    if (key === activeLeague) return
+    if (key === "lnb") { setActiveLeague("lnb"); return }
+    if (lnbfMatches !== null) { setActiveLeague("lnbf"); return }
+
+    setLnbfLoading(true)
+    try {
+      const res = await fetch("/api/website/programacion-lnbf", { cache: "no-store" })
+      const data = res.ok ? await res.json() : {}
+      setLnbfMatches(Array.isArray(data.matches) ? data.matches : [])
+    } catch {
+      setLnbfMatches([])
+    } finally {
+      setLnbfLoading(false)
+      setActiveLeague("lnbf")
+    }
+  }
 
   const scroll = (dir: "left" | "right") => {
     scrollRef.current?.scrollBy({ left: dir === "left" ? -260 : 260, behavior: "smooth" })
   }
 
-  if (!matches.length) return null
+  const activeMatches = activeLeague === "lnb" ? lnbMatches : (lnbfMatches ?? [])
+
+  if (!lnbMatches.length) return null
 
   return (
     <div className="bg-[#0a1628] border-b border-white/10">
       <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
         <div className="flex items-center gap-1">
-          {/* Mobile scroll: left arrow */}
+          {/* Left arrow */}
           <button
             onClick={() => scroll("left")}
-            className="md:hidden shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
+            className="shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
             aria-label="Anterior"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -114,32 +138,54 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
             className="flex items-center flex-1 overflow-x-auto py-1.5 flex-nowrap"
             style={{ scrollbarWidth: "none" }}
           >
-            {/* Brand label */}
-            <div className="shrink-0 flex items-center gap-2 pr-4 mr-3 border-r border-white/10">
-              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-blue-400">
-                LNB 2026
-              </span>
+            {/* League toggle */}
+            <div className="shrink-0 flex items-center gap-1 pr-3 mr-2 border-r border-white/10">
+              <button
+                onClick={() => handleSelectLeague("lnb")}
+                className={`text-[10px] font-black uppercase tracking-[0.12em] px-2 py-0.5 rounded transition-colors ${
+                  activeLeague === "lnb"
+                    ? "bg-blue-500/20 text-blue-300"
+                    : "text-white/30 hover:text-white/60"
+                }`}
+              >
+                LNB
+              </button>
+              <button
+                onClick={() => handleSelectLeague("lnbf")}
+                disabled={lnbfLoading}
+                className={`text-[10px] font-black uppercase tracking-[0.12em] px-2 py-0.5 rounded transition-colors ${
+                  activeLeague === "lnbf"
+                    ? "bg-rose-500/20 text-rose-300"
+                    : "text-white/30 hover:text-white/60"
+                }`}
+              >
+                {lnbfLoading ? "···" : "LNBF"}
+              </button>
             </div>
 
             {/* Match pills */}
-            {matches.map((m, i) => (
-              <div key={m.id} className="flex items-center">
-                {m.statsUrl ? (
-                  <a href={m.statsUrl} target="_blank" rel="noopener noreferrer" className="block">
+            {activeMatches.length === 0 ? (
+              <span className="text-[11px] text-white/30 px-2">Sin partidos programados</span>
+            ) : (
+              activeMatches.map((m, i) => (
+                <div key={m.id} className="flex items-center">
+                  {m.statsUrl ? (
+                    <a href={m.statsUrl} target="_blank" rel="noopener noreferrer" className="block">
+                      <TickerCard m={m} />
+                    </a>
+                  ) : (
                     <TickerCard m={m} />
-                  </a>
-                ) : (
-                  <TickerCard m={m} />
-                )}
-                {i < matches.length - 1 && <Separator />}
-              </div>
-            ))}
+                  )}
+                  {i < activeMatches.length - 1 && <Separator />}
+                </div>
+              ))
+            )}
           </div>
 
-          {/* Mobile scroll: right arrow */}
+          {/* Right arrow */}
           <button
             onClick={() => scroll("right")}
-            className="md:hidden shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
+            className="shrink-0 flex items-center justify-center w-6 h-8 text-white/40 hover:text-white/80 transition-colors"
             aria-label="Siguiente"
           >
             <ChevronRight className="w-4 h-4" />
