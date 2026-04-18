@@ -119,7 +119,7 @@ function TeamSelect({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-64 bg-white rounded-xl border border-gray-100 shadow-lg z-50 overflow-hidden">
+        <div className="absolute left-0 sm:left-auto sm:right-0 top-full mt-1.5 w-72 sm:w-64 bg-white rounded-xl border border-gray-100 shadow-lg z-50 overflow-hidden">
           {/* Search */}
           <div className="p-2 border-b border-gray-100">
             <input
@@ -132,7 +132,7 @@ function TeamSelect({
           </div>
 
           {/* Option list */}
-          <div className="overflow-y-auto max-h-64">
+          <div className="overflow-y-auto max-h-[50vh] sm:max-h-64">
             {/* "All teams" option */}
             <button
               onClick={() => { onChange(null); setOpen(false); setSearch("") }}
