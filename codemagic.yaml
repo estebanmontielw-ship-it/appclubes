@@ -17,7 +17,7 @@ workflows:
         distribution_type: app_store
         bundle_identifier: py.com.cpb.app
       vars:
-        APP_STORE_APPLE_ID: 1234567890   # ← reemplazar con tu App Store ID una vez creada la app
+        APP_STORE_APPLE_ID: 6762518262
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "py.com.cpb.app"
