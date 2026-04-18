@@ -180,10 +180,10 @@ export default function HonorariosAdminPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100 text-[10px] font-black uppercase tracking-wide text-gray-400">
                   <th className="text-left px-4 py-3">Oficial</th>
-                  <th className="text-center px-3 py-3">Partidos</th>
+                  <th className="text-center px-3 py-3 hidden sm:table-cell">Partidos</th>
                   <th className="text-right px-3 py-3 text-yellow-600">Pendiente</th>
-                  <th className="text-right px-3 py-3 text-green-600">Cobrado</th>
-                  <th className="text-right px-3 py-3">Total</th>
+                  <th className="text-right px-3 py-3 text-green-600 hidden sm:table-cell">Cobrado</th>
+                  <th className="text-right px-3 py-3 hidden sm:table-cell">Total</th>
                   <th className="px-3 py-3" />
                 </tr>
               </thead>
@@ -200,10 +200,13 @@ export default function HonorariosAdminPage() {
                         <div className="min-w-0">
                           <p className="font-semibold text-gray-900 truncate">{o.nombre} {o.apellido}</p>
                           <p className="text-[10px] text-gray-400 truncate">{o.email}</p>
+                          <p className="text-[10px] text-gray-500 sm:hidden mt-0.5">
+                            {o.totalPartidos} partidos · <span className="text-gray-700 font-semibold">Total {formatCurrency(o.totalGeneral)}</span>
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-center">
+                    <td className="px-3 py-3 text-center hidden sm:table-cell">
                       <span className="font-bold text-gray-700">{o.totalPartidos}</span>
                       {o.partidosPendientes > 0 && (
                         <span className="ml-1.5 text-[9px] font-bold text-yellow-600 bg-yellow-50 px-1.5 py-0.5 rounded-full">
@@ -214,10 +217,10 @@ export default function HonorariosAdminPage() {
                     <td className="px-3 py-3 text-right font-semibold text-yellow-700 tabular-nums">
                       {formatCurrency(o.totalPendiente)}
                     </td>
-                    <td className="px-3 py-3 text-right font-semibold text-green-600 tabular-nums">
+                    <td className="px-3 py-3 text-right font-semibold text-green-600 tabular-nums hidden sm:table-cell">
                       {formatCurrency(o.totalPagado)}
                     </td>
-                    <td className="px-3 py-3 text-right font-black text-gray-900 tabular-nums">
+                    <td className="px-3 py-3 text-right font-black text-gray-900 tabular-nums hidden sm:table-cell">
                       {formatCurrency(o.totalGeneral)}
                     </td>
                     <td className="px-3 py-3">
