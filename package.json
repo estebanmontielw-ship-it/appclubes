@@ -12,7 +12,8 @@
     "cap:sync": "npx cap sync",
     "cap:ios": "npx cap open ios",
     "cap:android": "npx cap open android",
-    "cap:icons": "node scripts/generate-app-icons.js"
+    "cap:icons": "node scripts/generate-app-icons.js",
+    "cap:setup": "node scripts/setup-native.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.81.0",
