@@ -2,19 +2,38 @@ import type { Metadata } from "next"
 import ProgramacionLNBClient from "@/components/website/ProgramacionLNBClient"
 import { loadLnbSchedule } from "@/lib/programacion-lnb"
 
-// ISR: refresh every 5 minutes. The Genius Sports schedule is also cached
-// inside the lib helper, so this is mainly a safety cap.
-export const revalidate = 300
+// force-dynamic so generateMetadata can read ?comp= for per-competition OG images
+export const dynamic = "force-dynamic"
 
-export const metadata: Metadata = {
-  title: "Programación LNB",
-  description:
-    "Programación confirmada de la Liga Nacional de Básquetbol. Filtrá por fecha, club o condición (local/visitante).",
-  robots: {
-    // Accessible by direct link, but not indexed/crawled
-    index: false,
-    follow: false,
-  },
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://cpb.com.py"
+
+const COMP_META: Record<string, { title: string; description: string }> = {
+  lnb:  { title: "Programación LNB",           description: "Programación confirmada de la Liga Nacional de Básquetbol. Filtrá por fecha, club o condición." },
+  lnbf: { title: "Programación LNBF",          description: "Programación confirmada de la Liga Nacional Femenina de Básquetbol 2026." },
+  u22m: { title: "Programación U22 Masculino", description: "Programación del Torneo de Desarrollo U22 Masculino 2026." },
+  u22f: { title: "Programación U22 Femenino",  description: "Programación del Torneo de Desarrollo U22 Femenino 2026." },
+}
+
+export async function generateMetadata({ searchParams }: { searchParams: { comp?: string } }): Promise<Metadata> {
+  const comp = searchParams?.comp ?? "lnb"
+  const meta = COMP_META[comp] ?? COMP_META.lnb
+  const ogImage = `${BASE_URL}/api/og/programacion?comp=${comp}`
+  return {
+    title: meta.title,
+    description: meta.description,
+    robots: { index: false, follow: false },
+    openGraph: {
+      title: meta.title,
+      description: meta.description,
+      images: [{ url: ogImage, width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: meta.title,
+      description: meta.description,
+      images: [ogImage],
+    },
+  }
 }
 
 export default async function ProgramacionLNBPage() {

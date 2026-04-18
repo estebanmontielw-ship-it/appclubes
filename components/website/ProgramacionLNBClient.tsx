@@ -314,6 +314,10 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
     setSelectedRound(null)
     setSelectedTeamId(null)
     setClubSide("all")
+    if (typeof window !== "undefined") {
+      const url = key === "lnb" ? window.location.pathname : `${window.location.pathname}?comp=${key}`
+      history.replaceState(null, "", url)
+    }
     if (key === "lnb") { setActiveComp("lnb"); return }
     if (compCache[key]) { setActiveComp(key); return }
 
@@ -337,6 +341,16 @@ export default function ProgramacionLNBClient({ competitionName, teams, matches:
       setActiveComp(key)
     }
   }
+
+  // On mount: read ?comp= and auto-switch to that competition
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const comp = new URLSearchParams(window.location.search).get("comp") as CompKey | null
+    if (comp && comp !== "lnb" && (comp === "lnbf" || comp === "u22m" || comp === "u22f")) {
+      handleSelectCompetition(comp)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Show all matches — completed ones display the score, upcoming ones display time.
   const scheduledMatches = useMemo(() => activeMatches, [activeMatches])
