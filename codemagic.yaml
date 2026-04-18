@@ -23,7 +23,6 @@ workflows:
         BUNDLE_ID: "py.com.cpb.app"
       node: 22.11.0
       xcode: latest
-      cocoapods: default
 
     scripts:
       - name: Install npm dependencies
@@ -47,14 +46,6 @@ workflows:
 
       - name: Sync Capacitor to iOS
         script: npx cap sync ios
-
-      - name: Install CocoaPods dependencies
-        script: |
-          set -e
-          PODFILE=$(find ios -name "Podfile" -maxdepth 4 | head -1)
-          echo "Podfile found at: $PODFILE"
-          cd "$(dirname "$PODFILE")"
-          pod install
 
       - name: Set build number from Codemagic
         script: |
