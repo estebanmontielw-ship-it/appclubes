@@ -12,34 +12,38 @@ export async function middleware(req: NextRequest) {
 
   const pathname = req.nextUrl.pathname
 
-  const isAuthRoute =
+  const isOficialesAuthRoute =
     pathname.startsWith("/oficiales/login") ||
     pathname.startsWith("/oficiales/registro") ||
     pathname.startsWith("/oficiales/recuperar") ||
     pathname.startsWith("/oficiales/verificar-email")
   const isPublicRoute = pathname.startsWith("/verificar")
   const isApiRoute = pathname.startsWith("/api")
+  const isMiCuenta = pathname.startsWith("/mi-cuenta")
 
   // Public routes and API routes — always allow
   if (isPublicRoute || isApiRoute) {
     return response
   }
 
-  // No user and protected route → redirect to login
-  if (!user && !isAuthRoute) {
-    const redirectUrl = new URL("/oficiales/login", req.url)
-    return NextResponse.redirect(redirectUrl)
+  // /mi-cuenta requires auth — redirect to unified login
+  if (isMiCuenta && !user) {
+    return NextResponse.redirect(new URL("/login", req.url))
   }
 
-  // Has user and on auth route → redirect to dashboard
-  if (user && isAuthRoute) {
-    const redirectUrl = new URL("/oficiales", req.url)
-    return NextResponse.redirect(redirectUrl)
+  // Oficiales protected routes
+  if (!isMiCuenta) {
+    if (!user && !isOficialesAuthRoute) {
+      return NextResponse.redirect(new URL("/oficiales/login", req.url))
+    }
+    if (user && isOficialesAuthRoute) {
+      return NextResponse.redirect(new URL("/oficiales", req.url))
+    }
   }
 
   return response
 }
 
 export const config = {
-  matcher: ["/oficiales/:path*", "/verificar/:path*"],
+  matcher: ["/oficiales/:path*", "/verificar/:path*", "/mi-cuenta/:path*"],
 }
