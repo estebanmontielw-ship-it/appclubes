@@ -52,8 +52,13 @@ export default function LoginUnificadoPage() {
         router.push(redirect)
         router.refresh()
       } else {
-        router.push("/mi-cuenta")
-        router.refresh()
+        // Supabase session exists but no profile in DB — sign out and inform user
+        await supabase.auth.signOut()
+        toast({
+          variant: "destructive",
+          title: "Cuenta incompleta",
+          description: "Tu cuenta existe pero no está vinculada a un perfil. Contactá a soporte o registrate de nuevo.",
+        })
       }
     } catch {
       toast({ variant: "destructive", title: "Error", description: "No se pudo conectar con el servidor" })

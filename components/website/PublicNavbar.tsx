@@ -41,14 +41,16 @@ export default function PublicNavbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { setSessionState("logged_out"); return }
-      fetch("/api/auth/whoami")
-        .then(r => r.ok ? r.json() : null)
-        .then(d => { setUserInfo(d); setSessionState("logged_in") })
-        .catch(() => setSessionState("logged_out"))
-    })
+    let cancelled = false
+    fetch("/api/auth/whoami")
+      .then(r => r.ok ? r.json() : null)
+      .then(d => {
+        if (cancelled) return
+        if (d) { setUserInfo(d); setSessionState("logged_in") }
+        else { setSessionState("logged_out") }
+      })
+      .catch(() => { if (!cancelled) setSessionState("logged_out") })
+    return () => { cancelled = true }
   }, [])
 
   const handleLogout = async () => {

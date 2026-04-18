@@ -17,6 +17,10 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/oficiales/registro") ||
     pathname.startsWith("/oficiales/recuperar") ||
     pathname.startsWith("/oficiales/verificar-email")
+  const isUnifiedAuthRoute =
+    pathname === "/login" ||
+    pathname === "/registro" ||
+    pathname.startsWith("/registro/")
   const isPublicRoute = pathname.startsWith("/verificar")
   const isApiRoute = pathname.startsWith("/api")
   const isMiCuenta = pathname.startsWith("/mi-cuenta")
@@ -26,13 +30,18 @@ export async function middleware(req: NextRequest) {
     return response
   }
 
+  // Unified auth pages (/login, /registro/*) — if logged in, go home (client-side will whoami-redirect)
+  if (isUnifiedAuthRoute && user) {
+    return NextResponse.redirect(new URL("/", req.url))
+  }
+
   // /mi-cuenta requires auth — redirect to unified login
   if (isMiCuenta && !user) {
     return NextResponse.redirect(new URL("/login", req.url))
   }
 
   // Oficiales protected routes
-  if (!isMiCuenta) {
+  if (!isMiCuenta && !isUnifiedAuthRoute) {
     if (!user && !isOficialesAuthRoute) {
       return NextResponse.redirect(new URL("/oficiales/login", req.url))
     }
@@ -45,5 +54,12 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/oficiales/:path*", "/verificar/:path*", "/mi-cuenta/:path*"],
+  matcher: [
+    "/oficiales/:path*",
+    "/verificar/:path*",
+    "/mi-cuenta/:path*",
+    "/login",
+    "/registro",
+    "/registro/:path*",
+  ],
 }

@@ -49,8 +49,8 @@ export default function RegistroAficionadoPage() {
     const e: Record<string, string> = {}
     if (!nombre.trim()) e.nombre = "Requerido"
     if (!apellido.trim()) e.apellido = "Requerido"
-    if (!email.trim() || !email.includes("@")) e.email = "Email inválido"
-    if (password.length < 6) e.password = "Mínimo 6 caracteres"
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) e.email = "Email inválido"
+    if (password.length < 8) e.password = "Mínimo 8 caracteres"
     if (password !== confirm) e.confirm = "Las contraseñas no coinciden"
     setErrors(e)
     return Object.keys(e).length === 0
@@ -118,7 +118,7 @@ export default function RegistroAficionadoPage() {
         {step === 1 ? (
           <>
             <CardContent className="space-y-4 pt-4">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="nombre">Nombre</Label>
                   <Input id="nombre" value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Juan" className="h-11" />
@@ -137,7 +137,7 @@ export default function RegistroAficionadoPage() {
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="password">Contraseña</Label>
-                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 6 caracteres" className="h-11" />
+                <Input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Mínimo 8 caracteres" className="h-11" />
                 {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
               </div>
               <div className="space-y-1.5">
@@ -161,8 +161,8 @@ export default function RegistroAficionadoPage() {
             <CardContent className="space-y-5 pt-4">
               <div className="space-y-1.5">
                 <Label>Club favorito <span className="text-gray-400 font-normal">(opcional)</span></Label>
-                <Select value={clubFavorito} onValueChange={setClubFavorito}>
-                  <SelectTrigger className="h-11">
+                <Select value={clubFavorito || undefined} onValueChange={setClubFavorito}>
+                  <SelectTrigger className="h-11 w-full">
                     <SelectValue placeholder="Seleccioná un club" />
                   </SelectTrigger>
                   <SelectContent>

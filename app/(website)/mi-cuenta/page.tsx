@@ -125,12 +125,12 @@ export default function MiCuentaPage() {
             <Star className="h-5 w-5 text-yellow-500" />
             <h2 className="font-semibold text-gray-900">Tu club favorito</h2>
           </div>
-          <Select value={clubFavorito} onValueChange={setClubFavorito}>
-            <SelectTrigger className="h-11">
+          <Select value={clubFavorito || "__none__"} onValueChange={v => setClubFavorito(v === "__none__" ? "" : v)}>
+            <SelectTrigger className="h-11 w-full">
               <SelectValue placeholder="Seleccioná un club" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Sin seleccionar</SelectItem>
+              <SelectItem value="__none__">Sin seleccionar</SelectItem>
               {clubes.map(c => (
                 <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>
               ))}
