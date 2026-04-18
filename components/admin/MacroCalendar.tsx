@@ -21,12 +21,27 @@ const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ago
 interface MatchEntry { comp: CompKey; match: NormalizedMatch }
 
 interface TeamOption {
-  key: string          // sigla (uppercase) when available, else normalized name
-  displayName: string  // common word prefix across all team names in the group
-  sigla: string | null
-  logo: string | null  // first logo found for this club
+  key: string            // normalized club key (primary merge key)
+  displayName: string    // common word prefix across all team names in the group
+  displaySigla: string | null  // best sigla to show (from most senior comp)
+  logo: string | null
+  siglas: string[]       // ALL siglas for this club (for match filtering)
   comps: CompKey[]
-  nameKeys: string[]   // all normalized names belonging to this club (for matching)
+  nameKeys: string[]     // all normalized names (for match filtering)
+}
+
+// Strip noise words and spaces to get a canonical club key.
+// "DEPORTIVO CAMPOALTO" → "campoalto"
+// "Campo Alto U22 Masc"  → "campoalto"
+// "OLIMPIA KINGS"        → "olimpia"
+// "Olimpia U22 Masc"     → "olimpia"
+function normalizeClubKey(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // remove accents
+    .replace(/\b(deportivo|club|atletico|atletismo|sportivo|sport|asociacion|sol de america)\b/g, "")
+    .replace(/\b(u22|u-22|masc|fem|masculino|femenino|senior|kings|queens)\b/g, "")
+    .replace(/[^a-z0-9]/g, "") // collapse spaces + symbols
 }
 
 // Finds the longest common word prefix across multiple team names
@@ -71,7 +86,7 @@ function TeamSelect({
     const q = search.toLowerCase().trim()
     if (!q) return teams
     return teams.filter(t =>
-      t.displayName.toLowerCase().includes(q) || (t.sigla ?? "").toLowerCase().includes(q)
+      t.displayName.toLowerCase().includes(q) || t.siglas.some(s => s.toLowerCase().includes(q))
     )
   }, [teams, search])
 
@@ -98,7 +113,7 @@ function TeamSelect({
           <Users className="h-3.5 w-3.5 shrink-0" />
         )}
         <span className="max-w-[120px] truncate">
-          {selected ? (selected.sigla ?? selected.displayName) : "Equipo"}
+          {selected ? (selected.displaySigla ?? selected.displayName) : "Equipo"}
         </span>
         <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -151,7 +166,7 @@ function TeamSelect({
                     <img src={team.logo} alt="" width={28} height={28} className="w-full h-full object-contain p-0.5" />
                   ) : (
                     <span className="text-[9px] font-black text-gray-400 uppercase">
-                      {team.sigla ?? team.key.slice(0, 3)}
+                      {team.displaySigla ?? team.key.slice(0, 3)}
                     </span>
                   )}
                 </div>
@@ -304,48 +319,115 @@ export default function MacroCalendar() {
     })
   }, [])
 
-  // Deduplicated team list — primary grouping by sigla (same sigla = same club),
-  // fallback to normalized name when sigla is absent.
-  // "OLIMPIA KINGS" + "OLIMPIA QUEENS" + "Olimpia U22 F" (all sigla OLI)
-  // → one entry: key="OLI", displayName="Olimpia", comps=[lnb,lnbf,u22f]
+  // Deduplicated team list across all 4 competitions.
+  //
+  // Two-pass merge:
+  // Pass 1 — group by normalizeClubKey(name):
+  //   "DEPORTIVO CAMPOALTO" and "Campo Alto U22 Masc" both → "campoalto" → merged
+  //   "DEPORTIVO SAN JOSE"  and "San Jose U22 Masc"   both → "sanjose"   → merged
+  //   "OLIMPIA KINGS/QUEENS/U22"                       all → "olimpia"   → merged
+  // Pass 2 — merge any remaining groups that share a sigla (handles cases where
+  //   names diverge too much but sigla is the same, e.g. "Felix Perez Cardozo"
+  //   vs "Felix Perez" both using FPC):
   const availableTeams = useMemo((): TeamOption[] => {
-    // map key → { names[], sigla, logo, comps[] }
-    const raw = new Map<string, { names: string[]; sigla: string | null; logo: string | null; comps: CompKey[] }>()
+    type RawGroup = {
+      names: string[]
+      siglas: string[]       // all distinct siglas found (uppercase)
+      logo: string | null
+      logos: Map<string, string>  // name → logo
+      comps: CompKey[]
+    }
 
+    // COMP priority for picking the "display sigla" (senior > youth)
+    const COMP_PRIORITY: CompKey[] = ["lnb", "lnbf", "u22m", "u22f"]
+
+    // ── Pass 1: group by normalized club key ──────────────────────────────
+    const byNorm = new Map<string, RawGroup>()
     for (const comp of ALL_COMPS) {
       for (const match of (allMatches[comp] ?? [])) {
-        const logoMap: Record<string, string | null> = {
-          [match.homeName]: match.homeLogo,
-          [match.awayName]: match.awayLogo,
-        }
-        const pairs: [string, string | null][] = [
-          [match.homeName, match.homeSigla],
-          [match.awayName, match.awaySigla],
+        const pairs: [string, string | null, string | null][] = [
+          [match.homeName, match.homeSigla, match.homeLogo],
+          [match.awayName, match.awaySigla, match.awayLogo],
         ]
-        for (const [name, sigla] of pairs) {
-          // Group key: sigla (uppercase) when present, else normalized name
-          const groupKey = sigla ? sigla.toUpperCase().trim() : name.toLowerCase().trim()
-          const existing = raw.get(groupKey)
-          if (existing) {
-            if (!existing.names.includes(name)) existing.names.push(name)
-            if (!existing.comps.includes(comp)) existing.comps.push(comp)
-            if (!existing.logo && logoMap[name]) existing.logo = logoMap[name]
+        for (const [name, sigla, logo] of pairs) {
+          const normKey = normalizeClubKey(name)
+          if (!normKey) continue
+          const g = byNorm.get(normKey)
+          if (g) {
+            if (!g.names.includes(name)) g.names.push(name)
+            if (sigla && !g.siglas.includes(sigla.toUpperCase())) g.siglas.push(sigla.toUpperCase())
+            if (!g.comps.includes(comp)) g.comps.push(comp)
+            if (logo && !g.logos.has(name)) g.logos.set(name, logo)
           } else {
-            raw.set(groupKey, { names: [name], sigla: sigla ?? null, logo: logoMap[name] ?? null, comps: [comp] })
+            byNorm.set(normKey, {
+              names: [name],
+              siglas: sigla ? [sigla.toUpperCase()] : [],
+              logo: logo ?? null,
+              logos: logo ? new Map([[name, logo]]) : new Map(),
+              comps: [comp],
+            })
           }
         }
       }
     }
 
-    return Array.from(raw.entries())
-      .map(([key, { names, sigla, logo, comps }]) => ({
-        key,
-        displayName: commonWordPrefix(names) || names[0],
-        sigla,
-        logo,
-        comps,
-        nameKeys: names.map(n => n.toLowerCase().trim()),
-      }))
+    // ── Pass 2: merge groups that share a sigla ───────────────────────────
+    // Union-find: sigla → canonical normKey
+    const siglaToKey = new Map<string, string>()
+    const merged = new Map<string, RawGroup>()
+
+    for (const [normKey, g] of Array.from(byNorm.entries())) {
+      // Find if any sigla of this group already belongs to another merged group
+      let targetKey = normKey
+      for (const s of g.siglas) {
+        if (siglaToKey.has(s)) { targetKey = siglaToKey.get(s)!; break }
+      }
+
+      const existing = merged.get(targetKey)
+      if (existing) {
+        // Merge g into existing
+        for (const n of g.names) if (!existing.names.includes(n)) existing.names.push(n)
+        for (const s of g.siglas) {
+          if (!existing.siglas.includes(s)) existing.siglas.push(s)
+          if (!siglaToKey.has(s)) siglaToKey.set(s, targetKey)
+        }
+        for (const c of g.comps) if (!existing.comps.includes(c)) existing.comps.push(c)
+        for (const [n, l] of Array.from(g.logos.entries())) if (!existing.logos.has(n)) existing.logos.set(n, l)
+        if (!existing.logo && g.logo) existing.logo = g.logo
+      } else {
+        merged.set(targetKey, g)
+        for (const s of g.siglas) if (!siglaToKey.has(s)) siglaToKey.set(s, targetKey)
+      }
+    }
+
+    // ── Build final TeamOption list ───────────────────────────────────────
+    return Array.from(merged.entries())
+      .map(([key, g]) => {
+        // Pick display sigla from the most senior competition
+        const displaySigla = (() => {
+          for (const comp of COMP_PRIORITY) {
+            // Find a match in this comp whose team is in this group
+            for (const match of (allMatches[comp] ?? [])) {
+              if (g.names.includes(match.homeName) && match.homeSigla) return match.homeSigla
+              if (g.names.includes(match.awayName) && match.awaySigla) return match.awaySigla
+            }
+          }
+          return g.siglas[0] ?? null
+        })()
+
+        // Pick best logo (from first available)
+        const logo = g.logo ?? (g.logos.size > 0 ? Array.from(g.logos.values())[0] : null)
+
+        return {
+          key,
+          displayName: commonWordPrefix(g.names) || g.names[0],
+          displaySigla,
+          logo,
+          siglas: g.siglas,
+          comps: COMP_PRIORITY.filter(c => g.comps.includes(c)),
+          nameKeys: g.names.map(n => n.toLowerCase().trim()),
+        }
+      })
       .sort((a, b) => a.displayName.localeCompare(b.displayName, "es"))
   }, [allMatches])
 
@@ -356,7 +438,7 @@ export default function MacroCalendar() {
       if (!activeComps.has(comp)) continue
       for (const match of (allMatches[comp] ?? [])) {
         if (!match.date) continue
-        // Team filter: match by sigla (primary) or normalized name (fallback)
+        // Team filter: check all siglas + all name variants for this club
         if (selectedTeam) {
           const team = availableTeams.find(t => t.key === selectedTeam)
           if (team) {
@@ -364,8 +446,8 @@ export default function MacroCalendar() {
             const awaySigla = match.awaySigla?.toUpperCase().trim() ?? ""
             const homeNameKey = match.homeName.toLowerCase().trim()
             const awayNameKey = match.awayName.toLowerCase().trim()
-            const homeMatch = (team.sigla && homeSigla === team.key) || team.nameKeys.includes(homeNameKey)
-            const awayMatch = (team.sigla && awaySigla === team.key) || team.nameKeys.includes(awayNameKey)
+            const homeMatch = team.siglas.includes(homeSigla) || team.nameKeys.includes(homeNameKey)
+            const awayMatch = team.siglas.includes(awaySigla) || team.nameKeys.includes(awayNameKey)
             if (!homeMatch && !awayMatch) continue
           }
         }
@@ -684,7 +766,7 @@ export default function MacroCalendar() {
             ) : (
               <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
             )}
-            <span className="font-bold">{team.sigla ?? team.displayName}</span>
+            <span className="font-bold">{team.displaySigla ?? team.displayName}</span>
             <span className="text-gray-400">·</span>
             <div className="flex gap-1">
               {team.comps.map(c => (
