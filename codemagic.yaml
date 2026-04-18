@@ -34,6 +34,7 @@ workflows:
 
       - name: Add iOS platform if missing
         script: |
+          mkdir -p out
           if [ ! -f "ios/App/Podfile" ]; then
             rm -rf ios
             npx cap add ios
