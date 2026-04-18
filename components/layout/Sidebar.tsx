@@ -120,6 +120,11 @@ function getNavSections(
             href: "/oficiales/admin/torneo3x3",
             icon: Trophy,
           },
+          {
+            label: "Calendario Macro",
+            href: "/oficiales/admin/calendario-macro",
+            icon: Calendar,
+          },
         ],
       },
       {
@@ -221,6 +226,12 @@ function getNavSections(
               { label: "Calculadora Aranceles", href: "/oficiales/admin/aranceles-lnb" },
             ],
           },
+        ],
+      },
+      {
+        label: "CALENDARIO",
+        items: [
+          { label: "Calendario Macro", href: "/oficiales/admin/calendario-macro", icon: Calendar },
         ],
       },
     ]
