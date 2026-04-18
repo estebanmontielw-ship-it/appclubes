@@ -18,21 +18,6 @@ const CATEGORIAS = [
 
 interface Club { id: number; nombre: string; ciudad: string; logoUrl: string | null; sigla: string | null }
 
-function normalize(s: string) {
-  return s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-}
-
-function dedupeClubs(clubs: Club[]): Club[] {
-  const seen = new Set<string>()
-  const out: Club[] = []
-  for (const c of clubs) {
-    const key = normalize(c.nombre)
-    if (seen.has(key)) continue
-    seen.add(key)
-    out.push(c)
-  }
-  return out
-}
 
 export default function RegistroAficionadoPage() {
   const router = useRouter()
@@ -52,9 +37,9 @@ export default function RegistroAficionadoPage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    fetch("/api/website/clubes")
+    fetch("/api/website/clubes/nacionales")
       .then(r => r.json())
-      .then(d => setClubes(dedupeClubs(d.clubes || [])))
+      .then(d => setClubes(d.clubes || []))
       .catch(() => {})
   }, [])
 
