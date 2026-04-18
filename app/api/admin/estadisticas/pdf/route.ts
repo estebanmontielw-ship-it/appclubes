@@ -78,7 +78,7 @@ export async function GET() {
 
     // Top cities
     const cityCount: Record<string, number> = {}
-    allUsuarios.forEach(u => { cityCount[u.ciudad] = (cityCount[u.ciudad] || 0) + 1 })
+    allUsuarios.forEach(u => { if (u.ciudad) cityCount[u.ciudad] = (cityCount[u.ciudad] || 0) + 1 })
     const topCities = Object.entries(cityCount).sort((a, b) => b[1] - a[1]).slice(0, 10)
 
     // CT stats

@@ -122,6 +122,7 @@ export async function GET() {
     // ─── Oficiales: top ciudades ───
     const cityCount: Record<string, number> = {}
     allUsuarios.forEach(u => {
+      if (!u.ciudad) return
       cityCount[u.ciudad] = (cityCount[u.ciudad] || 0) + 1
     })
     const topCiudadesOficiales = Object.entries(cityCount)
@@ -135,6 +136,7 @@ export async function GET() {
       "36-40": 0, "41-50": 0, "51+": 0,
     }
     allUsuarios.forEach(u => {
+      if (!u.fechaNacimiento) return
       const age = Math.floor((now.getTime() - new Date(u.fechaNacimiento).getTime()) / (365.25 * 24 * 60 * 60 * 1000))
       if (age < 10 || age > 80) return
       if (age <= 20) ageRanges["16-20"]++

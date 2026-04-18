@@ -45,6 +45,7 @@ export async function GET() {
     // Distribution by city
     const cityCount: Record<string, number> = {}
     allUsers.forEach(u => {
+      if (!u.ciudad) return
       cityCount[u.ciudad] = (cityCount[u.ciudad] || 0) + 1
     })
     const topCities = Object.entries(cityCount)
@@ -53,10 +54,13 @@ export async function GET() {
 
     // Age distribution
     const now = new Date()
-    const ages = allUsers.map(u => {
-      const birth = new Date(u.fechaNacimiento)
-      return Math.floor((now.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
-    }).filter(a => a > 10 && a < 80)
+    const ages = allUsers
+      .filter(u => u.fechaNacimiento)
+      .map(u => {
+        const birth = new Date(u.fechaNacimiento as Date)
+        return Math.floor((now.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000))
+      })
+      .filter(a => a > 10 && a < 80)
 
     const ageRanges: Record<string, number> = {
       "16-20": 0, "21-25": 0, "26-30": 0, "31-35": 0,
