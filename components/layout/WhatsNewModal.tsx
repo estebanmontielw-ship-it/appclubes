@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { X, Banknote, Calculator, MapPin, ArrowRight } from "lucide-react"
+import { X, Banknote, Calculator, Calendar, ArrowRight } from "lucide-react"
 import Link from "next/link"
 
 // Bump this key whenever you want the modal to re-appear for everyone
-const STORAGE_KEY = "cpb_whats_new_v3"
+const STORAGE_KEY = "cpb_whats_new_v4"
 
 interface Feature {
   icon: React.ElementType
@@ -20,30 +20,32 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
+    icon: Calendar,
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    title: "Calendario Macro — 4 torneos en uno",
+    desc: "Ahora podés ver todos los partidos de LNB, LNBF, U22 Masculino y U22 Femenino en un solo calendario. Navegá por semana o mes, filtrá por equipo y consultá horarios, canchas y rivales de un vistazo.",
+    href: "/oficiales/calendario-macro",
+    linkLabel: "Abrir calendario",
+    highlight: true,
+  },
+  {
     icon: Banknote,
     color: "text-emerald-600",
     bg: "bg-emerald-50",
-    title: "Mis Honorarios — tu registro de cobros",
-    desc: "Registrá cada partido que arbitrás o trabajás: categoría, fase, monto y estado (pendiente / cobrado). El sistema te sugiere el arancel CPB automáticamente según la fase. Llevá el control de todo lo que ganás en la temporada.",
+    title: "Mis Honorarios",
+    desc: "Registrá cada partido, consultá aranceles y llevá el control de tus cobros de temporada.",
     href: "/oficiales/mis-honorarios",
-    linkLabel: "Ir a Mis Honorarios",
-    highlight: true,
+    linkLabel: "Ver mis honorarios",
   },
   {
     icon: Calculator,
     color: "text-primary",
     bg: "bg-primary/10",
     title: "Calculadora de Aranceles",
-    desc: "Conocé tu honorario antes del partido: elegís categoría, fase y sede y el sistema calcula neto, IVA 10% y feriado ×1.5 al instante.",
+    desc: "Calculá tu honorario neto, IVA 10% y feriado ×1.5 antes del partido.",
     href: "/oficiales/calculadora",
     linkLabel: "Abrir calculadora",
-  },
-  {
-    icon: MapPin,
-    color: "text-blue-600",
-    bg: "bg-blue-50",
-    title: "Plus transporte para Inferiores",
-    desc: "Al cargar honorarios de U13 a U19 podés sumar el plus de sede: Luque +60 000 Gs. o Capiatá +80 000 Gs. Se suma solo al monto.",
   },
 ]
 
@@ -85,10 +87,10 @@ export default function WhatsNewModal() {
           </button>
           <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Nuevas funciones</span>
           <h2 className="text-xl font-black text-white leading-tight mt-1">
-            Controlá tus cobros<br />desde el portal CPB
+            Nuevas funciones<br />en tu portal CPB
           </h2>
           <p className="text-sm text-white/80 mt-1.5">
-            Ahora tenés herramientas para llevar tus finanzas de temporada.
+            Calendario de torneos, honorarios y más para esta temporada.
           </p>
         </div>
 
@@ -129,12 +131,12 @@ export default function WhatsNewModal() {
         {/* CTA */}
         <div className="px-5 py-5">
           <Link
-            href="/oficiales/mis-honorarios"
+            href="/oficiales/calendario-macro"
             onClick={close}
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-blue-600 text-white font-bold text-sm hover:bg-blue-700 transition-colors"
           >
-            <Banknote className="h-4 w-4" />
-            Ir a Mis Honorarios
+            <Calendar className="h-4 w-4" />
+            Ver Calendario Macro
           </Link>
           <button
             onClick={close}

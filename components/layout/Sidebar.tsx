@@ -120,6 +120,11 @@ function getNavSections(
             href: "/oficiales/admin/torneo3x3",
             icon: Trophy,
           },
+          {
+            label: "Calendario Macro",
+            href: "/oficiales/admin/calendario-macro",
+            icon: Calendar,
+          },
         ],
       },
       {
@@ -199,6 +204,12 @@ function getNavSections(
           },
         ],
       },
+      {
+        label: "COMPETENCIAS",
+        items: [
+          { label: "Calendario Macro", href: "/oficiales/admin/calendario-macro", icon: Calendar },
+        ],
+      },
     ]
   }
 
@@ -223,6 +234,12 @@ function getNavSections(
           },
         ],
       },
+      {
+        label: "CALENDARIO",
+        items: [
+          { label: "Calendario Macro", href: "/oficiales/admin/calendario-macro", icon: Calendar },
+        ],
+      },
     ]
   }
 
@@ -245,6 +262,12 @@ function getNavSections(
               { label: "Ver mis cursos", href: "/oficiales/admin/cursos" },
             ],
           },
+        ],
+      },
+      {
+        label: "COMPETENCIAS",
+        items: [
+          { label: "Calendario Macro", href: "/oficiales/admin/calendario-macro", icon: Calendar },
         ],
       },
     ]
@@ -279,6 +302,12 @@ function getNavSections(
       label: "CONSULTAS",
       items: [
         { label: "Verificar CT", href: "/oficiales/verificar-ct", icon: Search },
+      ],
+    },
+    {
+      label: "COMPETENCIAS",
+      items: [
+        { label: "Calendario Macro", href: "/oficiales/calendario-macro", icon: Calendar },
       ],
     },
   ]

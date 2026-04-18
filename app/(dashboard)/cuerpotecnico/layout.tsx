@@ -7,8 +7,9 @@ import { createClient } from "@/utils/supabase/client"
 import {
   Home, User, CreditCard, FileText, Bell, LogOut,
   GraduationCap, Users, History, FolderOpen, Lock,
-  Menu, X,
+  Menu, X, Calendar, BarChart3,
 } from "lucide-react"
+import CTWhatsNewModal from "@/components/layout/CTWhatsNewModal"
 
 const navItems = [
   { label: "Inicio", href: "/cuerpotecnico", icon: Home },
@@ -86,6 +87,30 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
           )
         })}
 
+        <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase px-3 mb-1.5 mt-5">COMPETENCIAS</p>
+        <Link
+          href="/cuerpotecnico/calendario-macro"
+          onClick={() => mobile && setMobileOpen(false)}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+            pathname === "/cuerpotecnico/calendario-macro" ? "bg-primary text-white shadow-sm" : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          <Calendar className={`h-[18px] w-[18px] shrink-0 ${pathname === "/cuerpotecnico/calendario-macro" ? "text-white" : "text-gray-400"}`} />
+          <span className="flex-1">Calendario Macro</span>
+        </Link>
+        {(ct.rol === "ENTRENADOR_NACIONAL" || ct.rol === "ENTRENADOR_EXTRANJERO" || ct.rol === "ASISTENTE") && (
+          <Link
+            href="/cuerpotecnico/estadisticas"
+            onClick={() => mobile && setMobileOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              pathname === "/cuerpotecnico/estadisticas" ? "bg-primary text-white shadow-sm" : "text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <BarChart3 className={`h-[18px] w-[18px] shrink-0 ${pathname === "/cuerpotecnico/estadisticas" ? "text-white" : "text-gray-400"}`} />
+            <span className="flex-1">Estadísticas LNB</span>
+          </Link>
+        )}
+
         <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase px-3 mb-1.5 mt-5">PRÓXIMAMENTE</p>
         {comingSoon.map((item) => (
           <button key={item.label} onClick={() => setComingSoonMsg(item)}
@@ -144,6 +169,8 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
 
         <main className="flex-1 p-4 md:p-6">{children}</main>
       </div>
+
+      <CTWhatsNewModal rol={ct.rol} />
 
       {/* Coming soon modal */}
       {comingSoonMsg && (

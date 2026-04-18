@@ -95,6 +95,13 @@ export async function POST(request: Request) {
       ctUsers = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "HABILITADO" }, select: { id: true, email: true, nombre: true } })
     } else if (destinatarios === "CT_PENDIENTES") {
       ctUsers = await prisma.cuerpoTecnico.findMany({ where: { estadoHabilitacion: "PENDIENTE" }, select: { id: true, email: true, nombre: true } })
+    } else if (destinatarios === "CT_ENTRENADORES") {
+      ctUsers = await prisma.cuerpoTecnico.findMany({ where: { rol: { in: ["ENTRENADOR_NACIONAL", "ENTRENADOR_EXTRANJERO"] } }, select: { id: true, email: true, nombre: true } })
+    } else if (destinatarios === "CT_ASISTENTES") {
+      ctUsers = await prisma.cuerpoTecnico.findMany({ where: { rol: "ASISTENTE" }, select: { id: true, email: true, nombre: true } })
+    } else if (destinatarios === "TODOS_SISTEMA") {
+      users = await prisma.usuario.findMany({ select: selectFields })
+      ctUsers = await prisma.cuerpoTecnico.findMany({ select: { id: true, email: true, nombre: true } })
     } else if (destinatarios === "USUARIO_ESPECIFICO" && emailEspecifico) {
       const oficial = await prisma.usuario.findFirst({ where: { email: emailEspecifico }, select: selectFields })
       if (oficial) {

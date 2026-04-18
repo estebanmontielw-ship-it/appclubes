@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -16,18 +17,44 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Send, Bell, Mail, FileText, Search, Sparkles, Wand2, Smartphone } from "lucide-react"
 
-const DESTINATARIOS = [
-  { value: "TODOS", label: "Todos los oficiales" },
-  { value: "VERIFICADOS", label: "Solo verificados" },
-  { value: "PENDIENTES", label: "Pendientes de verificación" },
-  { value: "ARBITRO", label: "Árbitros" },
-  { value: "MESA", label: "Oficiales de Mesa" },
-  { value: "ESTADISTICO", label: "Estadísticos" },
-  { value: "CT_TODOS", label: "Cuerpo Técnico — Todos" },
-  { value: "CT_HABILITADOS", label: "Cuerpo Técnico — Habilitados" },
-  { value: "CT_PENDIENTES", label: "Cuerpo Técnico — Pendientes" },
-  { value: "USUARIO_ESPECIFICO", label: "Persona específica (buscar)" },
+const DESTINATARIOS_GRUPOS = [
+  {
+    label: "OFICIALES",
+    items: [
+      { value: "TODOS", label: "Todos los oficiales" },
+      { value: "VERIFICADOS", label: "Solo verificados (habilitados)" },
+      { value: "PENDIENTES", label: "Pendientes de verificación" },
+      { value: "ARBITRO", label: "Árbitros" },
+      { value: "MESA", label: "Oficiales de Mesa" },
+      { value: "ESTADISTICO", label: "Estadísticos" },
+    ],
+  },
+  {
+    label: "CUERPO TÉCNICO",
+    items: [
+      { value: "CT_TODOS", label: "Cuerpo Técnico — Todos" },
+      { value: "CT_HABILITADOS", label: "Cuerpo Técnico — Habilitados" },
+      { value: "CT_PENDIENTES", label: "Cuerpo Técnico — Pendientes" },
+      { value: "CT_ENTRENADORES", label: "Entrenadores (Nac. + Extran.)" },
+      { value: "CT_ASISTENTES", label: "Asistentes" },
+    ],
+  },
+  {
+    label: "TODOS",
+    items: [
+      { value: "TODOS_SISTEMA", label: "Todos — Oficiales + Cuerpo Técnico" },
+    ],
+  },
+  {
+    label: "INDIVIDUAL",
+    items: [
+      { value: "USUARIO_ESPECIFICO", label: "Persona específica (buscar)" },
+    ],
+  },
 ]
+
+// Flat list for lookups
+const DESTINATARIOS = DESTINATARIOS_GRUPOS.flatMap((g) => g.items)
 
 const PLANTILLAS = [
   {
@@ -167,7 +194,7 @@ export default function AdminNotificacionesPage() {
             body: JSON.stringify({
               titulo,
               mensaje,
-              destinatarios: destinatarios.startsWith("CT_") ? "ct" : destinatarios === "USUARIO_ESPECIFICO" ? "all" : "oficiales",
+              destinatarios: destinatarios === "TODOS_SISTEMA" ? "all" : destinatarios.startsWith("CT_") ? "ct" : destinatarios === "USUARIO_ESPECIFICO" ? "all" : "oficiales",
             }),
           })
           if (pushRes.ok) {
@@ -276,8 +303,16 @@ export default function AdminNotificacionesPage() {
                 <SelectValue placeholder="¿A quién va dirigido?" />
               </SelectTrigger>
               <SelectContent>
-                {DESTINATARIOS.map((d) => (
-                  <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                {DESTINATARIOS_GRUPOS.map((grupo, gi) => (
+                  <SelectGroup key={grupo.label}>
+                    {gi > 0 && <div className="my-1 h-px bg-gray-100" />}
+                    <div className="px-2 py-1">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">{grupo.label}</p>
+                    </div>
+                    {grupo.items.map((d) => (
+                      <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
