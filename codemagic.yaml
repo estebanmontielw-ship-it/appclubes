@@ -21,7 +21,7 @@ workflows:
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "py.com.cpb.app"
-      node: 20.11.0
+      node: 22.11.0
       xcode: latest
       cocoapods: default
 
@@ -88,7 +88,7 @@ workflows:
         - google_play    # contiene GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       vars:
         PACKAGE_NAME: "py.com.cpb.app"
-      node: 20.11.0
+      node: 22.11.0
       java: 17
 
     scripts:
