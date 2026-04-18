@@ -42,15 +42,27 @@ export default function PublicNavbar() {
 
   useEffect(() => {
     let cancelled = false
-    fetch("/api/auth/whoami")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (cancelled) return
-        if (d) { setUserInfo(d); setSessionState("logged_in") }
-        else { setSessionState("logged_out") }
-      })
-      .catch(() => { if (!cancelled) setSessionState("logged_out") })
-    return () => { cancelled = true }
+
+    const checkSession = () =>
+      fetch("/api/auth/whoami")
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (cancelled) return
+          if (d) { setUserInfo(d); setSessionState("logged_in") }
+          else { setSessionState("logged_out"); setUserInfo(null) }
+        })
+        .catch(() => { if (!cancelled) setSessionState("logged_out") })
+
+    checkSession()
+
+    // Keep state in sync across tabs and after token refresh
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
+      if (event === "SIGNED_OUT") { if (!cancelled) { setSessionState("logged_out"); setUserInfo(null) } }
+      else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") { checkSession() }
+    })
+
+    return () => { cancelled = true; subscription.unsubscribe() }
   }, [])
 
   const handleLogout = async () => {

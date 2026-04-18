@@ -22,7 +22,7 @@ export async function GET() {
 
   const profile = await prisma.usuario.findUnique({
     where: { id: user.id },
-    select: { nombre: true, apellido: true, email: true, clubFavorito: true, alertasCategorias: true },
+    select: { nombre: true, apellido: true, email: true, avatarUrl: true, clubFavorito: true, alertasCategorias: true },
   })
   if (!profile) return NextResponse.json({ error: "Perfil no encontrado" }, { status: 404 })
 
@@ -50,11 +50,17 @@ export async function PUT(request: Request) {
     .filter((c: unknown): c is string => typeof c === "string" && ALLOWED_CATEGORIAS.has(c))
     .slice(0, 10)
 
+  // avatarUrl: only accept HTTPS URLs from our own Supabase storage
+  const avatarUrl = typeof body.avatarUrl === "string" && body.avatarUrl.startsWith("https://")
+    ? body.avatarUrl
+    : body.avatarUrl === null ? null : undefined
+
   await prisma.usuario.update({
     where: { id: user.id },
     data: {
       clubFavorito,
       alertasCategorias: alertasCategorias.length ? JSON.stringify(alertasCategorias) : null,
+      ...(avatarUrl !== undefined ? { avatarUrl } : {}),
     },
   })
 

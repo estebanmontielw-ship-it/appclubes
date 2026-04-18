@@ -1,171 +1,159 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { createClient } from "@/utils/supabase/client"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2, LogOut, Star, Bell, User } from "lucide-react"
-import { useToast } from "@/components/ui/use-toast"
+import Link from "next/link"
+import { Star, Bell, User, ChevronRight, BellOff } from "lucide-react"
 
-const CATEGORIAS = [
-  { id: "lnb", label: "Liga Nacional Masculina (LNB)" },
-  { id: "lnbf", label: "Liga Nacional Femenina (LNBF)" },
-  { id: "u22m", label: "Sub-22 Masculino" },
-  { id: "u22f", label: "Sub-22 Femenino" },
-]
-
-interface Club { id: number; nombre: string }
 interface Profile {
   nombre: string
   apellido: string
   email: string
+  avatarUrl: string | null
   clubFavorito: string | null
   alertasCategorias: string | null
 }
 
-export default function MiCuentaPage() {
-  const router = useRouter()
-  const { toast } = useToast()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+interface Club { id: number; nombre: string; logoUrl: string | null; sigla: string | null }
+
+const CATEG_LABELS: Record<string, string> = {
+  lnb: "Liga Nacional Masculina",
+  lnbf: "Liga Nacional Femenina",
+  u22m: "Sub-22 Masculino",
+  u22f: "Sub-22 Femenino",
+}
+
+export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [clubes, setClubes] = useState<Club[]>([])
-  const [clubFavorito, setClubFavorito] = useState("")
-  const [categorias, setCategorias] = useState<string[]>([])
+  const [pushGranted, setPushGranted] = useState(false)
 
   useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) { router.push("/login"); return }
-      Promise.all([
-        fetch("/api/me/preferencias").then(r => r.json()),
-        fetch("/api/website/clubes").then(r => r.json()),
-      ]).then(([pref, clubData]) => {
-        if (pref.profile) {
-          setProfile(pref.profile)
-          setClubFavorito(pref.profile.clubFavorito || "")
-          try {
-            setCategorias(pref.profile.alertasCategorias ? JSON.parse(pref.profile.alertasCategorias) : [])
-          } catch { setCategorias([]) }
-        }
-        setClubes(clubData.clubes || [])
-        setLoading(false)
-      })
-    })
-  }, [router])
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const res = await fetch("/api/me/preferencias", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clubFavorito: clubFavorito || null, alertasCategorias: categorias }),
-      })
-      if (res.ok) {
-        toast({ title: "Preferencias guardadas" })
-      } else {
-        toast({ variant: "destructive", title: "Error al guardar" })
-      }
-    } catch {
-      toast({ variant: "destructive", title: "Error de conexión" })
-    } finally {
-      setSaving(false)
+    fetch("/api/me/preferencias").then(r => r.ok ? r.json() : null).then(d => d?.profile && setProfile(d.profile))
+    fetch("/api/website/clubes").then(r => r.json()).then(d => setClubes(d.clubes || []))
+    if (typeof window !== "undefined" && "Notification" in window) {
+      setPushGranted(Notification.permission === "granted")
     }
-  }
+  }, [])
 
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
-  }
+  const categorias = (() => {
+    try { return profile?.alertasCategorias ? JSON.parse(profile.alertasCategorias) as string[] : [] }
+    catch { return [] }
+  })()
 
-  const toggleCategoria = (id: string) => {
-    setCategorias(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id])
-  }
+  const clubData = clubes.find(c => c.nombre === profile?.clubFavorito)
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
-  }
-
-  if (!profile) return null
-
-  const initials = `${profile.nombre[0]}${profile.apellido[0]}`.toUpperCase()
+  const initials = profile ? `${profile.nombre[0]}${profile.apellido[0]}`.toUpperCase() : "?"
 
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4">
-      <div className="max-w-lg mx-auto space-y-6">
-        {/* Header */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-4">
-          <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-            <span className="text-2xl font-bold text-primary">{initials}</span>
+    <div className="space-y-4">
+      {/* Welcome header */}
+      <div className="bg-gradient-to-r from-[#0a1628] to-[#1a3a6e] rounded-2xl p-6 text-white">
+        <div className="flex items-center gap-4">
+          {profile?.avatarUrl ? (
+            <img src={profile.avatarUrl} alt="Avatar" className="h-14 w-14 rounded-full object-cover ring-2 ring-white/30" />
+          ) : (
+            <div className="h-14 w-14 rounded-full bg-white/10 flex items-center justify-center">
+              <span className="text-xl font-bold">{initials}</span>
+            </div>
+          )}
+          <div>
+            <p className="text-white/70 text-sm">Bienvenido de vuelta</p>
+            <h1 className="text-xl font-bold">{profile ? `${profile.nombre} ${profile.apellido}` : "..."}</h1>
+            <p className="text-white/60 text-xs mt-0.5">{profile?.email}</p>
           </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-gray-900 truncate">{profile.nombre} {profile.apellido}</h1>
-            <p className="text-sm text-gray-500 truncate">{profile.email}</p>
-            <span className="inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-              <User className="h-3 w-3" /> Aficionado
-            </span>
-          </div>
-          <Button variant="ghost" size="icon" onClick={handleLogout} title="Cerrar sesión">
-            <LogOut className="h-5 w-5 text-gray-400" />
-          </Button>
         </div>
+      </div>
 
+      {/* Quick cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Club favorito */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-          <div className="flex items-center gap-2">
-            <Star className="h-5 w-5 text-yellow-500" />
-            <h2 className="font-semibold text-gray-900">Tu club favorito</h2>
+        <Link href="/mi-cuenta/perfil" className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-primary/30 transition-colors group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-yellow-500">
+              <Star className="h-4 w-4" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Club favorito</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary transition-colors" />
           </div>
-          <Select value={clubFavorito || "__none__"} onValueChange={v => setClubFavorito(v === "__none__" ? "" : v)}>
-            <SelectTrigger className="h-11 w-full">
-              <SelectValue placeholder="Seleccioná un club" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Sin seleccionar</SelectItem>
-              {clubes.map(c => (
-                <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+          {clubData?.logoUrl ? (
+            <div className="flex items-center gap-3">
+              <img src={clubData.logoUrl} alt={clubData.nombre} className="h-10 w-10 object-contain" />
+              <span className="font-semibold text-gray-900 text-sm leading-tight">{clubData.nombre}</span>
+            </div>
+          ) : profile?.clubFavorito ? (
+            <p className="font-semibold text-gray-900">{profile.clubFavorito}</p>
+          ) : (
+            <p className="text-sm text-gray-400">Sin seleccionar</p>
+          )}
+        </Link>
 
         {/* Categorías */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-4">
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-blue-500" />
-            <h2 className="font-semibold text-gray-900">Categorías de interés</h2>
+        <Link href="/mi-cuenta/perfil" className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-primary/30 transition-colors group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-blue-500">
+              <Bell className="h-4 w-4" />
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Categorías</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary transition-colors" />
           </div>
-          <p className="text-sm text-gray-500 -mt-2">Recibí notificaciones sobre los partidos que seguís</p>
-          <div className="space-y-3">
-            {CATEGORIAS.map(cat => (
-              <div key={cat.id} className="flex items-center gap-3">
-                <Checkbox id={`pref-${cat.id}`} checked={categorias.includes(cat.id)} onCheckedChange={() => toggleCategoria(cat.id)} />
-                <label htmlFor={`pref-${cat.id}`} className="text-sm text-gray-700 cursor-pointer">{cat.label}</label>
-              </div>
-            ))}
+          {categorias.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {categorias.map((c: string) => (
+                <span key={c} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-medium">
+                  {CATEG_LABELS[c] ?? c}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-400">Sin categorías</p>
+          )}
+        </Link>
+
+        {/* Notificaciones */}
+        <Link href="/mi-cuenta/notificaciones" className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:border-primary/30 transition-colors group">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2 text-green-500">
+              {pushGranted ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4 text-gray-400" />}
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Notificaciones</span>
+            </div>
+            <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary transition-colors" />
           </div>
-        </div>
+          {pushGranted ? (
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-sm font-medium text-gray-700">Activadas</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-gray-300" />
+              <span className="text-sm text-gray-400">No activadas</span>
+            </div>
+          )}
+        </Link>
+      </div>
 
-        <Button className="w-full h-11 text-base font-semibold" onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Guardar cambios
-        </Button>
-
-        <button
-          onClick={handleLogout}
-          className="w-full text-sm text-gray-400 hover:text-gray-600 transition-colors py-2"
-        >
-          Cerrar sesión
-        </button>
+      {/* Quick links */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 divide-y divide-gray-50">
+        <Link href="/mi-cuenta/perfil" className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors group">
+          <div className="h-9 w-9 rounded-xl bg-blue-50 flex items-center justify-center">
+            <User className="h-4 w-4 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900">Mi perfil</p>
+            <p className="text-xs text-gray-500">Foto, club favorito y preferencias</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary" />
+        </Link>
+        <Link href="/mi-cuenta/notificaciones" className="flex items-center gap-3 px-5 py-4 hover:bg-gray-50 transition-colors group">
+          <div className="h-9 w-9 rounded-xl bg-purple-50 flex items-center justify-center">
+            <Bell className="h-4 w-4 text-purple-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-900">Configurar notificaciones</p>
+            <p className="text-xs text-gray-500">Elegí qué partidos y competencias te interesan</p>
+          </div>
+          <ChevronRight className="h-4 w-4 text-gray-300 group-hover:text-primary" />
+        </Link>
       </div>
     </div>
   )

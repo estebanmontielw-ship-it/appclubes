@@ -41,6 +41,7 @@ model Usuario {
   genero             String             @default("Masculino")
   fotoCedulaUrl      String?
   fotoCarnetUrl      String?
+  avatarUrl          String?
   clubFavorito       String?
   alertasCategorias  String?
   estadoVerificacion EstadoVerificacion @default(PENDIENTE)
