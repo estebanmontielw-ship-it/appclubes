@@ -18,7 +18,7 @@ workflows:
         bundle_identifier: py.com.cpb.app
       vars:
         APP_STORE_APPLE_ID: 6762518262
-        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "py.com.cpb.app"
       node: 22.11.0
@@ -55,7 +55,7 @@ workflows:
       - name: Build iOS .ipa
         script: |
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
+            --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
     artifacts:
