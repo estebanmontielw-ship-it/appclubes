@@ -21,10 +21,27 @@ const MONTHS_ES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Ago
 interface MatchEntry { comp: CompKey; match: NormalizedMatch }
 
 interface TeamOption {
-  key: string          // normalized name used as id
-  name: string
+  key: string          // sigla (uppercase) when available, else normalized name
+  displayName: string  // common word prefix across all team names in the group
   sigla: string | null
-  comps: CompKey[]     // competitions this team appears in
+  logo: string | null  // first logo found for this club
+  comps: CompKey[]
+  nameKeys: string[]   // all normalized names belonging to this club (for matching)
+}
+
+// Finds the longest common word prefix across multiple team names
+// "OLIMPIA KINGS" + "OLIMPIA QUEENS" + "Olimpia U22 F" → "Olimpia"
+function commonWordPrefix(names: string[]): string {
+  if (names.length === 0) return ""
+  if (names.length === 1) return names[0]
+  const wordArrays = names.map(n => n.trim().split(/\s+/))
+  const common: string[] = []
+  for (let i = 0; i < wordArrays[0].length; i++) {
+    const w = wordArrays[0][i].toUpperCase()
+    if (wordArrays.every(a => (a[i] ?? "").toUpperCase() === w)) common.push(wordArrays[0][i])
+    else break
+  }
+  return common.join(" ") || names[0]
 }
 
 // ── Custom team dropdown ─────────────────────────────────────────────────────
@@ -54,7 +71,7 @@ function TeamSelect({
     const q = search.toLowerCase().trim()
     if (!q) return teams
     return teams.filter(t =>
-      t.name.toLowerCase().includes(q) || (t.sigla ?? "").toLowerCase().includes(q)
+      t.displayName.toLowerCase().includes(q) || (t.sigla ?? "").toLowerCase().includes(q)
     )
   }, [teams, search])
 
@@ -74,9 +91,14 @@ function TeamSelect({
             : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
         }`}
       >
-        <Users className="h-3.5 w-3.5 shrink-0" />
+        {selected?.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={selected.logo} alt="" width={16} height={16} className="w-4 h-4 object-contain rounded-full shrink-0" />
+        ) : (
+          <Users className="h-3.5 w-3.5 shrink-0" />
+        )}
         <span className="max-w-[120px] truncate">
-          {selected ? (selected.sigla ?? selected.name) : "Equipo"}
+          {selected ? (selected.sigla ?? selected.displayName) : "Equipo"}
         </span>
         <ChevronDown className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
@@ -122,18 +144,25 @@ function TeamSelect({
                   value === team.key ? "bg-blue-50/60" : ""
                 }`}
               >
-                {/* Sigla badge */}
-                <span className="w-9 text-[10px] font-black text-gray-500 text-right shrink-0">
-                  {team.sigla ?? team.name.slice(0,3).toUpperCase()}
-                </span>
-                {/* Name */}
+                {/* Logo or sigla badge */}
+                <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center shrink-0 overflow-hidden">
+                  {team.logo ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={team.logo} alt="" width={28} height={28} className="w-full h-full object-contain p-0.5" />
+                  ) : (
+                    <span className="text-[9px] font-black text-gray-400 uppercase">
+                      {team.sigla ?? team.key.slice(0, 3)}
+                    </span>
+                  )}
+                </div>
+                {/* Club name (common prefix) */}
                 <span className={`flex-1 font-medium truncate ${value === team.key ? "text-[#0a1628] font-bold" : "text-gray-700"}`}>
-                  {team.name}
+                  {team.displayName}
                 </span>
-                {/* Competition dots */}
+                {/* Competition dots — one per comp the club plays in */}
                 <div className="flex gap-0.5 shrink-0">
                   {team.comps.map(c => (
-                    <span key={c} className="w-2 h-2 rounded-full" style={{ backgroundColor: COMP_COLORS[c] }} title={c.toUpperCase()} />
+                    <span key={c} className="w-2 h-2 rounded-full" style={{ backgroundColor: COMP_COLORS[c] }} title={COMP_CONFIG[c].label} />
                   ))}
                 </div>
               </button>
@@ -275,27 +304,49 @@ export default function MacroCalendar() {
     })
   }, [])
 
-  // Deduplicated team list across all competitions, sorted alphabetically
+  // Deduplicated team list — primary grouping by sigla (same sigla = same club),
+  // fallback to normalized name when sigla is absent.
+  // "OLIMPIA KINGS" + "OLIMPIA QUEENS" + "Olimpia U22 F" (all sigla OLI)
+  // → one entry: key="OLI", displayName="Olimpia", comps=[lnb,lnbf,u22f]
   const availableTeams = useMemo((): TeamOption[] => {
-    const map = new Map<string, TeamOption>()
+    // map key → { names[], sigla, logo, comps[] }
+    const raw = new Map<string, { names: string[]; sigla: string | null; logo: string | null; comps: CompKey[] }>()
+
     for (const comp of ALL_COMPS) {
       for (const match of (allMatches[comp] ?? [])) {
+        const logoMap: Record<string, string | null> = {
+          [match.homeName]: match.homeLogo,
+          [match.awayName]: match.awayLogo,
+        }
         const pairs: [string, string | null][] = [
           [match.homeName, match.homeSigla],
           [match.awayName, match.awaySigla],
         ]
         for (const [name, sigla] of pairs) {
-          const key = name.toLowerCase().trim()
-          const existing = map.get(key)
+          // Group key: sigla (uppercase) when present, else normalized name
+          const groupKey = sigla ? sigla.toUpperCase().trim() : name.toLowerCase().trim()
+          const existing = raw.get(groupKey)
           if (existing) {
+            if (!existing.names.includes(name)) existing.names.push(name)
             if (!existing.comps.includes(comp)) existing.comps.push(comp)
+            if (!existing.logo && logoMap[name]) existing.logo = logoMap[name]
           } else {
-            map.set(key, { key, name, sigla, comps: [comp] })
+            raw.set(groupKey, { names: [name], sigla: sigla ?? null, logo: logoMap[name] ?? null, comps: [comp] })
           }
         }
       }
     }
-    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "es"))
+
+    return Array.from(raw.entries())
+      .map(([key, { names, sigla, logo, comps }]) => ({
+        key,
+        displayName: commonWordPrefix(names) || names[0],
+        sigla,
+        logo,
+        comps,
+        nameKeys: names.map(n => n.toLowerCase().trim()),
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName, "es"))
   }, [allMatches])
 
   // All active matches indexed by date, sorted by time — respects both comp and team filters
@@ -305,11 +356,18 @@ export default function MacroCalendar() {
       if (!activeComps.has(comp)) continue
       for (const match of (allMatches[comp] ?? [])) {
         if (!match.date) continue
-        // Team filter: skip if a team is selected and this match doesn't involve them
+        // Team filter: match by sigla (primary) or normalized name (fallback)
         if (selectedTeam) {
-          const homeKey = match.homeName.toLowerCase().trim()
-          const awayKey = match.awayName.toLowerCase().trim()
-          if (homeKey !== selectedTeam && awayKey !== selectedTeam) continue
+          const team = availableTeams.find(t => t.key === selectedTeam)
+          if (team) {
+            const homeSigla = match.homeSigla?.toUpperCase().trim() ?? ""
+            const awaySigla = match.awaySigla?.toUpperCase().trim() ?? ""
+            const homeNameKey = match.homeName.toLowerCase().trim()
+            const awayNameKey = match.awayName.toLowerCase().trim()
+            const homeMatch = (team.sigla && homeSigla === team.key) || team.nameKeys.includes(homeNameKey)
+            const awayMatch = (team.sigla && awaySigla === team.key) || team.nameKeys.includes(awayNameKey)
+            if (!homeMatch && !awayMatch) continue
+          }
         }
         const arr = map.get(match.date) ?? []
         arr.push({ comp, match })
@@ -620,8 +678,13 @@ export default function MacroCalendar() {
         if (!team) return null
         return (
           <div className="flex items-center gap-2 text-xs text-[#0a1628] bg-blue-50 border border-blue-100 rounded-full px-3 py-1.5 self-start">
-            <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
-            <span className="font-bold">{team.sigla ?? team.name}</span>
+            {team.logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={team.logo} alt="" width={20} height={20} className="w-5 h-5 object-contain rounded-full shrink-0" />
+            ) : (
+              <Users className="h-3.5 w-3.5 text-blue-400 shrink-0" />
+            )}
+            <span className="font-bold">{team.sigla ?? team.displayName}</span>
             <span className="text-gray-400">·</span>
             <div className="flex gap-1">
               {team.comps.map(c => (
