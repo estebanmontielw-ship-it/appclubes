@@ -17,6 +17,22 @@ const CATEGORIAS = [
   { id: "lnbf", label: "Liga Nacional Femenina", sublabel: "LNBF" },
 ]
 
+function normalize(s: string) {
+  return s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+}
+
+function dedupeClubs(clubs: Club[]): Club[] {
+  const seen = new Set<string>()
+  const out: Club[] = []
+  for (const c of clubs) {
+    const key = normalize(c.nombre)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(c)
+  }
+  return out
+}
+
 export default function PerfilPage() {
   const { toast } = useToast()
   const fileRef = useRef<HTMLInputElement>(null)
@@ -41,7 +57,7 @@ export default function PerfilPage() {
         setAvatarUrl(p.avatarUrl || null)
         try { setCategorias(p.alertasCategorias ? JSON.parse(p.alertasCategorias) : []) } catch { setCategorias([]) }
       }
-      setClubes(clubData.clubes || [])
+      setClubes(dedupeClubs(clubData.clubes || []))
     })
   }, [])
 

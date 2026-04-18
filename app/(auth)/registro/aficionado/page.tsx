@@ -7,19 +7,32 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
+import { cn } from "@/lib/utils"
 
 const CATEGORIAS = [
-  { id: "lnb", label: "Liga Nacional Masculina (LNB)" },
-  { id: "lnbf", label: "Liga Nacional Femenina (LNBF)" },
-  { id: "u22m", label: "Sub-22 Masculino" },
-  { id: "u22f", label: "Sub-22 Femenino" },
+  { id: "lnb", label: "Liga Nacional Masculina", sublabel: "LNB" },
+  { id: "lnbf", label: "Liga Nacional Femenina", sublabel: "LNBF" },
 ]
 
-interface Club { id: number; nombre: string; ciudad: string }
+interface Club { id: number; nombre: string; ciudad: string; logoUrl: string | null; sigla: string | null }
+
+function normalize(s: string) {
+  return s.toLowerCase().trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+}
+
+function dedupeClubs(clubs: Club[]): Club[] {
+  const seen = new Set<string>()
+  const out: Club[] = []
+  for (const c of clubs) {
+    const key = normalize(c.nombre)
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(c)
+  }
+  return out
+}
 
 export default function RegistroAficionadoPage() {
   const router = useRouter()
@@ -41,7 +54,7 @@ export default function RegistroAficionadoPage() {
   useEffect(() => {
     fetch("/api/website/clubes")
       .then(r => r.json())
-      .then(d => setClubes(d.clubes || []))
+      .then(d => setClubes(dedupeClubs(d.clubes || [])))
       .catch(() => {})
   }, [])
 
@@ -159,33 +172,102 @@ export default function RegistroAficionadoPage() {
         ) : (
           <>
             <CardContent className="space-y-5 pt-4">
-              <div className="space-y-1.5">
+              {/* Club favorito — visual grid with logos */}
+              <div className="space-y-2">
                 <Label>Club favorito <span className="text-gray-400 font-normal">(opcional)</span></Label>
-                <Select value={clubFavorito || undefined} onValueChange={setClubFavorito}>
-                  <SelectTrigger className="h-11 w-full">
-                    <SelectValue placeholder="Seleccioná un club" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {clubes.map(c => (
-                      <SelectItem key={c.id} value={c.nombre}>{c.nombre}</SelectItem>
+                <p className="text-xs text-gray-500">Tocá tu club de la LNB o LNBF</p>
+
+                {clubes.length === 0 ? (
+                  <div className="grid grid-cols-4 gap-2 pt-1">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <div key={i} className="aspect-square rounded-xl bg-gray-100 animate-pulse" />
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-4 gap-2 pt-1">
+                    {clubes.map(club => {
+                      const selected = clubFavorito === club.nombre
+                      return (
+                        <button
+                          type="button"
+                          key={club.id}
+                          onClick={() => setClubFavorito(selected ? "" : club.nombre)}
+                          className={cn(
+                            "flex flex-col items-center gap-1 p-2 rounded-xl border-2 transition-all",
+                            selected
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : "border-gray-100 hover:border-gray-200 bg-gray-50"
+                          )}
+                          title={club.nombre}
+                        >
+                          {club.logoUrl ? (
+                            <img src={club.logoUrl} alt={club.nombre} className="h-8 w-8 object-contain" />
+                          ) : (
+                            <div className="h-8 w-8 rounded-lg bg-gray-200 flex items-center justify-center">
+                              <span className="text-[10px] font-bold text-gray-500">{club.sigla ?? club.nombre.slice(0, 3)}</span>
+                            </div>
+                          )}
+                          <span className="text-[9px] font-medium text-gray-600 text-center leading-tight line-clamp-2">
+                            {club.sigla ?? club.nombre.split(" ").slice(-1)[0]}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {clubFavorito && (
+                  <div className="mt-2 p-2.5 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-2">
+                    {clubes.find(c => c.nombre === clubFavorito)?.logoUrl && (
+                      <img src={clubes.find(c => c.nombre === clubFavorito)!.logoUrl!} alt="" className="h-6 w-6 object-contain" />
+                    )}
+                    <p className="flex-1 text-xs font-semibold text-primary truncate">{clubFavorito}</p>
+                    <button
+                      type="button"
+                      onClick={() => setClubFavorito("")}
+                      className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                )}
               </div>
+
+              {/* Categorías — cards con toggle */}
               <div className="space-y-2">
                 <Label>Categorías de interés <span className="text-gray-400 font-normal">(opcional)</span></Label>
                 <p className="text-xs text-gray-500">Recibí alertas sobre los partidos que te interesan</p>
-                <div className="space-y-2.5 pt-1">
-                  {CATEGORIAS.map(cat => (
-                    <div key={cat.id} className="flex items-center gap-3">
-                      <Checkbox
-                        id={cat.id}
-                        checked={categorias.includes(cat.id)}
-                        onCheckedChange={() => toggleCategoria(cat.id)}
-                      />
-                      <label htmlFor={cat.id} className="text-sm text-gray-700 cursor-pointer">{cat.label}</label>
-                    </div>
-                  ))}
+                <div className="space-y-2 pt-1">
+                  {CATEGORIAS.map(cat => {
+                    const active = categorias.includes(cat.id)
+                    return (
+                      <button
+                        type="button"
+                        key={cat.id}
+                        onClick={() => toggleCategoria(cat.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-3 rounded-xl border-2 transition-all text-left",
+                          active ? "border-primary bg-primary/5" : "border-gray-100 hover:border-gray-200 bg-gray-50"
+                        )}
+                      >
+                        <div className={cn(
+                          "h-9 w-9 rounded-lg flex items-center justify-center font-bold text-xs shrink-0",
+                          active ? "bg-primary text-white" : "bg-gray-200 text-gray-600"
+                        )}>
+                          {cat.sublabel}
+                        </div>
+                        <span className={cn("flex-1 font-medium text-sm", active ? "text-primary" : "text-gray-700")}>
+                          {cat.label}
+                        </span>
+                        <div className={cn(
+                          "h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0",
+                          active ? "border-primary bg-primary" : "border-gray-300"
+                        )}>
+                          {active && <CheckCircle2 className="h-3 w-3 text-white" />}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             </CardContent>
