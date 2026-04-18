@@ -22,7 +22,7 @@ workflows:
         XCODE_SCHEME: "App"
         BUNDLE_ID: "py.com.cpb.app"
       node: 22.11.0
-      xcode: latest
+      xcode: 16.2
 
     scripts:
       - name: Install npm dependencies
