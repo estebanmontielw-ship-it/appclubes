@@ -83,21 +83,20 @@ export async function GET() {
     const bySigla = new Map<string, Club>()
     const noSigla: Club[] = []
 
-    for (const club of byName.values()) {
-      const code = club.sigla?.toUpperCase().trim()
-      if (!code) { noSigla.push(club); continue }
+    Array.from(byName.values()).forEach(club => {
+      const code = club.sigla ? club.sigla.toUpperCase().trim() : ""
+      if (!code) { noSigla.push(club); return }
       const existing = bySigla.get(code)
       if (!existing) {
         bySigla.set(code, club)
       } else {
-        // Keep the entry with the longer/fuller name, prefer one with a logo
         const keepLonger = club.nombre.length > existing.nombre.length ? club : existing
         const logo = existing.logoUrl ?? club.logoUrl
         bySigla.set(code, { ...keepLonger, logoUrl: logo })
       }
-    }
+    })
 
-    const clubes = [...bySigla.values(), ...noSigla].sort((a, b) =>
+    const clubes = Array.from(bySigla.values()).concat(noSigla).sort((a, b) =>
       a.nombre.localeCompare(b.nombre, "es")
     )
 
