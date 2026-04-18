@@ -1,0 +1,132 @@
+# Codemagic CI/CD for CPB Capacitor app
+# Two workflows: ios-release → App Store Connect, android-release → Play Store
+# Reference: https://docs.codemagic.io/yaml-basic-configuration/yaml-getting-started/
+
+workflows:
+  # ───────────────────────────────────────────────────────────
+  # iOS workflow — builds and uploads to TestFlight
+  # ───────────────────────────────────────────────────────────
+  ios-release:
+    name: iOS — App Store
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    integrations:
+      app_store_connect: CPB App Store Connect
+    environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: py.com.cpb.app
+      vars:
+        APP_STORE_APPLE_ID: 1234567890   # ← reemplazar con tu App Store ID una vez creada la app
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
+        XCODE_SCHEME: "App"
+        BUNDLE_ID: "py.com.cpb.app"
+      node: 20.11.0
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Generate Prisma client
+        script: npx prisma generate
+
+      - name: Add iOS platform if missing
+        script: |
+          if [ ! -d "ios" ]; then
+            npx cap add ios
+          fi
+
+      - name: Copy Firebase config into iOS project
+        script: |
+          cp assets/firebase/GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
+
+      - name: Sync Capacitor to iOS
+        script: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
+
+      - name: Set build number from Codemagic
+        script: |
+          cd ios/App
+          agvtool new-version -all $(($BUILD_NUMBER + 1))
+
+      - name: Build iOS .ipa
+        script: |
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.app
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        # Uncomment the next two lines once you're ready to submit to App Store review:
+        # submit_to_app_store: false
+        # release_type: MANUAL
+
+  # ───────────────────────────────────────────────────────────
+  # Android workflow — builds signed .aab for Play Store
+  # ───────────────────────────────────────────────────────────
+  android-release:
+    name: Android — Play Store
+    max_build_duration: 60
+    instance_type: linux_x2
+    environment:
+      android_signing:
+        - cpb_keystore   # crear esto en Codemagic → App settings → Code signing identities
+      groups:
+        - google_play    # contiene GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+      vars:
+        PACKAGE_NAME: "py.com.cpb.app"
+      node: 20.11.0
+      java: 17
+
+    scripts:
+      - name: Install npm dependencies
+        script: npm ci
+
+      - name: Generate Prisma client
+        script: npx prisma generate
+
+      - name: Add Android platform if missing
+        script: |
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
+
+      - name: Copy Firebase config into Android project
+        script: |
+          cp assets/firebase/google-services.json android/app/google-services.json
+
+      - name: Sync Capacitor to Android
+        script: npx cap sync android
+
+      - name: Bump Android version code
+        script: |
+          cd android
+          sed -i.bak "s/versionCode [0-9]*/versionCode $(($BUILD_NUMBER + 1))/" app/build.gradle
+
+      - name: Build signed Android App Bundle
+        script: |
+          cd android
+          ./gradlew bundleRelease
+
+    artifacts:
+      - android/app/build/outputs/**/*.aab
+      - android/app/build/outputs/**/mapping.txt
+
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal           # cambiar a 'production' cuando esté listo
+        submit_as_draft: true
