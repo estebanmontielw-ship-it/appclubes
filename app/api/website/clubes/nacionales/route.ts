@@ -35,6 +35,8 @@ function normalizeKey(name: string): string {
     .replace(/[^a-z0-9]/g, "")
 }
 
+type Club = { id: number; nombre: string; logoUrl: string | null; sigla: string | null; ciudad: string }
+
 export async function GET() {
   try {
     const [lnb, lnbf] = await Promise.all([
@@ -55,33 +57,47 @@ export async function GET() {
       }
     }
 
-    // Merge by normalized base name, preferring entries that have a logo
-    const byKey = new Map<string, { id: number; nombre: string; logoUrl: string | null; sigla: string | null; ciudad: string }>()
-
+    // Pass 1: dedupe by normalized name
+    const byName = new Map<string, Club>()
     for (const t of allTeams) {
       const rawName: string = t.competitorName ?? t.teamName ?? t.name ?? ""
       if (!rawName) continue
-
-      const baseName = stripGenderSuffix(rawName)
       const key = normalizeKey(rawName)
       const logo = extractLogo(t)
-
-      const existing = byKey.get(key)
+      const existing = byName.get(key)
       if (!existing) {
-        byKey.set(key, {
+        byName.set(key, {
           id: t.competitorId ?? t.teamId ?? t.id ?? 0,
-          nombre: baseName,
+          nombre: stripGenderSuffix(rawName),
           logoUrl: logo,
           sigla: t.competitorCode ?? t.teamCode ?? t.code ?? null,
           ciudad: t.city ?? "",
         })
       } else if (!existing.logoUrl && logo) {
-        // upgrade to version that has a logo
-        byKey.set(key, { ...existing, logoUrl: logo })
+        byName.set(key, { ...existing, logoUrl: logo })
       }
     }
 
-    const clubes = Array.from(byKey.values()).sort((a, b) =>
+    // Pass 2: dedupe by sigla — merge entries that share the same team code
+    // e.g. "FELIX PEREZ CARDOZO" (sigla FPC) + "FPC" (sigla FPC) → one entry
+    const bySigla = new Map<string, Club>()
+    const noSigla: Club[] = []
+
+    for (const club of byName.values()) {
+      const code = club.sigla?.toUpperCase().trim()
+      if (!code) { noSigla.push(club); continue }
+      const existing = bySigla.get(code)
+      if (!existing) {
+        bySigla.set(code, club)
+      } else {
+        // Keep the entry with the longer/fuller name, prefer one with a logo
+        const keepLonger = club.nombre.length > existing.nombre.length ? club : existing
+        const logo = existing.logoUrl ?? club.logoUrl
+        bySigla.set(code, { ...keepLonger, logoUrl: logo })
+      }
+    }
+
+    const clubes = [...bySigla.values(), ...noSigla].sort((a, b) =>
       a.nombre.localeCompare(b.nombre, "es")
     )
 
