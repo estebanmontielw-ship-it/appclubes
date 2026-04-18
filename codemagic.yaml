@@ -34,11 +34,12 @@ workflows:
 
       - name: Add iOS platform if missing
         script: |
+          set -e
           mkdir -p out
-          if [ ! -f "ios/App/Podfile" ]; then
-            rm -rf ios
-            npx cap add ios
-          fi
+          rm -rf ios
+          npx cap add ios
+          echo "=== Podfile location ==="
+          find ios -name "Podfile" 2>/dev/null || echo "No Podfile found"
 
       - name: Copy Firebase config into iOS project
         script: |
@@ -49,7 +50,10 @@ workflows:
 
       - name: Install CocoaPods dependencies
         script: |
-          cd ios/App
+          set -e
+          PODFILE=$(find ios -name "Podfile" -maxdepth 4 | head -1)
+          echo "Podfile found at: $PODFILE"
+          cd "$(dirname "$PODFILE")"
           pod install
 
       - name: Set build number from Codemagic
