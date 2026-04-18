@@ -37,17 +37,18 @@ export default function NotificacionesPage() {
   const requestPush = async () => {
     setActivating(true)
     try {
-      const { requestNotificationPermission } = await import("@/lib/firebase")
-      const token = await requestNotificationPermission()
+      const { requestPushPermission, savePushToken } = await import("@/lib/native-push")
+      const token = await requestPushPermission()
 
-      if (Notification.permission === "granted") {
+      // Re-check permission state after request
+      const granted = typeof window !== "undefined" && "Notification" in window
+        ? Notification.permission === "granted"
+        : !!token
+
+      if (granted) {
         setPermState("granted")
         if (token) {
-          await fetch("/api/push/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ token }),
-          })
+          await savePushToken(token)
           toast({ title: "Notificaciones activadas", description: "Te avisaremos cuando haya partidos" })
         }
       } else {
@@ -55,10 +56,10 @@ export default function NotificacionesPage() {
         toast({
           variant: "destructive",
           title: "Permiso denegado",
-          description: "Habilitá las notificaciones en la configuración de tu navegador",
+          description: "Habilitá las notificaciones en la configuración de tu dispositivo",
         })
       }
-    } catch (e) {
+    } catch {
       toast({ variant: "destructive", title: "Error al activar" })
     } finally {
       setActivating(false)

@@ -8,10 +8,22 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "cap:sync": "npx cap sync",
+    "cap:ios": "npx cap open ios",
+    "cap:android": "npx cap open android",
+    "cap:icons": "node scripts/generate-app-icons.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.81.0",
+    "@capacitor/android": "^8.3.1",
+    "@capacitor/app": "^8.1.0",
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
+    "@capacitor/ios": "^8.3.1",
+    "@capacitor/push-notifications": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.1",
+    "@capacitor/status-bar": "^8.0.2",
     "@google-analytics/data": "^5.2.1",
     "@hookform/resolvers": "^5.2.2",
     "@prisma/client": "^5.22.0",
