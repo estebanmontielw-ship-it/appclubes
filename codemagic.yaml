@@ -5,6 +5,7 @@
 workflows:
   # ───────────────────────────────────────────────────────────
   # iOS workflow — builds and uploads to TestFlight
+  # Capacitor 7 uses CocoaPods + xcworkspace
   # ───────────────────────────────────────────────────────────
   ios-release:
     name: iOS — App Store
@@ -17,12 +18,12 @@ workflows:
         distribution_type: app_store
         bundle_identifier: py.com.cpb.app
       vars:
-        APP_STORE_APPLE_ID: 1234567890   # ← reemplazar con tu App Store ID una vez creada la app
+        APP_STORE_APPLE_ID: 6762518262
         XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "py.com.cpb.app"
-      node: 20.11.0
-      xcode: latest
+      node: 22.11.0
+      xcode: 16.2
       cocoapods: default
 
     scripts:
@@ -32,23 +33,29 @@ workflows:
       - name: Generate Prisma client
         script: npx prisma generate
 
-      - name: Add iOS platform if missing
+      - name: Add iOS platform
         script: |
-          if [ ! -d "ios" ]; then
-            npx cap add ios
-          fi
+          set -e
+          mkdir -p out
+          rm -rf ios
+          npx cap add ios
+          echo "=== Podfile location ==="
+          find ios -name "Podfile" 2>/dev/null || echo "No Podfile found"
 
       - name: Copy Firebase config into iOS project
         script: |
           cp assets/firebase/GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
 
-      - name: Sync Capacitor to iOS
-        script: npx cap sync ios
-
       - name: Install CocoaPods dependencies
         script: |
           cd ios/App
           pod install
+
+      - name: Sync Capacitor to iOS
+        script: npx cap sync ios
+
+      - name: Apply provisioning profiles to Xcode project
+        script: xcode-project use-profiles
 
       - name: Set build number from Codemagic
         script: |
@@ -59,7 +66,8 @@ workflows:
         script: |
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME"
+            --scheme "$XCODE_SCHEME" \
+            --export-options-plist "ios-config/ExportOptions.plist"
 
     artifacts:
       - build/ios/ipa/*.ipa
@@ -88,7 +96,7 @@ workflows:
         - google_play    # contiene GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
       vars:
         PACKAGE_NAME: "py.com.cpb.app"
-      node: 20.11.0
+      node: 22.11.0
       java: 17
 
     scripts:
