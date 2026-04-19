@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client"
 import {
   Home, User, CreditCard, FileText, Bell, LogOut,
   GraduationCap, Users, History, FolderOpen, Lock,
-  Menu, X, Calendar, BarChart3,
+  Menu, X, Calendar, BarChart3, Globe,
 } from "lucide-react"
 import CTWhatsNewModal from "@/components/layout/CTWhatsNewModal"
 
@@ -122,7 +122,12 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
 
-      <div className="px-3 py-3 border-t border-gray-100">
+      <div className="px-3 py-3 border-t border-gray-100 space-y-0.5">
+        <Link href="/" onClick={() => mobile && setMobileOpen(false)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+          <Globe className="h-[18px] w-[18px] shrink-0 text-gray-400" />
+          <span>Volver al sitio CPB</span>
+        </Link>
         <button onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50">
           <LogOut className="h-[18px] w-[18px] shrink-0" />

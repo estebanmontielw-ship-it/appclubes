@@ -528,8 +528,16 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* Footer — Notificaciones + Logout */}
+      {/* Footer — Site link + Notificaciones + Logout */}
       <div className="px-3 py-3 border-t border-gray-100 space-y-0.5">
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all duration-150"
+        >
+          <Globe className="h-[18px] w-[18px] shrink-0 text-gray-400" />
+          <span>Volver al sitio CPB</span>
+        </Link>
         <Link
           href="/oficiales/notificaciones"
           onClick={onNavigate}
