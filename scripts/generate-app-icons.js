@@ -127,6 +127,26 @@ async function generateSplash() {
   console.log("✅ Splash screens generated")
 }
 
+async function generateWalletPassIcons() {
+  const outDir = path.join(ROOT, "public", "wallet-pass")
+  fs.mkdirSync(outDir, { recursive: true })
+  const sizes = [
+    { name: "icon.png",     px: 29 },
+    { name: "icon@2x.png",  px: 58 },
+    { name: "icon@3x.png",  px: 87 },
+    { name: "logo.png",     px: 50 },
+    { name: "logo@2x.png",  px: 100 },
+    { name: "logo@3x.png",  px: 150 },
+  ]
+  for (const { name, px } of sizes) {
+    await sharp(ICON_SRC)
+      .flatten({ background: "#ffffff" })
+      .resize(px, px)
+      .toFile(path.join(outDir, name))
+  }
+  console.log("✅ Apple Wallet pass icons generated")
+}
+
 async function main() {
   if (!fs.existsSync(ICON_SRC)) {
     console.error("❌ Missing assets/icon-source.png — place a 1024x1024 PNG there first")
@@ -136,6 +156,7 @@ async function main() {
   await generateIosIcons()
   await generateAndroidIcons()
   await generateSplash()
+  await generateWalletPassIcons()
   console.log("\n🎉 All assets generated!")
 }
 
