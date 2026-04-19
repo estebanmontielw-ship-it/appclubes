@@ -6,6 +6,7 @@ import PWARegister from "@/components/PWARegister"
 import ManifestSwitcher from "@/components/ManifestSwitcher"
 import PushNotifications from "@/components/PushNotifications"
 import CapacitorLinkHandler from "@/components/CapacitorLinkHandler"
+import StatusBarScrollEffect from "@/components/StatusBarScrollEffect"
 
 export const viewport = {
   width: "device-width",
@@ -84,6 +85,7 @@ export default function RootLayout({
         <ManifestSwitcher />
         <PushNotifications />
         <CapacitorLinkHandler />
+        <StatusBarScrollEffect />
       </body>
     </html>
   )
