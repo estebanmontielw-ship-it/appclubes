@@ -48,9 +48,8 @@ const config: CapacitorConfig = {
       spinnerColor: "#ffffff",
     },
     StatusBar: {
-      style: "DARK",            // white icons on dark background
-      backgroundColor: "#0a1628",
-      overlaysWebView: false,
+      style: "DEFAULT",         // iOS auto-adjusts icon color based on content underneath
+      overlaysWebView: true,    // el color de la página se extiende hasta el borde superior
     },
     App: {
       // handle back button on Android — prevents accidental exit

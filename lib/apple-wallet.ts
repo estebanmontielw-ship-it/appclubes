@@ -28,7 +28,17 @@ function requireEnv(name: string): string {
   const v = process.env[name]
   if (!v) throw new Error(`Missing env var: ${name}`)
   // Soporta tanto saltos reales como literales "\n" (facilita pegar en Vercel como una línea)
-  return v.replace(/\\n/g, "\n")
+  return v.replace(/\\n/g, "\n").trim()
+}
+
+function validatePem(name: string, content: string, expectedHeaders: string[]): void {
+  const firstLine = content.split("\n")[0]?.trim() || ""
+  const matches = expectedHeaders.some((h) => firstLine === `-----BEGIN ${h}-----`)
+  if (!matches) {
+    throw new Error(
+      `${name} tiene formato PEM inválido. Primera línea: "${firstLine.slice(0, 60)}". Esperaba uno de: ${expectedHeaders.join(", ")}`
+    )
+  }
 }
 
 function loadIcon(name: string): Buffer {
@@ -45,6 +55,10 @@ export async function generateCarnetPass(data: CarnetPassData): Promise<Buffer> 
   const signerKey = requireEnv("APPLE_PASS_SIGNER_KEY_PEM")
   const wwdr = requireEnv("APPLE_PASS_WWDR_PEM")
   const signerKeyPassphrase = process.env.APPLE_PASS_SIGNER_KEY_PASSWORD || ""
+
+  validatePem("APPLE_PASS_SIGNER_CERT_PEM", signerCert, ["CERTIFICATE"])
+  validatePem("APPLE_PASS_WWDR_PEM", wwdr, ["CERTIFICATE"])
+  validatePem("APPLE_PASS_SIGNER_KEY_PEM", signerKey, ["PRIVATE KEY", "ENCRYPTED PRIVATE KEY", "RSA PRIVATE KEY"])
 
   const verificadoFecha = new Date(data.verificadoEn).toLocaleDateString("es-PY", {
     day: "2-digit",
