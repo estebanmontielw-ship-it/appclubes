@@ -12,6 +12,14 @@ export default function PushNotifications() {
     if (typeof window === "undefined") return
     if ((window as any).Capacitor?.isNative) return
     if (!("Notification" in window)) return
+
+    // Skip banner if already installed as PWA — silently register if already granted
+    const isPWA = window.matchMedia?.("(display-mode: standalone)").matches || (window.navigator as any).standalone
+    if (isPWA) {
+      if (Notification.permission === "granted") registerPush()
+      return
+    }
+
     if (Notification.permission === "granted") {
       registerPush()
       return

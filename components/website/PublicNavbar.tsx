@@ -39,6 +39,17 @@ export default function PublicNavbar() {
   const [sessionState, setSessionState] = useState<SessionState>("loading")
   const [userInfo, setUserInfo] = useState<UserInfo>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [scrolledPastHero, setScrolledPastHero] = useState(false)
+
+  // On the homepage, the navbar uses a dark theme until the user scrolls past the hero
+  const darkTheme = pathname === "/" && !scrolledPastHero
+
+  useEffect(() => {
+    const update = () => setScrolledPastHero(window.scrollY > window.innerHeight * 0.6)
+    window.addEventListener("scroll", update, { passive: true })
+    update()
+    return () => window.removeEventListener("scroll", update)
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -81,7 +92,12 @@ export default function PublicNavbar() {
   return (
     <header
       data-navbar
-      className="sticky top-0 z-50 bg-gradient-to-r from-[#0a1628] to-[#132043] lg:bg-none lg:bg-white/95 backdrop-blur-md border-b border-white/10 lg:border-gray-100/80 shadow-sm"
+      className={cn(
+        "sticky top-0 z-50 backdrop-blur-md border-b transition-colors duration-300 shadow-sm",
+        darkTheme
+          ? "bg-gradient-to-r from-[#0a1628] to-[#132043] border-white/10 lg:bg-white/95 lg:border-gray-100/80"
+          : "bg-white/95 border-gray-100/80"
+      )}
       style={{ paddingTop: "env(safe-area-inset-top)" }}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -90,8 +106,8 @@ export default function PublicNavbar() {
           <Link href="/" className="flex items-center gap-3 shrink-0">
             <img src="/favicon-cpb.png" alt="CPB" className="h-10 w-10 object-contain" />
             <div className="hidden sm:block">
-              <p className="font-heading text-lg text-white lg:text-gray-900 leading-tight tracking-wide">CPB</p>
-              <p className="text-[10px] text-blue-300 lg:text-gray-400 leading-tight -mt-0.5">Confederación Paraguaya de Básquetbol</p>
+              <p className={cn("font-heading text-lg leading-tight tracking-wide", darkTheme ? "text-white lg:text-gray-900" : "text-gray-900")}>CPB</p>
+              <p className={cn("text-[10px] leading-tight -mt-0.5", darkTheme ? "text-blue-300 lg:text-gray-400" : "text-gray-400")}>Confederación Paraguaya de Básquetbol</p>
             </div>
           </Link>
 
@@ -202,7 +218,7 @@ export default function PublicNavbar() {
 
             <button
               onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden p-2 rounded-lg text-white/80 hover:bg-white/10"
+              className={cn("lg:hidden p-2 rounded-lg", darkTheme ? "text-white/80 hover:bg-white/10" : "text-gray-600 hover:bg-gray-100")}
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>

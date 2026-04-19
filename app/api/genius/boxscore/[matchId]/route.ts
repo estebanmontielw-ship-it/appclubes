@@ -52,8 +52,8 @@ export async function GET(
       }
     }
 
-    const normalize = (raw: any[], teamId: string) => {
-      const players = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
+    const normalize = (raw: any, _teamId: string) => {
+      const players: any[] = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
       return players
         .filter((p: any) => p.played === 1 || p.sMinutes)
         .map((p: any) => ({

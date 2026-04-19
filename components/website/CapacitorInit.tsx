@@ -14,10 +14,9 @@ export default function CapacitorInit() {
 
     async function init() {
       try {
-        // Configure status bar
+        // Configure status bar — transparent bg so each page's header color shows through
         const { StatusBar, Style } = await import("@capacitor/status-bar")
         await StatusBar.setStyle({ style: Style.Dark })
-        await StatusBar.setBackgroundColor({ color: "#0a1628" })
       } catch {}
 
       try {

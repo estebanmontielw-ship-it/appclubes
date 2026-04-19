@@ -42,7 +42,7 @@ export default function HeroSection({ slides }: HeroSectionProps) {
   }, [effectiveSlides.length])
 
   return (
-    <section className="relative bg-[#0a1628] text-white overflow-hidden min-h-[85vh] flex items-center">
+    <section className="relative bg-[#0a1628] text-white overflow-hidden min-h-screen md:min-h-[85vh] flex items-center">
       {/* Rotating background images with crossfade */}
       <div className="absolute inset-0">
         {effectiveSlides.map((slide, idx) => (
@@ -125,8 +125,6 @@ export default function HeroSection({ slides }: HeroSectionProps) {
         </div>
       </div>
 
-      {/* Bottom gradient fade */}
-      <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
     </section>
   )
 }
