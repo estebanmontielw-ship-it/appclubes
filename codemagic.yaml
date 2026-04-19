@@ -42,6 +42,9 @@ workflows:
           echo "=== Podfile location ==="
           find ios -name "Podfile" 2>/dev/null || echo "No Podfile found"
 
+      - name: Generate app icons
+        script: node scripts/generate-app-icons.js
+
       - name: Copy Firebase config into iOS project
         script: |
           cp assets/firebase/GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
