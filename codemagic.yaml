@@ -47,6 +47,9 @@ workflows:
       - name: Sync Capacitor to iOS
         script: npx cap sync ios
 
+      - name: Apply provisioning profiles to Xcode project
+        script: xcode-project use-profiles
+
       - name: Set build number from Codemagic
         script: |
           cd ios/App
