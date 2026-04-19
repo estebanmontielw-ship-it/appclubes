@@ -5,6 +5,7 @@
 workflows:
   # ───────────────────────────────────────────────────────────
   # iOS workflow — builds and uploads to TestFlight
+  # Capacitor 7 uses CocoaPods + xcworkspace
   # ───────────────────────────────────────────────────────────
   ios-release:
     name: iOS — App Store
@@ -18,11 +19,12 @@ workflows:
         bundle_identifier: py.com.cpb.app
       vars:
         APP_STORE_APPLE_ID: 6762518262
-        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_WORKSPACE: "ios/App/App.xcworkspace"
         XCODE_SCHEME: "App"
         BUNDLE_ID: "py.com.cpb.app"
       node: 22.11.0
       xcode: 16.2
+      cocoapods: default
 
     scripts:
       - name: Install npm dependencies
@@ -31,7 +33,7 @@ workflows:
       - name: Generate Prisma client
         script: npx prisma generate
 
-      - name: Add iOS platform if missing
+      - name: Add iOS platform
         script: |
           set -e
           mkdir -p out
@@ -43,6 +45,11 @@ workflows:
       - name: Copy Firebase config into iOS project
         script: |
           cp assets/firebase/GoogleService-Info.plist ios/App/App/GoogleService-Info.plist
+
+      - name: Install CocoaPods dependencies
+        script: |
+          cd ios/App
+          pod install
 
       - name: Sync Capacitor to iOS
         script: npx cap sync ios
@@ -58,7 +65,7 @@ workflows:
       - name: Build iOS .ipa
         script: |
           xcode-project build-ipa \
-            --project "$XCODE_PROJECT" \
+            --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
             --export-options-plist "ios-config/ExportOptions.plist"
 
