@@ -38,18 +38,10 @@ export default function CapacitorInit() {
         })
       } catch {}
 
-      // Register for push notifications silently if already granted
+      // Register for push notifications — requests permission if not yet asked
       try {
-        if (typeof window !== "undefined" && "Notification" in window) {
-          if ((window as any).Capacitor?.isNative) {
-            const { PushNotifications } = await import("@capacitor/push-notifications")
-            const perm = await PushNotifications.checkPermissions()
-            if (perm.receive === "granted") {
-              const token = await registerNativePush()
-              if (token) await savePushToken(token)
-            }
-          }
-        }
+        const token = await registerNativePush()
+        if (token) await savePushToken(token)
       } catch {}
     }
 

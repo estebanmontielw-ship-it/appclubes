@@ -146,7 +146,12 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
 
       <div className="flex-1 flex flex-col min-h-screen">
         {/* Top bar */}
-        <header className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between md:px-6">
+        <header
+          data-navbar
+          className="sticky top-0 z-10 bg-white border-b border-gray-100"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
+        <div className="px-4 py-3 flex items-center justify-between md:px-6">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 -ml-2 rounded-lg text-gray-600 hover:bg-gray-100">
               <Menu className="h-5 w-5" />
@@ -165,6 +170,7 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
               )}
             </div>
           </div>
+        </div>
         </header>
 
         <main className="flex-1 p-4 md:p-6">{children}</main>

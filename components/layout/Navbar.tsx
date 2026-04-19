@@ -19,7 +19,12 @@ export default function Navbar({
   menuOpen,
 }: NavbarProps) {
   return (
-    <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100 h-14 flex items-center px-4 md:px-6">
+    <header
+      data-navbar
+      className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-gray-100"
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
+    <div className="h-14 flex items-center px-4 md:px-6">
       {/* Mobile menu button */}
       <Button
         variant="ghost"
@@ -61,6 +66,7 @@ export default function Navbar({
           <span className="text-sm font-medium text-gray-700">{userName}</span>
         </div>
       </div>
+    </div>
     </header>
   )
 }

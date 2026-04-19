@@ -111,9 +111,18 @@ export default function CarnetPage() {
     window.open("/api/carnet/pdf", "_blank")
   }
 
-  const handleAddToWallet = () => {
-    // iOS: descarga el .pkpass → iOS lo abre con Wallet automáticamente
-    window.location.href = "/api/carnet/wallet/ios"
+  const [walletLoading, setWalletLoading] = useState(false)
+
+  const handleAddToWallet = async () => {
+    setWalletLoading(true)
+    try {
+      const { openWalletPass } = await import("@/lib/wallet-download")
+      await openWalletPass("/api/carnet/wallet/ios")
+    } catch (err) {
+      toast({ variant: "destructive", title: "No se pudo abrir el carnet en Wallet" })
+    } finally {
+      setWalletLoading(false)
+    }
   }
 
   const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent)
@@ -298,9 +307,9 @@ export default function CarnetPage() {
       {/* Action buttons */}
       <div className="space-y-3">
         {isVerified && isIOS && (
-          <Button onClick={handleAddToWallet} className="w-full bg-black hover:bg-zinc-900 text-white">
+          <Button onClick={handleAddToWallet} disabled={walletLoading} className="w-full bg-black hover:bg-zinc-900 text-white">
             <Wallet className="mr-2 h-4 w-4" />
-            Agregar a Apple Wallet
+            {walletLoading ? "Abriendo Wallet..." : "Agregar a Apple Wallet"}
           </Button>
         )}
         <div className="flex gap-3">
