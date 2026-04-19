@@ -51,6 +51,8 @@ function getNavSections(
         label: "MI CUENTA",
         items: [
           { label: "Dashboard", href: "/oficiales/admin", icon: Home },
+          { label: "Mi perfil", href: "/oficiales/perfil", icon: User },
+          { label: "Mi carnet", href: "/oficiales/carnet", icon: CreditCard },
         ],
       },
       {
