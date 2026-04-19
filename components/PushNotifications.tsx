@@ -8,24 +8,22 @@ export default function PushNotifications() {
   const [registering, setRegistering] = useState(false)
 
   useEffect(() => {
-    // Don't show if not supported or already asked
+    // Skip web prompt on native Capacitor — CapacitorInit handles push there
     if (typeof window === "undefined") return
+    if ((window as any).Capacitor?.isNative) return
     if (!("Notification" in window)) return
     if (Notification.permission === "granted") {
-      // Already granted, register silently
       registerPush()
       return
     }
     if (Notification.permission === "denied") return
 
-    // Check if already asked
     const asked = localStorage.getItem("cpb-push-asked")
     if (asked) {
       const askedAt = parseInt(asked)
-      if (Date.now() - askedAt < 7 * 24 * 60 * 60 * 1000) return // Ask again after 7 days
+      if (Date.now() - askedAt < 7 * 24 * 60 * 60 * 1000) return
     }
 
-    // Show prompt after delay
     setTimeout(() => setShowPrompt(true), 10000)
   }, [])
 
