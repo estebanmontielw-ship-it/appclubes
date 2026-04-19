@@ -12,6 +12,7 @@ const config: CapacitorConfig = {
     url: "https://cpb.com.py",
     cleartext: false, // HTTPS only
     androidScheme: "https",
+    allowNavigation: ["cpb.com.py", "*.cpb.com.py"],
   },
 
   // ─── iOS ──────────────────────────────────────────────────
