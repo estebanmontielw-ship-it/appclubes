@@ -22,12 +22,12 @@ export type CarnetPassData = {
   verificadoEn: Date | string
   qrToken: string
   serialNumber: string
+  fotoCarnetUrl?: string | null
 }
 
 function requireEnv(name: string): string {
   const v = process.env[name]
   if (!v) throw new Error(`Missing env var: ${name}`)
-  // Soporta tanto saltos reales como literales "\n" (facilita pegar en Vercel como una línea)
   return v.replace(/\\n/g, "\n").trim()
 }
 
@@ -48,6 +48,35 @@ function loadIcon(name: string): Buffer {
   return fs.readFileSync(fallback)
 }
 
+/** Resizes the CPB logo to a given size with transparent background */
+async function buildLogoBuffer(size: number): Promise<Buffer> {
+  const sharp = (await import("sharp")).default
+  const src = path.join(process.cwd(), "public", "favicon-cpb.png")
+  return sharp(src)
+    .resize(size, size, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .png()
+    .toBuffer()
+}
+
+/** Fetches the user photo URL and returns square-cropped thumbnail buffers */
+async function buildThumbnails(
+  url: string
+): Promise<{ thumb: Buffer; thumb2x: Buffer } | null> {
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(6000) })
+    if (!res.ok) return null
+    const raw = Buffer.from(await res.arrayBuffer())
+    const sharp = (await import("sharp")).default
+    const [thumb, thumb2x] = await Promise.all([
+      sharp(raw).resize(90, 90, { fit: "cover", position: "top" }).png().toBuffer(),
+      sharp(raw).resize(180, 180, { fit: "cover", position: "top" }).png().toBuffer(),
+    ])
+    return { thumb, thumb2x }
+  } catch {
+    return null
+  }
+}
+
 export async function generateCarnetPass(data: CarnetPassData): Promise<Buffer> {
   const passTypeIdentifier = requireEnv("APPLE_PASS_TYPE_ID")
   const teamIdentifier = requireEnv("APPLE_TEAM_ID")
@@ -66,14 +95,28 @@ export async function generateCarnetPass(data: CarnetPassData): Promise<Buffer> 
     year: "numeric",
   })
 
+  // Build logo + photo in parallel
+  const [logo1x, logo2x, thumbnails] = await Promise.all([
+    buildLogoBuffer(40),
+    buildLogoBuffer(80),
+    data.fotoCarnetUrl ? buildThumbnails(data.fotoCarnetUrl) : null,
+  ])
+
+  const passFiles: Record<string, Buffer> = {
+    "icon.png": loadIcon("icon.png"),
+    "icon@2x.png": loadIcon("icon@2x.png"),
+    "icon@3x.png": loadIcon("icon@3x.png"),
+    "logo.png": logo1x,
+    "logo@2x.png": logo2x,
+  }
+
+  if (thumbnails) {
+    passFiles["thumbnail.png"] = thumbnails.thumb
+    passFiles["thumbnail@2x.png"] = thumbnails.thumb2x
+  }
+
   const pass = new PKPass(
-    {
-      "icon.png": loadIcon("icon.png"),
-      "icon@2x.png": loadIcon("icon@2x.png"),
-      "icon@3x.png": loadIcon("icon@3x.png"),
-      "logo.png": loadIcon("logo.png"),
-      "logo@2x.png": loadIcon("logo@2x.png"),
-    },
+    passFiles,
     { wwdr, signerCert, signerKey, signerKeyPassphrase },
     {
       formatVersion: 1,
@@ -84,7 +127,7 @@ export async function generateCarnetPass(data: CarnetPassData): Promise<Buffer> 
       serialNumber: data.serialNumber,
       foregroundColor: "rgb(255, 255, 255)",
       backgroundColor: "rgb(10, 22, 40)",
-      labelColor: "rgb(200, 220, 255)",
+      labelColor: "rgb(147, 197, 253)",
       logoText: "CPB",
     }
   )
@@ -93,7 +136,7 @@ export async function generateCarnetPass(data: CarnetPassData): Promise<Buffer> 
 
   pass.primaryFields.push({
     key: "nombre",
-    label: "NOMBRE",
+    label: "NOMBRE COMPLETO",
     value: data.nombreCompleto,
   })
 
@@ -104,7 +147,7 @@ export async function generateCarnetPass(data: CarnetPassData): Promise<Buffer> 
 
   pass.auxiliaryFields.push(
     { key: "ciudad", label: "CIUDAD", value: data.ciudad || "Paraguay" },
-    { key: "verificado", label: "VERIFICADO", value: verificadoFecha }
+    { key: "verificado", label: "HABILITADO DESDE", value: verificadoFecha }
   )
 
   pass.backFields.push(

@@ -39,6 +39,7 @@ export async function GET() {
       verificadoEn: usuario.verificadoEn || new Date(),
       qrToken: usuario.qrToken,
       serialNumber: usuario.id,
+      fotoCarnetUrl: usuario.fotoCarnetUrl,
     })
 
     return new NextResponse(new Uint8Array(buffer), {
