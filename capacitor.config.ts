@@ -20,7 +20,7 @@ const config: CapacitorConfig = {
     backgroundColor: "#0a1628",
     allowsLinkPreview: false,
     scrollEnabled: true,
-    limitsNavigationsToAppBoundDomains: true,
+    limitsNavigationsToAppBoundDomains: false,
   },
 
   // ─── Android ──────────────────────────────────────────────
