@@ -62,7 +62,7 @@ async function generateIosIcons() {
     const px = Math.round(size * scale)
     const filename = `icon-${idiom}-${px}.png`
     if (!generated.has(filename)) {
-      await sharp(ICON_SRC).resize(px, px).toFile(path.join(outDir, filename))
+      await sharp(ICON_SRC).flatten({ background: "#ffffff" }).resize(px, px).toFile(path.join(outDir, filename))
       generated.add(filename)
     }
     images.push({ size: `${size}x${size}`, idiom, filename, scale: `${scale}x` })
