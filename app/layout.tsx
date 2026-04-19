@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster"
 import PWARegister from "@/components/PWARegister"
 import ManifestSwitcher from "@/components/ManifestSwitcher"
 import PushNotifications from "@/components/PushNotifications"
+import CapacitorLinkHandler from "@/components/CapacitorLinkHandler"
 
 export const viewport = {
   width: "device-width",
@@ -82,6 +83,7 @@ export default function RootLayout({
         <PWARegister />
         <ManifestSwitcher />
         <PushNotifications />
+        <CapacitorLinkHandler />
       </body>
     </html>
   )

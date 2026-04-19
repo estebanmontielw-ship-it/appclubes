@@ -84,21 +84,67 @@ async function generateAndroidIcons() {
   console.log("✅ Android icons generated")
 }
 
+async function generateSplashImage(srcPath) {
+  // If no splash source, generate one: CPB logo centered on dark blue background
+  const SIZE = 2732
+  const LOGO_SIZE = 600
+  const BG = { r: 10, g: 22, b: 40 } // #0a1628
+
+  if (srcPath && fs.existsSync(srcPath)) {
+    return sharp(srcPath).resize(SIZE, SIZE, { fit: "cover" }).flatten({ background: BG }).toBuffer()
+  }
+
+  // Build splash from icon: dark blue bg + centered logo
+  const logo = await sharp(ICON_SRC)
+    .flatten({ background: BG })
+    .resize(LOGO_SIZE, LOGO_SIZE)
+    .toBuffer()
+
+  return sharp({
+    create: { width: SIZE, height: SIZE, channels: 3, background: BG },
+  })
+    .composite([{ input: logo, gravity: "center" }])
+    .png()
+    .toBuffer()
+}
+
 async function generateSplash() {
+  const splashBuf = await generateSplashImage(fs.existsSync(SPLASH_SRC) ? SPLASH_SRC : null)
+
   // iOS splash
   const iosSplashDir = path.join(ROOT, "ios", "App", "App", "Assets.xcassets", "Splash.imageset")
   fs.mkdirSync(iosSplashDir, { recursive: true })
-  await sharp(SPLASH_SRC).resize(2732, 2732, { fit: "cover" }).toFile(path.join(iosSplashDir, "splash.png"))
+  await sharp(splashBuf).toFile(path.join(iosSplashDir, "splash.png"))
   fs.writeFileSync(path.join(iosSplashDir, "Contents.json"), JSON.stringify({
     images: [{ idiom: "universal", filename: "splash.png", scale: "1x" }],
     info: { version: 1, author: "xcode" }
   }, null, 2))
 
-  // Android splash (placed in drawable folder by Capacitor)
+  // Android splash
   const androidDrawable = path.join(ROOT, "android", "app", "src", "main", "res", "drawable")
   fs.mkdirSync(androidDrawable, { recursive: true })
-  await sharp(SPLASH_SRC).resize(2732, 2732, { fit: "cover" }).toFile(path.join(androidDrawable, "splash.png"))
+  await sharp(splashBuf).toFile(path.join(androidDrawable, "splash.png"))
   console.log("✅ Splash screens generated")
+}
+
+async function generateWalletPassIcons() {
+  const outDir = path.join(ROOT, "public", "wallet-pass")
+  fs.mkdirSync(outDir, { recursive: true })
+  const sizes = [
+    { name: "icon.png",     px: 29 },
+    { name: "icon@2x.png",  px: 58 },
+    { name: "icon@3x.png",  px: 87 },
+    { name: "logo.png",     px: 50 },
+    { name: "logo@2x.png",  px: 100 },
+    { name: "logo@3x.png",  px: 150 },
+  ]
+  for (const { name, px } of sizes) {
+    await sharp(ICON_SRC)
+      .flatten({ background: "#ffffff" })
+      .resize(px, px)
+      .toFile(path.join(outDir, name))
+  }
+  console.log("✅ Apple Wallet pass icons generated")
 }
 
 async function main() {
@@ -109,8 +155,8 @@ async function main() {
   fs.mkdirSync(path.join(ROOT, "assets"), { recursive: true })
   await generateIosIcons()
   await generateAndroidIcons()
-  if (fs.existsSync(SPLASH_SRC)) await generateSplash()
-  else console.log("⚠️  No splash-source.png found — skipping splash generation")
+  await generateSplash()
+  await generateWalletPassIcons()
   console.log("\n🎉 All assets generated!")
 }
 

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "node scripts/bump-sw-version.js && prisma generate && next build",
+    "build": "node scripts/bump-sw-version.js && node scripts/generate-wallet-icons.js && prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
@@ -60,6 +60,7 @@
     "jspdf": "^4.2.1",
     "lucide-react": "^1.7.0",
     "next": "14.2.21",
+    "passkit-generator": "^3.4.0",
     "qrcode": "^1.5.4",
     "react": "^18",
     "react-dom": "^18",

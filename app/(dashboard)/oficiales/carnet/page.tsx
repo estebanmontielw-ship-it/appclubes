@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Download, Share2, AlertCircle, WifiOff, RefreshCw } from "lucide-react"
+import { Download, Share2, AlertCircle, WifiOff, RefreshCw, Wallet } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { ROL_LABELS } from "@/lib/constants"
 import { formatDate } from "@/lib/utils"
@@ -110,6 +110,13 @@ export default function CarnetPage() {
     // Opens the carnet HTML in a new tab — user can print/save as PDF
     window.open("/api/carnet/pdf", "_blank")
   }
+
+  const handleAddToWallet = () => {
+    // iOS: descarga el .pkpass → iOS lo abre con Wallet automáticamente
+    window.location.href = "/api/carnet/wallet/ios"
+  }
+
+  const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent)
 
   if (loading) {
     return (
@@ -289,19 +296,27 @@ export default function CarnetPage() {
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-3">
-        {isVerified && (
-          <Button onClick={handleDownloadPDF} className="flex-1">
-            <Download className="mr-2 h-4 w-4" />
-            Descargar PDF
+      <div className="space-y-3">
+        {isVerified && isIOS && (
+          <Button onClick={handleAddToWallet} className="w-full bg-black hover:bg-zinc-900 text-white">
+            <Wallet className="mr-2 h-4 w-4" />
+            Agregar a Apple Wallet
           </Button>
         )}
-        {usuario.qrToken && (
-          <Button variant="outline" onClick={handleShare} className="flex-1">
-            <Share2 className="mr-2 h-4 w-4" />
-            Compartir link
-          </Button>
-        )}
+        <div className="flex gap-3">
+          {isVerified && (
+            <Button onClick={handleDownloadPDF} variant="outline" className="flex-1">
+              <Download className="mr-2 h-4 w-4" />
+              Descargar PDF
+            </Button>
+          )}
+          {usuario.qrToken && (
+            <Button variant="outline" onClick={handleShare} className="flex-1">
+              <Share2 className="mr-2 h-4 w-4" />
+              Compartir link
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )
