@@ -16,15 +16,30 @@ const ROOT = path.join(__dirname, "..")
 const ICON_SRC = path.join(ROOT, "assets", "icon-source.png")
 const SPLASH_SRC = path.join(ROOT, "assets", "splash-source.png")
 
-// iOS icon sizes required by Xcode
-const IOS_ICONS = [
-  { size: 20, scales: [1, 2, 3] },
-  { size: 29, scales: [1, 2, 3] },
-  { size: 40, scales: [1, 2, 3] },
-  { size: 60, scales: [2, 3] },
-  { size: 76, scales: [1, 2] },
-  { size: 83.5, scales: [2] },
-  { size: 1024, scales: [1] }, // App Store
+// iOS icon entries with correct idiom per Apple spec
+const IOS_ICON_ENTRIES = [
+  // iPhone
+  { size: 20,   scale: 2, idiom: "iphone" },
+  { size: 20,   scale: 3, idiom: "iphone" },
+  { size: 29,   scale: 1, idiom: "iphone" },
+  { size: 29,   scale: 2, idiom: "iphone" },
+  { size: 29,   scale: 3, idiom: "iphone" },
+  { size: 40,   scale: 2, idiom: "iphone" },
+  { size: 40,   scale: 3, idiom: "iphone" },
+  { size: 60,   scale: 2, idiom: "iphone" },
+  { size: 60,   scale: 3, idiom: "iphone" },
+  // iPad
+  { size: 20,   scale: 1, idiom: "ipad" },
+  { size: 20,   scale: 2, idiom: "ipad" },
+  { size: 29,   scale: 1, idiom: "ipad" },
+  { size: 29,   scale: 2, idiom: "ipad" },
+  { size: 40,   scale: 1, idiom: "ipad" },
+  { size: 40,   scale: 2, idiom: "ipad" },
+  { size: 76,   scale: 1, idiom: "ipad" },
+  { size: 76,   scale: 2, idiom: "ipad" },   // 152x152
+  { size: 83.5, scale: 2, idiom: "ipad" },   // 167x167
+  // App Store
+  { size: 1024, scale: 1, idiom: "ios-marketing" },
 ]
 
 // Android icon sizes
@@ -40,21 +55,20 @@ async function generateIosIcons() {
   const outDir = path.join(ROOT, "ios", "App", "App", "Assets.xcassets", "AppIcon.appiconset")
   fs.mkdirSync(outDir, { recursive: true })
 
-  const entries = []
-  for (const { size, scales } of IOS_ICONS) {
-    for (const scale of scales) {
-      const px = Math.round(size * scale)
-      const filename = `icon-${px}.png`
+  const images = []
+  const generated = new Set()
+
+  for (const { size, scale, idiom } of IOS_ICON_ENTRIES) {
+    const px = Math.round(size * scale)
+    const filename = `icon-${idiom}-${px}.png`
+    if (!generated.has(filename)) {
       await sharp(ICON_SRC).resize(px, px).toFile(path.join(outDir, filename))
-      entries.push({ size: `${size}x${size}`, idiom: size <= 83.5 ? "iphone" : "ipad", filename, scale: `${scale}x` })
+      generated.add(filename)
     }
+    images.push({ size: `${size}x${size}`, idiom, filename, scale: `${scale}x` })
   }
 
-  // Write Contents.json for Xcode
-  const contents = {
-    images: entries.map(e => ({ size: e.size, idiom: e.idiom, filename: e.filename, scale: e.scale })),
-    info: { version: 1, author: "xcode" }
-  }
+  const contents = { images, info: { version: 1, author: "xcode" } }
   fs.writeFileSync(path.join(outDir, "Contents.json"), JSON.stringify(contents, null, 2))
   console.log("✅ iOS icons generated")
 }
