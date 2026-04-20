@@ -6,7 +6,8 @@
  * Returns the FCM token string, or null if unavailable/denied.
  */
 
-export { isNative } from "@/lib/capacitor"
+import { isNative } from "@/lib/capacitor"
+export { isNative }
 
 export async function registerNativePush(): Promise<string | null> {
   if (!isNative()) return null
