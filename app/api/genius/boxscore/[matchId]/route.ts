@@ -73,24 +73,31 @@ export async function GET(
       starter: !!(p.starter ?? p.starting ?? p.isStarting ?? p.isStarter),
     })
 
-    const sortPlayers = (rows: any[]) =>
-      rows
-        .filter(r => r.pts > 0 || Number(r.min) > 0)
-        .sort((a, b) => {
-          if (a.starter && !b.starter) return -1
-          if (!a.starter && b.starter) return 1
-          return b.pts - a.pts
-        })
+    const sortByStarterThenPts = (a: any, b: any) => {
+      if (a.starter && !b.starter) return -1
+      if (!a.starter && b.starter) return 1
+      return b.pts - a.pts
+    }
+
+    const hasAnyActivity = (r: any) =>
+      r.pts > 0 || Number(r.min) > 0 ||
+      r.reb > 0 || r.ast > 0 || r.stl > 0 || r.blk > 0 ||
+      r.to > 0 || r.pf > 0 || r.fg2a > 0 || r.fg3a > 0 || r.fta > 0
 
     const fromFiba = (teamData: any): any[] | null => {
       if (!teamData?.pl) return null
+      // All players in FibaLiveStats pl are official game participants — include all, no filtering
       const players = Object.values(teamData.pl).map(mapPlayer)
-      return players.length > 0 ? sortPlayers(players) : null
+      return players.length > 0 ? players.sort(sortByStarterThenPts) : null
     }
 
     const fromGenius = (raw: any): any[] => {
       const arr: any[] = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
-      return sortPlayers(arr.filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0).map(mapPlayer))
+      return arr
+        .filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0)
+        .map(mapPlayer)
+        .filter(hasAnyActivity)
+        .sort(sortByStarterThenPts)
     }
 
     // Extract team-level stats from FibaLiveStats
