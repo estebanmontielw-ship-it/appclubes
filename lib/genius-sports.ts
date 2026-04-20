@@ -9,38 +9,16 @@
 const API_BASE = "https://api.wh.geniussports.com/v1/basketball"
 const API_KEY = process.env.GENIUS_SPORTS_API_KEY || ""
 
-// In-memory cache
-const cache = new Map<string, { data: any; expires: number }>()
-
-const CACHE_TTL = {
-  short: 30 * 1000,        // 30 seconds — live match data
-  medium: 5 * 60 * 1000,   // 5 minutes — standings, schedule
-  long: 60 * 60 * 1000,    // 1 hour — competitions, teams
+// Revalidation seconds for Next.js Data Cache (shared across all serverless instances)
+const CACHE_TTL_SECONDS = {
+  short: 30,         // 30s — live match data
+  medium: 300,       // 5 min — standings, schedule
+  long: 3600,        // 1 hour — competitions, teams
 } as const
 
-type CacheTTL = keyof typeof CACHE_TTL
-
-function getCached(key: string): any | null {
-  const entry = cache.get(key)
-  if (!entry) return null
-  if (Date.now() > entry.expires) {
-    cache.delete(key)
-    return null
-  }
-  return entry.data
-}
-
-function setCache(key: string, data: any, ttl: CacheTTL) {
-  cache.set(key, { data, expires: Date.now() + CACHE_TTL[ttl] })
-}
+type CacheTTL = keyof typeof CACHE_TTL_SECONDS
 
 export async function geniusFetch(path: string, ttl: CacheTTL = "medium"): Promise<any> {
-  const cacheKey = path
-
-  // Check cache first
-  const cached = getCached(cacheKey)
-  if (cached) return cached
-
   const url = `${API_BASE}${path}`
 
   const res = await fetch(url, {
@@ -48,7 +26,7 @@ export async function geniusFetch(path: string, ttl: CacheTTL = "medium"): Promi
       "x-api-key": API_KEY,
       "Accept": "application/json",
     },
-    next: { revalidate: 0 }, // Don't use Next.js cache, we manage our own
+    next: { revalidate: CACHE_TTL_SECONDS[ttl] }, // Vercel Data Cache — shared across instances
   })
 
   if (!res.ok) {
@@ -56,9 +34,7 @@ export async function geniusFetch(path: string, ttl: CacheTTL = "medium"): Promi
     throw new Error(`Genius Sports API error ${res.status}: ${text}`)
   }
 
-  const data = await res.json()
-  setCache(cacheKey, data, ttl)
-  return data
+  return res.json()
 }
 
 // --- High-level helpers ---
