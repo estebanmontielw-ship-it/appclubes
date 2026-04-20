@@ -333,8 +333,18 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   const playerMap = new Map<number, Acc>()
   const teamMap = new Map<number, Acc & { teamGames: Set<number> }>()
 
-  // A player "played" if participated=1 OR has minutes > 0 (flag sometimes incorrect in LiveStats)
-  const didPlay = (p: any) => p.periodNumber === 0 && (p.participated === 1 || p.participated === "1" || (p.sMinutes != null && p.sMinutes > 0))
+  // A player "played" if participated=1, has minutes > 0, or has any recorded activity
+  // (participated flag is sometimes incorrect in Genius data)
+  const didPlay = (p: any) => {
+    if (p.periodNumber !== 0) return false
+    if (p.participated === 1 || p.participated === "1") return true
+    if (p.sMinutes != null && p.sMinutes > 0) return true
+    return (p.sPoints ?? 0) > 0 || (p.sReboundsTotal ?? 0) > 0 ||
+      (p.sAssists ?? 0) > 0 || (p.sSteals ?? 0) > 0 || (p.sBlocks ?? 0) > 0 ||
+      (p.sTurnovers ?? 0) > 0 || (p.sFoulsPersonal ?? 0) > 0 ||
+      (p.sTwoPointersAttempted ?? 0) > 0 || (p.sThreePointersAttempted ?? 0) > 0 ||
+      (p.sFreeThrowsAttempted ?? 0) > 0
+  }
 
   for (let i = 0; i < playerDataArrays.length; i++) {
     const matchId = completed[i].matchId
