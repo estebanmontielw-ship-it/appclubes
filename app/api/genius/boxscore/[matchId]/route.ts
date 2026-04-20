@@ -55,7 +55,7 @@ export async function GET(
     const normalize = (raw: any, _teamId: string) => {
       const players: any[] = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
       return players
-        .filter((p: any) => p.played === 1 || p.sMinutes)
+        .filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0)
         .map((p: any) => ({
           number: p.shirtNumber ?? p.shirt ?? "–",
           name: `${p.firstName ?? ""} ${p.familyName ?? p.lastName ?? ""}`.trim(),

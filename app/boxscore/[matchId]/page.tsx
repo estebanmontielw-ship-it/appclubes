@@ -7,7 +7,7 @@ import { Printer } from "lucide-react"
 interface PlayerRow {
   number: string
   name: string
-  min: string
+  min: string | number
   pts: number
   fg2m: number; fg2a: number
   fg3m: number; fg3a: number
@@ -26,8 +26,17 @@ interface BoxScore {
   away: PlayerRow[]
 }
 
+function fmtMin(raw: string | number): string {
+  if (raw === "–" || raw === "" || raw == null) return "–"
+  const n = typeof raw === "string" ? parseFloat(raw) : raw
+  if (isNaN(n) || n === 0) return "–"
+  const m = Math.floor(n)
+  const s = Math.round((n - m) * 60)
+  return `${m}:${s.toString().padStart(2, "0")}`
+}
+
 function pct(made: number, att: number) {
-  if (!att) return "–"
+  if (!att) return ""
   return Math.round((made / att) * 100) + "%"
 }
 
@@ -42,6 +51,10 @@ function totals(rows: PlayerRow[]) {
   }
 }
 
+const TH = "py-1 px-1 font-bold text-right text-[9px] tracking-wide"
+const TD = "py-0.5 px-1 text-right tabular-nums text-[10px]"
+const TD_LEFT = "py-0.5 pr-2 text-[10px]"
+
 function TeamTable({ rows, name, logo, color, score }: {
   rows: PlayerRow[]
   name: string
@@ -50,81 +63,96 @@ function TeamTable({ rows, name, logo, color, score }: {
   score: number | null
 }) {
   const t = totals(rows)
+  const starters = rows.filter(r => r.starter)
+  const bench = rows.filter(r => !r.starter)
+
+  const PlayerRow = ({ r, shade }: { r: PlayerRow; shade?: boolean }) => (
+    <tr className={shade ? "bg-gray-50/60" : ""}>
+      <td className={`${TD_LEFT} pl-1 text-gray-400 font-mono text-[9px] w-5`}>{r.number}</td>
+      <td className={`${TD_LEFT} font-semibold text-gray-900 min-w-[110px]`}>
+        {r.name}
+        {r.captain && <span className="ml-1 text-[8px] text-gray-400 font-normal">(C)</span>}
+      </td>
+      <td className={`${TD} text-gray-500`}>{fmtMin(r.min)}</td>
+      <td className={`${TD} font-black text-gray-900 text-[11px]`}>{r.pts}</td>
+      <td className={`${TD} text-gray-600`}>{r.fg2m}/{r.fg2a}</td>
+      <td className={`${TD} text-gray-600`}>{r.fg3m}/{r.fg3a}</td>
+      <td className={`${TD} text-gray-600`}>{r.ftm}/{r.fta}</td>
+      <td className={TD}>{r.ro}</td>
+      <td className={TD}>{r.rd}</td>
+      <td className={`${TD} font-semibold`}>{r.reb}</td>
+      <td className={TD}>{r.ast}</td>
+      <td className={TD}>{r.stl}</td>
+      <td className={TD}>{r.blk}</td>
+      <td className={TD}>{r.to}</td>
+      <td className={TD}>{r.pf}</td>
+      <td className={`${TD} font-semibold`} style={{ color: r.eff > 0 ? color : r.eff < 0 ? "#ef4444" : undefined }}>{r.eff}</td>
+    </tr>
+  )
+
   return (
-    <div className="mb-8">
+    <div className="team-section mb-4 print:mb-2">
       {/* Team header */}
-      <div className="flex items-center gap-3 mb-3 pb-2 border-b-2" style={{ borderColor: color }}>
-        {logo && <img src={logo} alt="" className="h-9 w-9 object-contain" />}
-        <div className="flex-1">
-          <p className="font-black text-base text-gray-900 leading-tight">{name}</p>
-        </div>
+      <div className="flex items-center gap-2.5 mb-1.5 pb-1.5 border-b-2" style={{ borderColor: color }}>
+        {logo && <img src={logo} alt="" className="h-8 w-8 print:h-6 print:w-6 object-contain shrink-0" />}
+        <p className="flex-1 font-black text-sm print:text-xs text-gray-900 uppercase tracking-wide">{name}</p>
         {score !== null && (
-          <span className="text-3xl font-black tabular-nums" style={{ color }}>{score}</span>
+          <span className="text-2xl print:text-xl font-black tabular-nums" style={{ color }}>{score}</span>
         )}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-[11px] border-collapse">
+      <div className="overflow-x-auto print:overflow-visible">
+        <table className="w-full border-collapse">
           <thead>
-            <tr className="text-gray-500 border-b border-gray-200">
-              <th className="text-left py-1 pr-2 font-bold w-6">#</th>
-              <th className="text-left py-1 pr-3 font-bold min-w-[120px]">JUGADOR</th>
-              <th className="py-1 px-1 font-bold text-right">MIN</th>
-              <th className="py-1 px-1 font-bold text-right text-gray-900">PTS</th>
-              <th className="py-1 px-1 font-bold text-right">2P</th>
-              <th className="py-1 px-1 font-bold text-right">3P</th>
-              <th className="py-1 px-1 font-bold text-right">TL</th>
-              <th className="py-1 px-1 font-bold text-right">RO</th>
-              <th className="py-1 px-1 font-bold text-right">RD</th>
-              <th className="py-1 px-1 font-bold text-right">REB</th>
-              <th className="py-1 px-1 font-bold text-right">ASI</th>
-              <th className="py-1 px-1 font-bold text-right">ROB</th>
-              <th className="py-1 px-1 font-bold text-right">TAP</th>
-              <th className="py-1 px-1 font-bold text-right">PER</th>
-              <th className="py-1 px-1 font-bold text-right">EF</th>
+            <tr className="text-gray-400 border-b border-gray-200">
+              <th className={`text-left py-1 pr-2 text-[9px] font-bold w-5`}>#</th>
+              <th className={`text-left py-1 pr-2 text-[9px] font-bold min-w-[110px]`}>JUGADOR</th>
+              <th className={`${TH} text-gray-500`}>MIN</th>
+              <th className={`${TH} text-gray-900`}>PTS</th>
+              <th className={TH}>2P</th>
+              <th className={TH}>3P</th>
+              <th className={TH}>TL</th>
+              <th className={TH}>RO</th>
+              <th className={TH}>RD</th>
+              <th className={TH}>REB</th>
+              <th className={TH}>ASI</th>
+              <th className={TH}>ROB</th>
+              <th className={TH}>TAP</th>
+              <th className={TH}>PER</th>
+              <th className={TH}>FP</th>
+              <th className={TH}>EF</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, i) => (
-              <tr key={i} className={`border-b border-gray-100 ${r.starter ? "" : "text-gray-500"}`}>
-                <td className="py-1 pr-2 text-gray-400 font-mono">{r.number}</td>
-                <td className="py-1 pr-3 font-semibold whitespace-nowrap">
-                  {r.name}
-                  {r.captain && <span className="ml-1 text-[9px] text-gray-400">(C)</span>}
-                  {r.starter && <span className="ml-1 text-[9px]" style={{ color }}>●</span>}
-                </td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.min}</td>
-                <td className="py-1 px-1 text-right tabular-nums font-black text-gray-900">{r.pts}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.fg2m}/{r.fg2a}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.fg3m}/{r.fg3a}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.ftm}/{r.fta}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.ro}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.rd}</td>
-                <td className="py-1 px-1 text-right tabular-nums font-semibold">{r.reb}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.ast}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.stl}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.blk}</td>
-                <td className="py-1 px-1 text-right tabular-nums">{r.pf}</td>
-                <td className="py-1 px-1 text-right tabular-nums font-semibold">{r.eff}</td>
-              </tr>
-            ))}
-            {/* Totals row */}
-            <tr className="font-black text-gray-900 border-t-2 border-gray-300 bg-gray-50">
-              <td colSpan={2} className="py-1.5 pr-3 text-xs">TOTALES</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">–</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.pts}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums text-[10px]">{t.fg2m}/{t.fg2a}<br/><span className="font-normal text-gray-400">{pct(t.fg2m,t.fg2a)}</span></td>
-              <td className="py-1.5 px-1 text-right tabular-nums text-[10px]">{t.fg3m}/{t.fg3a}<br/><span className="font-normal text-gray-400">{pct(t.fg3m,t.fg3a)}</span></td>
-              <td className="py-1.5 px-1 text-right tabular-nums text-[10px]">{t.ftm}/{t.fta}<br/><span className="font-normal text-gray-400">{pct(t.ftm,t.fta)}</span></td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.ro}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.rd}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.reb}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.ast}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.stl}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.blk}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.to}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.pf}</td>
-              <td className="py-1.5 px-1 text-right tabular-nums">{t.eff}</td>
+            {starters.length > 0 && (
+              <>
+                <tr><td colSpan={16} className="py-0.5 pl-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">Titulares</td></tr>
+                {starters.map((r, i) => <PlayerRow key={i} r={r} shade={i % 2 === 1} />)}
+              </>
+            )}
+            {bench.length > 0 && (
+              <>
+                <tr><td colSpan={16} className="py-0.5 pl-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 border-t border-t-gray-200 mt-1">Suplentes</td></tr>
+                {bench.map((r, i) => <PlayerRow key={i} r={r} shade={i % 2 === 1} />)}
+              </>
+            )}
+            {/* Totals */}
+            <tr className="font-black text-gray-900 border-t-2 border-gray-300">
+              <td colSpan={2} className="py-1 pl-1 text-[9px] uppercase tracking-wide">TOTALES</td>
+              <td className={`${TD} text-gray-500`}>–</td>
+              <td className={`${TD} text-[12px]`}>{t.pts}</td>
+              <td className={`${TD} text-[9px]`}>{t.fg2m}/{t.fg2a}<br /><span className="font-normal text-gray-400">{pct(t.fg2m,t.fg2a)}</span></td>
+              <td className={`${TD} text-[9px]`}>{t.fg3m}/{t.fg3a}<br /><span className="font-normal text-gray-400">{pct(t.fg3m,t.fg3a)}</span></td>
+              <td className={`${TD} text-[9px]`}>{t.ftm}/{t.fta}<br /><span className="font-normal text-gray-400">{pct(t.ftm,t.fta)}</span></td>
+              <td className={TD}>{t.ro}</td>
+              <td className={TD}>{t.rd}</td>
+              <td className={TD}>{t.reb}</td>
+              <td className={TD}>{t.ast}</td>
+              <td className={TD}>{t.stl}</td>
+              <td className={TD}>{t.blk}</td>
+              <td className={TD}>{t.to}</td>
+              <td className={TD}>{t.pf}</td>
+              <td className={TD}>{t.eff}</td>
             </tr>
           </tbody>
         </table>
@@ -138,19 +166,19 @@ export default function BoxScorePage() {
   const searchParams = useSearchParams()
   const matchId = params.matchId as string
 
-  const homeId   = searchParams.get("homeId") ?? ""
-  const awayId   = searchParams.get("awayId") ?? ""
-  const homeName = searchParams.get("homeName") ?? "Local"
-  const awayName = searchParams.get("awayName") ?? "Visitante"
+  const homeId    = searchParams.get("homeId") ?? ""
+  const awayId    = searchParams.get("awayId") ?? ""
+  const homeName  = searchParams.get("homeName") ?? "Local"
+  const awayName  = searchParams.get("awayName") ?? "Visitante"
   const homeSigla = searchParams.get("homeSigla") ?? ""
   const awaySigla = searchParams.get("awaySigla") ?? ""
-  const homeLogo = searchParams.get("homeLogo")
-  const awayLogo = searchParams.get("awayLogo")
+  const homeLogo  = searchParams.get("homeLogo")
+  const awayLogo  = searchParams.get("awayLogo")
   const homeScore = searchParams.get("homeScore")
   const awayScore = searchParams.get("awayScore")
-  const venue    = searchParams.get("venue") ?? ""
-  const date     = searchParams.get("date") ?? ""
-  const comp     = searchParams.get("comp") ?? ""
+  const venue     = searchParams.get("venue") ?? ""
+  const date      = searchParams.get("date") ?? ""
+  const comp      = searchParams.get("comp") ?? ""
 
   const [data, setData] = useState<BoxScore | null>(null)
   const [loading, setLoading] = useState(true)
@@ -165,7 +193,6 @@ export default function BoxScorePage() {
 
   const compLabel = comp === "lnb" ? "Liga Nacional de Básquetbol" : comp === "lnbf" ? "Liga Nacional de Básquetbol Femenino" : comp.toUpperCase()
   const compColor = comp === "lnb" ? "#ef4444" : "#ec4899"
-
   const periods = data?.periods ?? []
 
   return (
@@ -173,16 +200,38 @@ export default function BoxScorePage() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          @page { margin: 1.5cm; size: A4 landscape; }
+          body {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+            margin: 0;
+          }
+          @page {
+            size: A4 landscape;
+            margin: 0.6cm 0.8cm;
+          }
+          .boxscore-page {
+            padding: 0 !important;
+            max-width: 100% !important;
+          }
+          .match-header {
+            margin-bottom: 4px !important;
+            padding-bottom: 4px !important;
+          }
+          .team-section {
+            margin-bottom: 4px !important;
+          }
+          table td, table th {
+            padding-top: 1px !important;
+            padding-bottom: 1px !important;
+          }
         }
         body { font-family: 'Source Sans 3', system-ui, sans-serif; background: white; }
       `}</style>
 
-      <div className="max-w-[1100px] mx-auto p-6 sm:p-8 bg-white min-h-screen">
+      <div className="boxscore-page max-w-[1100px] mx-auto p-4 sm:p-6 bg-white min-h-screen print:min-h-0">
 
         {/* Print button */}
-        <div className="no-print flex justify-end mb-4">
+        <div className="no-print flex justify-end mb-3">
           <button
             onClick={() => window.print()}
             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-900 text-white text-sm font-semibold hover:bg-gray-700 transition-colors"
@@ -192,43 +241,44 @@ export default function BoxScorePage() {
           </button>
         </div>
 
-        {/* Header */}
-        <div className="border-b-4 pb-4 mb-6" style={{ borderColor: compColor }}>
-          <div className="flex items-center gap-2 mb-3">
-            <img src="/favicon-cpb.png" alt="CPB" className="h-8 w-8 object-contain" />
-            <div>
-              <p className="font-black text-xs uppercase tracking-widest" style={{ color: compColor }}>{compLabel}</p>
+        {/* Match header */}
+        <div className="match-header border-b-4 pb-3 mb-4 print:mb-2" style={{ borderColor: compColor }}>
+          {/* Competition info */}
+          <div className="flex items-center gap-2 mb-2">
+            <img src="/favicon-cpb.png" alt="CPB" className="h-7 w-7 object-contain" />
+            <div className="flex-1">
+              <p className="font-black text-[10px] uppercase tracking-widest" style={{ color: compColor }}>{compLabel}</p>
               {(date || venue) && (
-                <p className="text-xs text-gray-400">{date}{date && venue ? " · " : ""}{venue}</p>
+                <p className="text-[10px] text-gray-400">{date}{date && venue ? " · " : ""}{venue}</p>
               )}
             </div>
-            <p className="ml-auto text-[10px] text-gray-300">BOX SCORE OFICIAL</p>
+            <p className="text-[9px] text-gray-300 font-bold uppercase tracking-wider">Box Score Oficial</p>
           </div>
 
           {/* Scoreboard */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
             {/* Home */}
-            <div className="flex items-center gap-2 flex-1">
-              {homeLogo && <img src={homeLogo} alt="" className="h-10 w-10 object-contain" />}
-              <div>
-                <p className="font-black text-sm text-gray-900 leading-tight">{homeName}</p>
-                {homeSigla && <p className="text-xs text-gray-400 font-bold">{homeSigla}</p>}
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {homeLogo && <img src={homeLogo} alt="" className="h-10 w-10 print:h-8 print:w-8 object-contain shrink-0" />}
+              <div className="min-w-0">
+                <p className="font-black text-sm print:text-xs text-gray-900 leading-tight truncate">{homeName}</p>
+                {homeSigla && <p className="text-[10px] text-gray-400 font-bold">{homeSigla}</p>}
               </div>
             </div>
 
-            {/* Score + periods */}
-            <div className="text-center">
+            {/* Score + quarters */}
+            <div className="text-center shrink-0 px-3">
               <div className="flex items-center gap-3">
-                <span className="text-4xl font-black tabular-nums text-gray-900">{homeScore ?? "–"}</span>
-                <span className="text-xl text-gray-300 font-light">–</span>
-                <span className="text-4xl font-black tabular-nums text-gray-900">{awayScore ?? "–"}</span>
+                <span className="text-3xl print:text-2xl font-black tabular-nums text-gray-900">{homeScore ?? "–"}</span>
+                <span className="text-lg text-gray-300 font-light">–</span>
+                <span className="text-3xl print:text-2xl font-black tabular-nums text-gray-900">{awayScore ?? "–"}</span>
               </div>
               {periods.length > 0 && (
-                <div className="flex gap-1 justify-center mt-1">
+                <div className="flex gap-2 justify-center mt-0.5">
                   {periods.map((p, i) => (
                     <div key={i} className="text-center">
-                      <div className="text-[9px] text-gray-400 font-bold">{i < 4 ? `Q${i+1}` : `OT${i-3}`}</div>
-                      <div className="text-[11px] font-black tabular-nums text-gray-700">{p.home}–{p.away}</div>
+                      <div className="text-[8px] text-gray-400 font-bold">{i < 4 ? `Q${i+1}` : `OT${i-3}`}</div>
+                      <div className="text-[10px] font-black tabular-nums text-gray-700">{p.home}–{p.away}</div>
                     </div>
                   ))}
                 </div>
@@ -236,53 +286,41 @@ export default function BoxScorePage() {
             </div>
 
             {/* Away */}
-            <div className="flex items-center gap-2 flex-1 justify-end text-right">
-              <div>
-                <p className="font-black text-sm text-gray-900 leading-tight">{awayName}</p>
-                {awaySigla && <p className="text-xs text-gray-400 font-bold">{awaySigla}</p>}
+            <div className="flex items-center gap-2 flex-1 justify-end min-w-0 text-right">
+              <div className="min-w-0">
+                <p className="font-black text-sm print:text-xs text-gray-900 leading-tight truncate">{awayName}</p>
+                {awaySigla && <p className="text-[10px] text-gray-400 font-bold">{awaySigla}</p>}
               </div>
-              {awayLogo && <img src={awayLogo} alt="" className="h-10 w-10 object-contain" />}
+              {awayLogo && <img src={awayLogo} alt="" className="h-10 w-10 print:h-8 print:w-8 object-contain shrink-0" />}
             </div>
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Loading / Error */}
         {loading && (
-          <div className="flex items-center justify-center py-20 text-gray-400">
+          <div className="flex items-center justify-center py-16 text-gray-400">
             <div className="text-center">
               <div className="w-8 h-8 border-2 border-gray-200 border-t-gray-600 rounded-full animate-spin mx-auto mb-3" />
               <p className="text-sm">Cargando estadísticas...</p>
             </div>
           </div>
         )}
-
         {error && (
-          <div className="text-center py-12 text-gray-400">
-            <p className="text-sm">{error}</p>
-          </div>
+          <div className="text-center py-12 text-gray-400 text-sm">{error}</div>
         )}
 
         {data && !loading && (
           <>
-            <TeamTable
-              rows={data.home}
-              name={homeName}
-              logo={homeLogo ?? null}
-              color={compColor}
-              score={homeScore ? Number(homeScore) : null}
-            />
-            <TeamTable
-              rows={data.away}
-              name={awayName}
-              logo={awayLogo ?? null}
-              color={compColor}
-              score={awayScore ? Number(awayScore) : null}
-            />
+            <TeamTable rows={data.home} name={homeName} logo={homeLogo ?? null} color={compColor} score={homeScore ? Number(homeScore) : null} />
+            <TeamTable rows={data.away} name={awayName} logo={awayLogo ?? null} color={compColor} score={awayScore ? Number(awayScore) : null} />
 
-            {/* Footer */}
-            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-300">
+            <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between text-[9px] text-gray-300 no-print">
               <p>Estadísticas oficiales vía Genius Sports · cpb.com.py</p>
-              <p>● Titular · (C) Capitán</p>
+              <p>MIN = minutos · PER = pérdidas · FP = faltas personales · EF = eficiencia</p>
+            </div>
+            <div className="mt-2 pt-2 border-t border-gray-100 hidden print:flex items-center justify-between text-[8px] text-gray-300">
+              <p>Estadísticas oficiales vía Genius Sports · cpb.com.py</p>
+              <p>MIN · PTS · 2P · 3P · TL · RO · RD · REB · ASI · ROB · TAP · PER (pérdidas) · FP (faltas) · EF</p>
             </div>
           </>
         )}
