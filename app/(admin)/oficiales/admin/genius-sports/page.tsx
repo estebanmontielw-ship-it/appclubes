@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Search, Trophy, Calendar, BarChart3, Users, ChevronRight, Loader2, RefreshCw, ChevronDown } from "lucide-react"
+import { Search, Trophy, Calendar, BarChart3, Users, ChevronRight, Loader2, RefreshCw, ChevronDown, UserCheck } from "lucide-react"
 
 interface Competition {
   competitionId: number
@@ -28,6 +28,9 @@ export default function GeniusSportsAdminPage() {
   const [detailLoading, setDetailLoading] = useState(false)
   const [detailType, setDetailType] = useState<"matches" | "standings" | "teams">("matches")
   const [search, setSearch] = useState("")
+  const [selectedMatch, setSelectedMatch] = useState<any>(null)
+  const [matchPlayers, setMatchPlayers] = useState<any>(null)
+  const [matchPlayersLoading, setMatchPlayersLoading] = useState(false)
 
   useEffect(() => {
     loadCompetitions()
@@ -72,6 +75,25 @@ export default function GeniusSportsAdminPage() {
       setDetail({ error: e.message })
     } finally {
       setDetailLoading(false)
+    }
+  }
+
+  async function loadMatchPlayers(m: any) {
+    const competitors: any[] = m.competitors || []
+    const home = competitors.find((c: any) => c.isHomeCompetitor === 1 || c.isHomeCompetitor === "1") ?? competitors[0]
+    const away = competitors.find((c: any) => c.isHomeCompetitor === 0 || c.isHomeCompetitor === "0") ?? competitors[1]
+    if (!home || !away) return
+    setSelectedMatch(m)
+    setMatchPlayers(null)
+    setMatchPlayersLoading(true)
+    try {
+      const res = await fetch(`/api/genius/debug-boxscore?matchId=${m.matchId}&homeId=${home.teamId ?? home.competitorId}&awayId=${away.teamId ?? away.competitorId}`)
+      const json = await res.json()
+      setMatchPlayers(json)
+    } catch (e: any) {
+      setMatchPlayers({ error: e.message })
+    } finally {
+      setMatchPlayersLoading(false)
     }
   }
 
@@ -162,6 +184,86 @@ export default function GeniusSportsAdminPage() {
         <p className="text-xs text-gray-400 mb-3">
           {filtered.length} competencia{filtered.length !== 1 ? "s" : ""} en {selectedYear}
         </p>
+      )}
+
+      {/* Match players panel */}
+      {selectedMatch && (
+        <div className="mb-4 bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-primary" />
+              <span className="font-semibold text-sm text-gray-900">
+                Jugadores — ID {selectedMatch.matchId}
+              </span>
+              {matchPlayersLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-gray-400" />}
+            </div>
+            <button onClick={() => { setSelectedMatch(null); setMatchPlayers(null) }} className="text-[11px] text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100">✕ Cerrar</button>
+          </div>
+
+          {matchPlayers?.error && (
+            <p className="px-4 py-3 text-sm text-red-500">{matchPlayers.error}</p>
+          )}
+
+          {matchPlayers && !matchPlayers.error && (
+            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+              {(["home", "away"] as const).map(side => {
+                const team = matchPlayers.genius?.[side]
+                const teamName = side === "home"
+                  ? (matchPlayers.genius?.home?.players?.[0] ? "LOCAL" : "LOCAL")
+                  : "VISITANTE"
+                const competitors: any[] = selectedMatch.competitors || []
+                const comp = side === "home"
+                  ? (competitors.find((c: any) => c.isHomeCompetitor === 1 || c.isHomeCompetitor === "1") ?? competitors[0])
+                  : (competitors.find((c: any) => c.isHomeCompetitor === 0 || c.isHomeCompetitor === "0") ?? competitors[1])
+                const compName = comp?.competitorName ?? teamName
+
+                return (
+                  <div key={side} className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="font-bold text-xs text-gray-700 uppercase tracking-wide">{compName}</p>
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${team?.playerCount > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}>
+                        {team?.playerCount ?? 0} jugadores
+                      </span>
+                    </div>
+                    {!team?.players?.length ? (
+                      <p className="text-xs text-gray-400 italic">Sin datos en Genius</p>
+                    ) : (
+                      <table className="w-full text-[11px]">
+                        <thead>
+                          <tr className="text-gray-400 border-b border-gray-100">
+                            <th className="text-left py-1 font-medium">#</th>
+                            <th className="text-left py-1 font-medium">Jugador</th>
+                            <th className="text-right py-1 font-medium">MIN</th>
+                            <th className="text-right py-1 font-medium">PTS</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {team.players.map((p: any, i: number) => (
+                            <tr key={i} className="border-b border-gray-50">
+                              <td className="py-1 text-gray-400 font-mono w-6">{p.shirtNumber}</td>
+                              <td className="py-1 font-semibold text-gray-800">{p.name}</td>
+                              <td className="py-1 text-right text-gray-500 tabular-nums">
+                                {p.sMinutes != null ? `${Math.floor(p.sMinutes)}:${String(Math.round((p.sMinutes % 1) * 60)).padStart(2,"0")}` : "–"}
+                              </td>
+                              <td className={`py-1 text-right font-bold tabular-nums ${p.sPoints > 0 ? "text-gray-900" : "text-gray-300"}`}>{p.sPoints ?? 0}</td>
+                            </tr>
+                          ))}
+                          <tr className="font-black text-gray-700 border-t border-gray-300">
+                            <td colSpan={3} className="py-1 text-right pr-2 text-[10px] uppercase tracking-wide">Total</td>
+                            <td className="py-1 text-right tabular-nums">{team.players.reduce((s: number, p: any) => s + (p.sPoints ?? 0), 0)}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
+                    {!matchPlayers.fiba?.available && (
+                      <p className="mt-2 text-[10px] text-amber-600 bg-amber-50 rounded px-2 py-1">⚠ FibaLiveStats sin datos para este partido</p>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -348,7 +450,18 @@ export default function GeniusSportsAdminPage() {
                                   {venue ? (
                                     <p className="text-[10px] text-gray-400 truncate">{venue}</p>
                                   ) : <span />}
-                                  <p className="text-[10px] text-gray-300 shrink-0 ml-2">ID {m.matchId}</p>
+                                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                                    <p className="text-[10px] text-gray-300">ID {m.matchId}</p>
+                                    {isComplete && (
+                                      <button
+                                        onClick={e => { e.stopPropagation(); loadMatchPlayers(m) }}
+                                        className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors ${selectedMatch?.matchId === m.matchId ? "bg-primary text-white" : "bg-primary/10 text-primary hover:bg-primary/20"}`}
+                                      >
+                                        <UserCheck className="h-3 w-3" />
+                                        Jugadores
+                                      </button>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             )
