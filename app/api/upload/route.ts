@@ -6,22 +6,28 @@ import { v4 as uuidv4 } from "uuid"
 import sharp from "sharp"
 import { handleApiError } from "@/lib/api-errors"
 
-const ALLOWED_BUCKETS = ["fotos-oficiales", "documentos", "fotos-carnet", "fotos-ct", "hero-images", "recursos", "noticias"]
+const ALLOWED_BUCKETS = ["fotos-oficiales", "documentos", "fotos-carnet", "fotos-ct", "hero-images", "recursos", "noticias", "fotos-cedula", "certificados", "comprobantes"]
+
+// These buckets are used by public registration forms (user not yet authenticated)
+const PUBLIC_BUCKETS = new Set(["fotos-carnet", "fotos-cedula", "certificados", "comprobantes"])
 
 export async function POST(request: Request) {
   try {
-    // Auth check
-    const cookieStore = cookies()
-    const supabase = createClient(cookieStore)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "No autenticado" }, { status: 401 })
-    }
-
     const formData = await request.formData()
     const file = formData.get("file") as File
     const bucket = formData.get("bucket") as string
+
+    const isPublicBucket = PUBLIC_BUCKETS.has(bucket)
+
+    // Auth check — skip for public registration buckets
+    if (!isPublicBucket) {
+      const cookieStore = cookies()
+      const supabase = createClient(cookieStore)
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+      }
+    }
 
     if (!file || !bucket) {
       return NextResponse.json(
