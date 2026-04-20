@@ -89,6 +89,13 @@ function MatchCard({ m, clubName }: { m: NormalizedMatch; clubName: string }) {
   const isLive = m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
   const hasScore = m.homeScore != null && m.awayScore != null
 
+  // Shortcut link: live/≤30min → FibaLiveStats; otherwise → internal previa
+  const matchStartMs = m.isoDateTime ? Date.parse(m.isoDateTime) : null
+  const minutesUntilStart = matchStartMs ? (matchStartMs - Date.now()) / 60000 : null
+  const goToStats = isLive || isComplete || (minutesUntilStart != null && minutesUntilStart <= 30)
+  const shortcutUrl = goToStats ? m.statsUrl : `/partido/${m.id}`
+  const shortcutExternal = goToStats
+
   const myScore = isHome ? m.homeScore : m.awayScore
   const oppScore = isHome ? m.awayScore : m.homeScore
   const oppName = isHome ? m.awayName : m.homeName
@@ -147,8 +154,12 @@ function MatchCard({ m, clubName }: { m: NormalizedMatch; clubName: string }) {
           )}
         </div>
       ) : (
-        m.statsUrl ? (
-          <a href={m.statsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-blue-500 hover:text-blue-700">
+        shortcutUrl ? (
+          <a
+            href={shortcutUrl}
+            {...(shortcutExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            className="shrink-0 text-blue-500 hover:text-blue-700"
+          >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         ) : null
@@ -252,13 +263,23 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
 
   const displayLogo = club.logoUrl || teamLogo
 
-  // FibaLiveStats link: live match first, then next upcoming match
+  // Match button: live or starting within 30 min → FibaLiveStats; otherwise → internal previa
   const liveMatch = lnbMatches.find(
     (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
   )
-  const fibaStatsMatch = liveMatch ?? upcoming[0] ?? null
-  const fibaStatsUrl = fibaStatsMatch?.statsUrl ?? null
+  const nextMatch = upcoming[0] ?? null
+  const nextMatchStartMs = nextMatch?.isoDateTime ? Date.parse(nextMatch.isoDateTime) : null
+  const minutesUntilNext = nextMatchStartMs ? (nextMatchStartMs - Date.now()) / 60000 : null
+  const nextIsSoon = minutesUntilNext != null && minutesUntilNext <= 30
+
+  const fibaStatsMatch = liveMatch ?? nextMatch ?? null
   const fibaStatsIsLive = !!liveMatch
+  const showStatsLink = fibaStatsIsLive || nextIsSoon
+  const fibaStatsUrl = showStatsLink
+    ? fibaStatsMatch?.statsUrl ?? null
+    : fibaStatsMatch?.id
+      ? `/partido/${fibaStatsMatch.id}`
+      : null
 
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
   const clubSchema = {
@@ -456,12 +477,11 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
             </div>
           )}
 
-          {/* FibaLiveStats link */}
+          {/* Match button: FibaLiveStats (live/≤30min) or internal previa (>30min) */}
           {fibaStatsUrl && (
             <a
               href={fibaStatsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              {...(showStatsLink ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               className={`flex items-center justify-between gap-2 text-white rounded-xl p-3.5 transition-colors ${
                 fibaStatsIsLive
                   ? "bg-red-600 hover:bg-red-700"
@@ -473,10 +493,14 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
                   {fibaStatsIsLive && (
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
                   )}
-                  FibaLiveStats
+                  {showStatsLink ? "FibaLiveStats" : "Próximo partido"}
                 </p>
                 <p className="text-sm font-bold mt-0.5">
-                  {fibaStatsIsLive ? "En vivo ahora" : "Estadísticas del próximo partido"}
+                  {fibaStatsIsLive
+                    ? "En vivo ahora"
+                    : showStatsLink
+                      ? "Estadísticas — empieza pronto"
+                      : "Ver previa del partido"}
                 </p>
                 {!fibaStatsIsLive && fibaStatsMatch && (
                   <p className="text-[11px] text-white/50 mt-0.5">
