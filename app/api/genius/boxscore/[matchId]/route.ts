@@ -86,10 +86,10 @@ export async function GET(
 
     const geniusPlayers = (raw: any): any[] => {
       const arr: any[] = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
+      // Include all period=0 (totals) rows — DNP players show with "–" minutes
       return arr
-        .filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0)
+        .filter((p: any) => p.periodNumber === 0 || p.periodNumber == null)
         .map(mapPlayer)
-        .filter(hasAnyActivity)
     }
 
     // Merge FibaLiveStats (authoritative) + Genius (fills in any players missing from FIBA)
