@@ -1,7 +1,8 @@
 /**
  * Official LNB Apertura 2026 roster data from FIBA Organizer.
- * personId = spi_id (same across Genius Sports Warehouse and FibaLiveStats).
- * Used to cross-reference Genius API stats and detect missing players.
+ * NOTE: FIBA Organizer personId ≠ Genius Sports personId (different ID systems, 5-7M vs 1-3M range).
+ * Used only for cross-reference by name via /api/genius/debug-player.
+ * The app fetches live rosters from Genius API directly via getCompetitionTeamPersons().
  */
 
 export interface RegisteredPlayer {
@@ -141,6 +142,25 @@ export const LNB_ROSTERS: TeamRoster[] = [
       { personId: 7039186, firstName: "MAXSUEL",         lastName: "URNAU",          position: "Guard" },
       { personId: 7039141, firstName: "RENAN",           lastName: "DOS SANTOS",     position: "Guard" },
       { personId: 7039143, firstName: "SANTIAGO",        lastName: "PERALTA",        position: "Guard" },
+    ],
+  },
+  {
+    teamName: "Ciudad Nueva",
+    players: [
+      { personId: 6612744, firstName: "AIDER",           lastName: "BENITEZ" },
+      { personId: 7039183, firstName: "CRISTIAN",        lastName: "DELEON",         position: "Guard" },
+      { personId: 5627373, firstName: "ELIAS",           lastName: "MARTINEZ" },
+      { personId: 7039137, firstName: "GIULIANO",        lastName: "GIRET",          position: "Guard" },
+      { personId: 6682722, firstName: "LUCAS",           lastName: "BOGADO" },
+      { personId: 7039136, firstName: "MATHIAS",         lastName: "MARTINEZ",       position: "Guard" },
+      { personId: 6678536, firstName: "MATIAS",          lastName: "BAEZ" },
+      { personId: 7039182, firstName: "MCCRY",           lastName: "FENNER",         position: "Guard" },
+      { personId: 7039185, firstName: "MICHAEL",         lastName: "KAMARY",         position: "Guard" },
+      { personId: 7039184, firstName: "MIGUEL",          lastName: "POLANCO",        position: "Guard" },
+      { personId: 7040702, firstName: "NELSON",          lastName: "PERALTA BARRETO" },
+      { personId: 6486201, firstName: "RAUL",            lastName: "OCAMPO" },
+      { personId: 7039133, firstName: "SEBASTIAN",       lastName: "GALARZA",        position: "Guard" },
+      { personId: 7039134, firstName: "THIAGO",          lastName: "MARTINEZ",       position: "Guard" },
     ],
   },
 ]
