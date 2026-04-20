@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server"
 import { geniusFetch } from "@/lib/genius-sports"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
-import { LNB_ROSTERS, PLAYER_BY_ID } from "@/lib/rosters-lnb"
+import { LNB_ROSTERS } from "@/lib/rosters-lnb"
+
+/** Normalize for name matching: uppercase, remove accents, collapse spaces */
+function normName(s: string) {
+  return s
+    .toUpperCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Z ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
 
 /**
- * Debug: cross-reference official LNB rosters with Genius Sports match stats.
+ * Debug: cross-reference official LNB rosters with Genius Sports match stats (by name).
  *
  * GET /api/genius/debug-player            → full cross-reference report for all teams
- * GET /api/genius/debug-player?personId=X → search a single player across all matches
+ * GET /api/genius/debug-player?personId=X → search a Genius personId across all matches
+ * GET /api/genius/debug-player?name=ALVARO+DOMINGUEZ → search a player by name
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const personIdStr = searchParams.get("personId")
+  const nameQuery = searchParams.get("name")
 
   try {
     const { id: compId } = await resolveLnbCompetitionIdPublic()
@@ -21,8 +33,9 @@ export async function GET(request: Request) {
     const matches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
     const completed = matches.filter((m: any) => m.matchStatus === "COMPLETE")
 
-    // Collect all personIds seen across every completed match
-    const seenPersonIds = new Set<number>()
+    // Collect all players seen across every completed match (by Genius personId and by name)
+    const seenByGeniusId = new Map<number, any>()
+    const seenByName = new Map<string, any>()
     const matchPlayerData: Array<{ matchId: number; matchNumber: number; matchTime: string; players: any[] }> = []
 
     await Promise.all(
@@ -41,69 +54,71 @@ export async function GET(request: Request) {
           })
         )
         for (const p of allPlayers) {
-          if (p.personId) seenPersonIds.add(p.personId)
+          if (p.personId) seenByGeniusId.set(p.personId, p)
+          const fullName = normName(`${p.firstName ?? ""} ${p.familyName ?? p.personName ?? ""}`)
+          if (fullName) seenByName.set(fullName, p)
         }
         matchPlayerData.push({ matchId: m.matchId, matchNumber: m.matchNumber, matchTime: m.matchTime, players: allPlayers })
       })
     )
 
-    // Single-player mode
+    // Single-player by Genius personId
     if (personIdStr) {
       const personId = parseInt(personIdStr)
-      const rosterEntry = PLAYER_BY_ID.get(personId) ?? null
       const foundInMatches: any[] = []
       const notFoundInMatchIds: number[] = []
-
       for (const md of matchPlayerData) {
         const found = md.players.filter((p: any) => p.personId === personId)
-        if (found.length > 0) {
-          foundInMatches.push({ matchId: md.matchId, matchNumber: md.matchNumber, matchTime: md.matchTime, records: found })
-        } else {
-          notFoundInMatchIds.push(md.matchId)
-        }
+        if (found.length > 0) foundInMatches.push({ ...md, records: found })
+        else notFoundInMatchIds.push(md.matchId)
       }
-
-      // Probe direct Genius endpoints
-      const directProbes: Record<string, any> = {}
-      const probePaths = [
-        `/persons/${personId}`,
-        `/players/${personId}`,
-        `/competitions/${compId}/players/${personId}`,
-        `/competitions/${compId}/persons/${personId}`,
-      ]
-      await Promise.all(
-        probePaths.map(async (p) => {
-          try { directProbes[p] = await geniusFetch(p, "short") }
-          catch (e: any) { directProbes[p] = { error: e.message } }
-        })
-      )
-
       return NextResponse.json({
         personId,
-        rosterEntry,
-        inOfficialRoster: rosterEntry !== null,
-        appearsInGenius: seenPersonIds.has(personId),
+        appearsInGenius: seenByGeniusId.has(personId),
+        playerInfo: seenByGeniusId.get(personId) ?? null,
         completedMatchesChecked: completed.length,
         foundInMatches,
         notFoundInMatchIds,
-        directApiProbes: directProbes,
       })
     }
 
-    // Full cross-reference mode: show missing players per team
+    // Single-player by name
+    if (nameQuery) {
+      const needle = normName(nameQuery)
+      const geniusPlayer = seenByName.get(needle) ?? null
+      const foundInMatches: any[] = []
+      for (const md of matchPlayerData) {
+        const found = md.players.filter((p: any) => {
+          const n = normName(`${p.firstName ?? ""} ${p.familyName ?? p.personName ?? ""}`)
+          return n === needle
+        })
+        if (found.length > 0) foundInMatches.push({ ...md, records: found })
+      }
+      return NextResponse.json({ nameQuery, normalizedQuery: needle, geniusPlayer, foundInMatches })
+    }
+
+    // Full cross-reference by name (FIBA Organizer roster vs Genius match data)
     const report = LNB_ROSTERS.map(team => {
-      const missing = team.players.filter(p => !seenPersonIds.has(p.personId))
-      const found = team.players.filter(p => seenPersonIds.has(p.personId))
+      const results = team.players.map(p => {
+        const needle = normName(`${p.firstName} ${p.lastName}`)
+        const geniusMatch = seenByName.get(needle) ?? null
+        return {
+          fiba_personId: p.personId,
+          name: `${p.firstName} ${p.lastName}`,
+          normalizedName: needle,
+          foundInGenius: geniusMatch !== null,
+          genius_personId: geniusMatch?.personId ?? null,
+          genius_teamName: geniusMatch?.teamName ?? null,
+        }
+      })
+      const found = results.filter(r => r.foundInGenius)
+      const missing = results.filter(r => !r.foundInGenius)
       return {
         teamName: team.teamName,
         totalRegistered: team.players.length,
         foundInGenius: found.length,
         missingFromGenius: missing.length,
-        missingPlayers: missing.map(p => ({
-          personId: p.personId,
-          name: `${p.firstName} ${p.lastName}`,
-          debugUrl: `/api/genius/debug-player?personId=${p.personId}`,
-        })),
+        players: results,
       }
     })
 
@@ -116,6 +131,7 @@ export async function GET(request: Request) {
       totalRegistered,
       totalFoundInGenius: totalRegistered - totalMissing,
       totalMissingFromGenius: totalMissing,
+      note: "Matching by normalized name (FIBA Organizer personIds ≠ Genius personIds)",
       teams: report,
     })
   } catch (e: any) {
