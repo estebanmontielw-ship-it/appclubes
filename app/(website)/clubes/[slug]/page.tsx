@@ -252,8 +252,13 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
 
   const displayLogo = club.logoUrl || teamLogo
 
-  // FibaLiveStats link: use first match that has a statsUrl
-  const statsBaseUrl = lnbMatches.find((m) => m.statsUrl)?.statsUrl?.replace(/\/\d+\/$/, "") ?? null
+  // FibaLiveStats link: live match first, then next upcoming match
+  const liveMatch = lnbMatches.find(
+    (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+  )
+  const fibaStatsMatch = liveMatch ?? upcoming[0] ?? null
+  const fibaStatsUrl = fibaStatsMatch?.statsUrl ?? null
+  const fibaStatsIsLive = !!liveMatch
 
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
   const clubSchema = {
@@ -452,16 +457,32 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
           )}
 
           {/* FibaLiveStats link */}
-          {statsBaseUrl && (
+          {fibaStatsUrl && (
             <a
-              href={statsBaseUrl}
+              href={fibaStatsUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between gap-2 bg-[#0a1628] hover:bg-[#132043] text-white rounded-xl p-3.5 transition-colors"
+              className={`flex items-center justify-between gap-2 text-white rounded-xl p-3.5 transition-colors ${
+                fibaStatsIsLive
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-[#0a1628] hover:bg-[#132043]"
+              }`}
             >
               <div>
-                <p className="text-xs font-black uppercase tracking-wider text-blue-300">FibaLiveStats</p>
-                <p className="text-sm font-bold mt-0.5">Estadísticas en vivo</p>
+                <p className="text-xs font-black uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
+                  {fibaStatsIsLive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
+                  )}
+                  FibaLiveStats
+                </p>
+                <p className="text-sm font-bold mt-0.5">
+                  {fibaStatsIsLive ? "En vivo ahora" : "Estadísticas del próximo partido"}
+                </p>
+                {!fibaStatsIsLive && fibaStatsMatch && (
+                  <p className="text-[11px] text-white/50 mt-0.5">
+                    {fmtDate(fibaStatsMatch.date, fibaStatsMatch.time)}
+                  </p>
+                )}
               </div>
               <ExternalLink className="w-4 h-4 text-white/50 shrink-0" />
             </a>
