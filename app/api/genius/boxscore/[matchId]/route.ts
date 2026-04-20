@@ -18,8 +18,8 @@ export async function GET(
 
   try {
     const [homePlayers, awayPlayers, fibaData] = await Promise.all([
-      geniusFetch(`/matches/${matchId}/players?teamId=${homeId}`, "long"),
-      geniusFetch(`/matches/${matchId}/players?teamId=${awayId}`, "long"),
+      geniusFetch(`/matches/${matchId}/teams/${homeId}/players?limit=100`, "long"),
+      geniusFetch(`/matches/${matchId}/teams/${awayId}/players?limit=100`, "long"),
       fetch(`https://fibalivestats.dcd.shared.geniussports.com/data/${matchId}/data.json`, {
         signal: AbortSignal.timeout(5000),
       })

@@ -91,7 +91,7 @@ async function getGameLogFallback(personId: number, competitionId: string | numb
         const teamIds = competitors.map((c: any) => c.teamId ?? c.competitorId).filter(Boolean)
         const teamResults = await Promise.all(
           teamIds.map((tid: any) =>
-            geniusFetch(`/matches/${match.matchId}/players?teamId=${tid}`, "long").catch(() => null)
+            geniusFetch(`/matches/${match.matchId}/teams/${tid}/players?limit=100`, "long").catch(() => null)
           )
         )
 

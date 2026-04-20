@@ -47,7 +47,7 @@ export async function GET(request: Request) {
         await Promise.all(
           teamIds.map(async (tid: number) => {
             try {
-              const raw = await geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "short")
+              const raw = await geniusFetch(`/matches/${m.matchId}/teams/${tid}/players?limit=100`, "short")
               const players: any[] = raw?.response?.data ?? raw?.data ?? []
               allPlayers.push(...players)
             } catch { /* ignore */ }

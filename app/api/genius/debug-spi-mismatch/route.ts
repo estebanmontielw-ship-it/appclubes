@@ -65,22 +65,27 @@ export async function GET() {
       }))
       const rosterById = new Map(currentRoster.map(p => [p.personId, p.name]))
 
-      for (const gameId of AFFECTED_GAMES) {
-        const gameMatch = matches.find((m: any) => m.matchId === gameId)
+      for (const externalGameId of AFFECTED_GAMES) {
+        // AFFECTED_GAMES are FIBA external IDs; Genius uses its own internal matchId
+        const gameMatch = matches.find((m: any) =>
+          String(m.matchExternalId) === String(externalGameId) || m.matchId === externalGameId
+        )
         if (!gameMatch) continue
+        const internalMatchId = gameMatch.matchId
         const playedInGame = (gameMatch.competitors ?? []).some(
           (c: any) => (c.teamId ?? c.competitorId) === teamId
         )
         if (!playedInGame) continue
 
-        const raw = await geniusFetch(`/matches/${gameId}/players?teamId=${teamId}`, "short").catch(() => null)
+        const raw = await geniusFetch(`/matches/${internalMatchId}/teams/${teamId}/players?limit=100`, "short").catch(() => null)
         const allPlayers: any[] = raw?.response?.data ?? raw?.data ?? []
         const totals = allPlayers.filter((p: any) => p.periodNumber === 0 || p.periodNumber == null)
 
         results.push({
           teamCode,
           teamId,
-          gameId,
+          externalGameId,
+          internalMatchId,
           gameDate: gameMatch.matchTime?.split(" ")[0] ?? null,
           playersInMatchData: totals.map((p: any) => ({
             personId: p.personId,

@@ -20,7 +20,7 @@ export async function GET() {
     const [rawAll, ...rawPerTeam] = await Promise.all([
       geniusFetch(`/matches/${m.matchId}/players`, "short").catch(() => null),
       ...teamIds.map((tid: number) =>
-        geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "short").catch(() => null)
+        geniusFetch(`/matches/${m.matchId}/teams/${tid}/players?limit=100`, "short").catch(() => null)
       ),
     ])
 

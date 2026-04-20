@@ -147,7 +147,7 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
       const perTeam = await Promise.all(
         teamIds.map(async (tid: number) => {
           try {
-            const raw = await geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "medium")
+            const raw = await geniusFetch(`/matches/${m.matchId}/teams/${tid}/players?limit=100`, "medium")
             return raw?.response?.data ?? raw?.data ?? []
           } catch { return [] }
         })
@@ -311,7 +311,7 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
         const perTeam = await Promise.all(
           teamIds.map(async (tid: number) => {
             try {
-              const raw = await geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "medium")
+              const raw = await geniusFetch(`/matches/${m.matchId}/teams/${tid}/players?limit=100`, "medium")
               return raw?.response?.data ?? raw?.data ?? []
             } catch { return [] }
           })
