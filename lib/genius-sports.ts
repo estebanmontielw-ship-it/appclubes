@@ -91,7 +91,7 @@ export async function getTeam(teamId: string | number) {
 
 /** Official registered roster for a team in a competition (includes bench players with 0 mins) */
 export async function getCompetitionTeamPersons(competitionId: string | number, teamId: string | number) {
-  return geniusFetch(`/competitions/${competitionId}/teams/${teamId}/persons?isPlayer=1&isCurrent=1`, "medium")
+  return geniusFetch(`/competitions/${competitionId}/teams/${teamId}/persons?isPlayer=1&limit=100`, "medium")
 }
 
 /** Look up a single person by their Genius personId */
@@ -391,7 +391,7 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   await Promise.all(
     Array.from(allTeamsMap.keys()).map(async (tid) => {
       try {
-        const raw = await geniusFetch(`/competitions/${competitionId}/teams/${tid}/persons?isPlayer=1`, "long")
+        const raw = await geniusFetch(`/competitions/${competitionId}/teams/${tid}/persons?isPlayer=1&limit=100`, "long")
         const persons: any[] = raw?.response?.data ?? raw?.data ?? []
         const teamInfo = allTeamsMap.get(tid)
         for (const person of persons) {

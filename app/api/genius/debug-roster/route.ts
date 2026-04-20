@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       teamIds.map(async (tid) => {
         try {
           const raw = await geniusFetch(
-            `/competitions/${compId}/teams/${tid}/persons?isPlayer=1`,
+            `/competitions/${compId}/teams/${tid}/persons?isPlayer=1&limit=100`,
             "short"
           )
           const persons: any[] = raw?.response?.data ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
