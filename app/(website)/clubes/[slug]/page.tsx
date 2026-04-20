@@ -22,7 +22,11 @@ function normalizeName(s: string) {
 function namesMatch(a: string, b: string) {
   const na = normalizeName(a)
   const nb = normalizeName(b)
-  return na === nb || na.includes(nb) || nb.includes(na)
+  if (na === nb || na.includes(nb) || nb.includes(na)) return true
+  // Space-agnostic: handles "DEPORTIVO CAMPOALTO" vs "Club Deportivo Campo Alto"
+  const naC = na.replace(/\s+/g, "")
+  const nbC = nb.replace(/\s+/g, "")
+  return naC === nbC || naC.includes(nbC) || nbC.includes(naC)
 }
 
 // Which leagues each club belongs to (hardcoded to match clubes/page.tsx)

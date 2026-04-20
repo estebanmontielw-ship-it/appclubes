@@ -91,7 +91,7 @@ export async function getTeam(teamId: string | number) {
 
 /** Official registered roster for a team in a competition (includes bench players with 0 mins) */
 export async function getCompetitionTeamPersons(competitionId: string | number, teamId: string | number) {
-  return geniusFetch(`/competitions/${competitionId}/teams/${teamId}/persons?isPlayer=1&isCurrent=1`, "medium")
+  return geniusFetch(`/competitions/${competitionId}/teams/${teamId}/persons?isPlayer=1&limit=100`, "medium")
 }
 
 /** Look up a single person by their Genius personId */
@@ -333,8 +333,18 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   const playerMap = new Map<number, Acc>()
   const teamMap = new Map<number, Acc & { teamGames: Set<number> }>()
 
-  // A player "played" if participated=1 OR has minutes > 0 (flag sometimes incorrect in LiveStats)
-  const didPlay = (p: any) => p.periodNumber === 0 && (p.participated === 1 || p.participated === "1" || (p.sMinutes != null && p.sMinutes > 0))
+  // A player "played" if participated=1, has minutes > 0, or has any recorded activity
+  // (participated flag is sometimes incorrect in Genius data)
+  const didPlay = (p: any) => {
+    if (p.periodNumber !== 0) return false
+    if (p.participated === 1 || p.participated === "1") return true
+    if (p.sMinutes != null && p.sMinutes > 0) return true
+    return (p.sPoints ?? 0) > 0 || (p.sReboundsTotal ?? 0) > 0 ||
+      (p.sAssists ?? 0) > 0 || (p.sSteals ?? 0) > 0 || (p.sBlocks ?? 0) > 0 ||
+      (p.sTurnovers ?? 0) > 0 || (p.sFoulsPersonal ?? 0) > 0 ||
+      (p.sTwoPointersAttempted ?? 0) > 0 || (p.sThreePointersAttempted ?? 0) > 0 ||
+      (p.sFreeThrowsAttempted ?? 0) > 0
+  }
 
   for (let i = 0; i < playerDataArrays.length; i++) {
     const matchId = completed[i].matchId
@@ -391,7 +401,7 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   await Promise.all(
     Array.from(allTeamsMap.keys()).map(async (tid) => {
       try {
-        const raw = await geniusFetch(`/competitions/${competitionId}/teams/${tid}/persons?isPlayer=1`, "long")
+        const raw = await geniusFetch(`/competitions/${competitionId}/teams/${tid}/persons?isPlayer=1&limit=100`, "long")
         const persons: any[] = raw?.response?.data ?? raw?.data ?? []
         const teamInfo = allTeamsMap.get(tid)
         for (const person of persons) {
