@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
 
   // ─── Load the production web app (server URL mode) ────────
   // No static export needed — the native WebView loads cpb.com.py directly.
-  webDir: "out",
+  webDir: "out", // unused (app loads via server.url above), but required by Capacitor schema
   server: {
     url: "https://cpb.com.py",
     cleartext: false, // HTTPS only
@@ -21,7 +21,7 @@ const config: CapacitorConfig = {
     backgroundColor: "#0a1628",
     allowsLinkPreview: false,
     scrollEnabled: true,
-    limitsNavigationsToAppBoundDomains: false,
+    limitsNavigationsToAppBoundDomains: true, // defense in depth — restricts WKWebView navigation to declared domains
   },
 
   // ─── Android ──────────────────────────────────────────────

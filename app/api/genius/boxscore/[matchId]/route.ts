@@ -17,11 +17,9 @@ export async function GET(
   }
 
   try {
-    // Fetch players for both teams + match info in parallel
     const [homePlayers, awayPlayers, fibaData] = await Promise.all([
       geniusFetch(`/matches/${matchId}/players?teamId=${homeId}`, "long"),
       geniusFetch(`/matches/${matchId}/players?teamId=${awayId}`, "long"),
-      // FibaLiveStats data.json for period scores
       fetch(`https://fibalivestats.dcd.shared.geniussports.com/data/${matchId}/data.json`, {
         signal: AbortSignal.timeout(5000),
       })
@@ -29,30 +27,26 @@ export async function GET(
         .catch(() => null),
     ])
 
-    // Extract period scores from FibaLiveStats
+    // Period scores
     let periods: { home: number; away: number }[] = []
-    if (fibaData?.tm) {
-      const teamKeys = Object.keys(fibaData.tm)
-      if (teamKeys.length >= 2) {
-        const t1 = fibaData.tm[teamKeys[0]]
-        const t2 = fibaData.tm[teamKeys[1]]
-        // Determine which is home/away from sno (team number)
-        const home = t1?.sno === "1" ? t1 : t2
-        const away = t1?.sno === "1" ? t2 : t1
-        const numPeriods = Math.max(
-          Object.keys(home?.per ?? {}).length,
-          Object.keys(away?.per ?? {}).length
-        )
-        for (let p = 1; p <= numPeriods; p++) {
-          periods.push({
-            home: home?.per?.[p]?.sc ?? 0,
-            away: away?.per?.[p]?.sc ?? 0,
-          })
-        }
+    const fibaTeams: any[] = fibaData?.tm ? Object.values(fibaData.tm) : []
+    const fibaHome = fibaTeams.find((t: any) => t.sno === "1")
+    const fibaAway = fibaTeams.find((t: any) => t.sno === "2")
+
+    if (fibaHome && fibaAway) {
+      const numPeriods = Math.max(
+        Object.keys(fibaHome?.per ?? {}).length,
+        Object.keys(fibaAway?.per ?? {}).length
+      )
+      for (let p = 1; p <= numPeriods; p++) {
+        periods.push({
+          home: fibaHome?.per?.[p]?.sc ?? 0,
+          away: fibaAway?.per?.[p]?.sc ?? 0,
+        })
       }
     }
 
-    // Map a player object (FibaLiveStats OR Genius Warehouse) to a normalised row
+    // Map player from either FibaLiveStats or Genius Warehouse
     const mapPlayer = (p: any) => ({
       number: String(p.no ?? p.shirtNumber ?? p.shirt ?? "–"),
       name: `${p.fn ?? p.firstName ?? ""} ${p.ln ?? p.familyName ?? p.lastName ?? ""}`.trim(),
@@ -72,6 +66,8 @@ export async function GET(
       blk: p.sBlocks ?? 0,
       to: p.sTurnovers ?? 0,
       pf: p.sFoulsPersonal ?? 0,
+      fr: p.sFoulsOn ?? p.sFoulsReceived ?? 0,
+      pm: p.sPlusMinus ?? null,
       eff: p.sEfficiency ?? 0,
       captain: !!(p.captain),
       starter: !!(p.starter ?? p.starting ?? p.isStarting ?? p.isStarter),
@@ -86,11 +82,6 @@ export async function GET(
           return b.pts - a.pts
         })
 
-    // Prefer FibaLiveStats players (complete data) — fall back to Genius Warehouse API
-    const fibaTeams: any[] = fibaData?.tm ? Object.values(fibaData.tm) : []
-    const fibaHome = fibaTeams.find((t: any) => t.sno === "1")
-    const fibaAway = fibaTeams.find((t: any) => t.sno === "2")
-
     const fromFiba = (teamData: any): any[] | null => {
       if (!teamData?.pl) return null
       const players = Object.values(teamData.pl).map(mapPlayer)
@@ -102,11 +93,33 @@ export async function GET(
       return sortPlayers(arr.filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0).map(mapPlayer))
     }
 
+    // Extract team-level stats from FibaLiveStats
+    const teamStats = (td: any) => {
+      const tot = td?.tot ?? {}
+      return {
+        coach: td?.cch ?? td?.coach ?? null,
+        assistantCoach: td?.ac ?? td?.assistantCoach ?? null,
+        pointsFromTO: tot.sPointsFromTurnover ?? tot.sPointsTurnover ?? null,
+        pointsInPaint: tot.sPointsInPaint ?? tot.sPaintPoints ?? null,
+        pointsSecondChance: tot.sPointsSecondChance ?? tot.sSecondChancePoints ?? null,
+        pointsFastBreak: tot.sPointsFastBreak ?? tot.sFastBreakPoints ?? null,
+        benchPoints: tot.sBenchPoints ?? null,
+        biggestLead: tot.sBiggestLead ?? null,
+        biggestRun: tot.sBiggestRun ?? null,
+      }
+    }
+
     return NextResponse.json({
       matchId,
       periods,
-      home: fromFiba(fibaHome) ?? fromGenius(homePlayers),
-      away: fromFiba(fibaAway) ?? fromGenius(awayPlayers),
+      home: {
+        players: fromFiba(fibaHome) ?? fromGenius(homePlayers),
+        stats: teamStats(fibaHome),
+      },
+      away: {
+        players: fromFiba(fibaAway) ?? fromGenius(awayPlayers),
+        stats: teamStats(fibaAway),
+      },
     })
   } catch (err) {
     console.error("[boxscore]", err)

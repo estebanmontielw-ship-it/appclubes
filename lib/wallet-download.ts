@@ -6,12 +6,10 @@
  *   iOS recognises the .pkpass extension and offers "Add to Wallet".
  */
 
-function isCapacitorNative(): boolean {
-  return typeof window !== "undefined" && !!(window as any).Capacitor?.isNative
-}
+import { isNative } from "@/lib/capacitor"
 
 export async function openWalletPass(apiUrl: string): Promise<void> {
-  if (!isCapacitorNative()) {
+  if (!isNative()) {
     window.location.href = apiUrl
     return
   }

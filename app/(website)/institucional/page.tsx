@@ -15,6 +15,13 @@ export const metadata: Metadata = {
   },
 }
 
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/javascript:/gi, "")
+}
+
 export default async function InstitucionalPage() {
   let paginas: any[] = []
 
@@ -57,7 +64,7 @@ export default async function InstitucionalPage() {
               )}
               <div
                 className="prose prose-gray max-w-none"
-                dangerouslySetInnerHTML={{ __html: pagina.contenido }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(pagina.contenido) }}
               />
             </section>
           ))}

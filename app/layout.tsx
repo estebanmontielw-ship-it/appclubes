@@ -6,12 +6,12 @@ import PWARegister from "@/components/PWARegister"
 import ManifestSwitcher from "@/components/ManifestSwitcher"
 import PushNotifications from "@/components/PushNotifications"
 import CapacitorLinkHandler from "@/components/CapacitorLinkHandler"
-import StatusBarScrollEffect from "@/components/StatusBarScrollEffect"
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  // TODO: user-scalable should only apply in Capacitor native shell
   userScalable: false,
 }
 
@@ -35,8 +35,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <head>
-        {/* Viewport */}
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+        {/* Viewport is injected automatically by Next.js from the exported `viewport` const above */}
         {/* PWA */}
         {/* Manifest set dynamically by ManifestSwitcher */}
         <meta name="theme-color" content="#1e40af" />
@@ -85,7 +84,6 @@ export default function RootLayout({
         <ManifestSwitcher />
         <PushNotifications />
         <CapacitorLinkHandler />
-        <StatusBarScrollEffect />
       </body>
     </html>
   )
