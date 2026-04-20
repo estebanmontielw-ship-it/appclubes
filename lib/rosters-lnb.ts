@@ -70,7 +70,6 @@ export const LNB_ROSTERS: TeamRoster[] = [
       { personId: 7039127, firstName: "NICOLAS",         lastName: "REYERO",         position: "Guard" },
       { personId: 7039129, firstName: "OCTAVIO",         lastName: "CAPUTO",         position: "Guard" },
       { personId: 7039132, firstName: "OSCAR",           lastName: "TORO",           position: "Guard" },
-      { personId: 7039516, firstName: "VICTOR",          lastName: "SILVA" },
     ],
   },
   {
@@ -142,6 +141,7 @@ export const LNB_ROSTERS: TeamRoster[] = [
       { personId: 7039186, firstName: "MAXSUEL",         lastName: "URNAU",          position: "Guard" },
       { personId: 7039141, firstName: "RENAN",           lastName: "DOS SANTOS",     position: "Guard" },
       { personId: 7039143, firstName: "SANTIAGO",        lastName: "PERALTA",        position: "Guard" },
+      { personId: 7039516, firstName: "VICTOR",          lastName: "SILVA" },
     ],
   },
   {
