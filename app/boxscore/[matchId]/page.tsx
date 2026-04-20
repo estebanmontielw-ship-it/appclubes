@@ -124,17 +124,20 @@ function TeamTable({ rows, name, logo, color, score }: {
             </tr>
           </thead>
           <tbody>
-            {starters.length > 0 && (
+            {starters.length > 0 ? (
               <>
                 <tr><td colSpan={16} className="py-0.5 pl-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100">Titulares</td></tr>
                 {starters.map((r, i) => <PlayerRow key={i} r={r} shade={i % 2 === 1} />)}
+                {bench.length > 0 && (
+                  <>
+                    <tr><td colSpan={16} className="py-0.5 pl-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 border-t border-t-gray-200">Suplentes</td></tr>
+                    {bench.map((r, i) => <PlayerRow key={i} r={r} shade={i % 2 === 1} />)}
+                  </>
+                )}
               </>
-            )}
-            {bench.length > 0 && (
-              <>
-                <tr><td colSpan={16} className="py-0.5 pl-1 text-[8px] font-bold text-gray-400 uppercase tracking-widest border-b border-gray-100 border-t border-t-gray-200 mt-1">Suplentes</td></tr>
-                {bench.map((r, i) => <PlayerRow key={i} r={r} shade={i % 2 === 1} />)}
-              </>
+            ) : (
+              // No starter info available — show all players flat
+              rows.map((r, i) => <PlayerRow key={i} r={r} shade={i % 2 === 1} />)
             )}
             {/* Totals */}
             <tr className="font-black text-gray-900 border-t-2 border-gray-300">

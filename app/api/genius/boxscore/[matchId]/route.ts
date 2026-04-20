@@ -52,45 +52,61 @@ export async function GET(
       }
     }
 
-    const normalize = (raw: any, _teamId: string) => {
-      const players: any[] = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
-      return players
-        .filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0)
-        .map((p: any) => ({
-          number: p.shirtNumber ?? p.shirt ?? "–",
-          name: `${p.firstName ?? ""} ${p.familyName ?? p.lastName ?? ""}`.trim(),
-          min: p.sMinutes ?? "–",
-          pts: p.sPoints ?? 0,
-          fg2m: p.sTwoPointersMade ?? 0,
-          fg2a: p.sTwoPointersAttempted ?? 0,
-          fg3m: p.sThreePointersMade ?? 0,
-          fg3a: p.sThreePointersAttempted ?? 0,
-          ftm: p.sFreeThrowsMade ?? 0,
-          fta: p.sFreeThrowsAttempted ?? 0,
-          ro: p.sReboundsOffensive ?? 0,
-          rd: p.sReboundsDefensive ?? 0,
-          reb: p.sReboundsTotal ?? 0,
-          ast: p.sAssists ?? 0,
-          stl: p.sSteals ?? 0,
-          blk: p.sBlocks ?? 0,
-          to: p.sTurnovers ?? 0,
-          pf: p.sFoulsPersonal ?? 0,
-          eff: p.sEfficiency ?? 0,
-          captain: !!p.captain,
-          starter: !!p.starting,
-        }))
-        .sort((a: any, b: any) => {
+    // Map a player object (FibaLiveStats OR Genius Warehouse) to a normalised row
+    const mapPlayer = (p: any) => ({
+      number: String(p.no ?? p.shirtNumber ?? p.shirt ?? "–"),
+      name: `${p.fn ?? p.firstName ?? ""} ${p.ln ?? p.familyName ?? p.lastName ?? ""}`.trim(),
+      min: p.sMinutes ?? "–",
+      pts: p.sPoints ?? 0,
+      fg2m: p.sTwoPointersMade ?? 0,
+      fg2a: p.sTwoPointersAttempted ?? 0,
+      fg3m: p.sThreePointersMade ?? 0,
+      fg3a: p.sThreePointersAttempted ?? 0,
+      ftm: p.sFreeThrowsMade ?? 0,
+      fta: p.sFreeThrowsAttempted ?? 0,
+      ro: p.sReboundsOffensive ?? 0,
+      rd: p.sReboundsDefensive ?? 0,
+      reb: p.sReboundsTotal ?? 0,
+      ast: p.sAssists ?? 0,
+      stl: p.sSteals ?? 0,
+      blk: p.sBlocks ?? 0,
+      to: p.sTurnovers ?? 0,
+      pf: p.sFoulsPersonal ?? 0,
+      eff: p.sEfficiency ?? 0,
+      captain: !!(p.captain),
+      starter: !!(p.starter ?? p.starting ?? p.isStarting ?? p.isStarter),
+    })
+
+    const sortPlayers = (rows: any[]) =>
+      rows
+        .filter(r => r.pts > 0 || Number(r.min) > 0)
+        .sort((a, b) => {
           if (a.starter && !b.starter) return -1
           if (!a.starter && b.starter) return 1
-          return (b.pts as number) - (a.pts as number)
+          return b.pts - a.pts
         })
+
+    // Prefer FibaLiveStats players (complete data) — fall back to Genius Warehouse API
+    const fibaTeams: any[] = fibaData?.tm ? Object.values(fibaData.tm) : []
+    const fibaHome = fibaTeams.find((t: any) => t.sno === "1")
+    const fibaAway = fibaTeams.find((t: any) => t.sno === "2")
+
+    const fromFiba = (teamData: any): any[] | null => {
+      if (!teamData?.pl) return null
+      const players = Object.values(teamData.pl).map(mapPlayer)
+      return players.length > 0 ? sortPlayers(players) : null
+    }
+
+    const fromGenius = (raw: any): any[] => {
+      const arr: any[] = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
+      return sortPlayers(arr.filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0).map(mapPlayer))
     }
 
     return NextResponse.json({
       matchId,
       periods,
-      home: normalize(homePlayers, homeId),
-      away: normalize(awayPlayers, awayId),
+      home: fromFiba(fibaHome) ?? fromGenius(homePlayers),
+      away: fromFiba(fibaAway) ?? fromGenius(awayPlayers),
     })
   } catch (err) {
     console.error("[boxscore]", err)
