@@ -387,11 +387,38 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
     }
   }
 
+  // Merge official team rosters so registered players with 0 games still appear
+  await Promise.all(
+    Array.from(allTeamsMap.keys()).map(async (tid) => {
+      try {
+        const raw = await geniusFetch(`/competitions/${competitionId}/teams/${tid}/persons?isPlayer=1`, "long")
+        const persons: any[] = raw?.response?.data ?? raw?.data ?? []
+        const teamInfo = allTeamsMap.get(tid)
+        for (const person of persons) {
+          const pid: number = person.personId
+          if (!pid || playerMap.has(pid)) continue
+          playerMap.set(pid, {
+            personId: pid,
+            playerName: `${person.firstName ?? ""} ${person.familyName ?? ""}`.trim(),
+            teamName: person.primaryTeamName ?? teamInfo?.teamName ?? "",
+            teamId: tid,
+            teamSigla: teamInfo?.teamSigla ?? null,
+            teamLogo: teamLogoMap.get(tid) ?? null,
+            photoUrl: person.images?.photo?.T1?.url ?? null,
+            games: 0, pts: 0, reb: 0, rebOff: 0, rebDef: 0,
+            ast: 0, stl: 0, blk: 0, to: 0, min: 0,
+            fgm: 0, fga: 0, threePtM: 0, threePtA: 0,
+            ftm: 0, fta: 0, fouls: 0, eff: 0,
+          })
+        }
+      } catch { /* roster unavailable for this team */ }
+    })
+  )
+
   const avg = (total: number, games: number) => games > 0 ? Math.round((total / games) * 10) / 10 : 0
   const pct = (made: number, att: number) => att > 0 ? Math.round((made / att) * 1000) / 10 : null
 
   const players: PlayerStatFull[] = Array.from(playerMap.values())
-    .filter(p => p.games > 0)
     .map(p => ({
       ...p,
       ptsAvg: avg(p.pts, p.games), rebAvg: avg(p.reb, p.games),
@@ -400,7 +427,12 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
       minAvg: avg(p.min, p.games), effAvg: avg(p.eff, p.games),
       fgPct: pct(p.fgm, p.fga), threePtPct: pct(p.threePtM, p.threePtA), ftPct: pct(p.ftm, p.fta),
     }))
-    .sort((a, b) => b.ptsAvg - a.ptsAvg)
+    .sort((a, b) => {
+      // Players who haven't played yet go to the bottom
+      if (a.games === 0 && b.games > 0) return 1
+      if (a.games > 0 && b.games === 0) return -1
+      return b.ptsAvg - a.ptsAvg
+    })
 
   const teamsFromStats: TeamStatFull[] = Array.from(teamMap.values()).map(t => {
     const g = t.teamGames.size

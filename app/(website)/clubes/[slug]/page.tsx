@@ -572,9 +572,9 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
                       </Link>
                     </td>
                     <td className="px-3 py-2.5 text-center font-semibold text-gray-500">{p.games}</td>
-                    <td className="px-3 py-2.5 text-center font-black text-[#0a1628]">{p.ptsAvg.toFixed(1)}</td>
-                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.rebAvg.toFixed(1)}</td>
-                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.astAvg.toFixed(1)}</td>
+                    <td className="px-3 py-2.5 text-center font-black text-[#0a1628]">{p.games > 0 ? p.ptsAvg.toFixed(1) : "—"}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.games > 0 ? p.rebAvg.toFixed(1) : "—"}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.games > 0 ? p.astAvg.toFixed(1) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
