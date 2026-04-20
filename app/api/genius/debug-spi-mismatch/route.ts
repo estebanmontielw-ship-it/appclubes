@@ -3,14 +3,10 @@ import { geniusFetch } from "@/lib/genius-sports"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 
 /**
- * Cross-references match player data (old SPI IDs) with current roster (new SPI IDs).
- * Used to identify players whose stats are stored under a replaced/old SPI ID.
+ * Diagnostics: shows exactly what Genius Warehouse returns for CIU and FPC
+ * players in the affected games, to identify why some show PJ=0.
  *
  * GET /api/genius/debug-spi-mismatch
- *
- * Returns for each affected team+game:
- *   - players in match data whose personId is NOT in the current roster
- *   - paired with the current roster player that has the closest matching name
  */
 
 const AFFECTED_GAMES = [5198630, 5198633, 5198634, 5198635, 5198638]
@@ -20,26 +16,12 @@ function normName(s: string) {
   return (s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, " ").trim()
 }
 
-function nameSimilarity(a: string, b: string): number {
-  const na = normName(a)
-  const nb = normName(b)
-  if (na === nb) return 1
-  // check last name match
-  const partsA = na.split(" ")
-  const partsB = nb.split(" ")
-  const lastA = partsA[partsA.length - 1]
-  const lastB = partsB[partsB.length - 1]
-  if (lastA === lastB) return 0.8
-  if (na.includes(lastB) || nb.includes(lastA)) return 0.6
-  return 0
-}
-
 export async function GET() {
   try {
     const { id: compId } = await resolveLnbCompetitionIdPublic()
     if (!compId) return NextResponse.json({ error: "No competition ID" }, { status: 404 })
 
-    // Step 1: get all teams from competition to find teamIds for CIU and FPC
+    // Get all teams from competition
     const matchesRaw = await geniusFetch(`/competitions/${compId}/matches?limit=100`, "short")
     const matches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
 
@@ -54,17 +36,24 @@ export async function GET() {
       }
     }
 
+    // Show what team codes exist so we can confirm CIU/FPC are correct
+    const allTeamCodes = Array.from(teamMap.entries()).map(([code, info]) => ({
+      code,
+      teamId: info.teamId,
+      teamName: info.teamName,
+    }))
+
     const results: any[] = []
 
     for (const teamCode of AFFECTED_TEAM_CODES) {
       const teamInfo = teamMap.get(teamCode)
       if (!teamInfo) {
-        results.push({ teamCode, error: "Team not found in competition" })
+        results.push({ teamCode, error: `Not found in competition. Available codes: ${allTeamCodes.map(t => t.code).join(", ")}` })
         continue
       }
       const { teamId } = teamInfo
 
-      // Step 2: fetch current roster (new SPI IDs)
+      // Fetch current roster
       const rosterRaw = await geniusFetch(
         `/competitions/${compId}/teams/${teamId}/persons?isPlayer=1&limit=100`,
         "short"
@@ -72,15 +61,11 @@ export async function GET() {
       const rosterPersons: any[] = rosterRaw?.response?.data ?? rosterRaw?.data ?? []
       const currentRoster = rosterPersons.map((p: any) => ({
         personId: p.personId,
-        name: normName(`${p.firstName ?? ""} ${p.familyName ?? ""}`),
-        firstName: p.firstName,
-        familyName: p.familyName,
+        name: `${p.firstName ?? ""} ${p.familyName ?? ""}`.trim(),
       }))
-      const currentIds = new Set(currentRoster.map((p: any) => p.personId))
+      const rosterById = new Map(currentRoster.map(p => [p.personId, p.name]))
 
-      // Step 3: for each affected game, fetch match players for this team
       for (const gameId of AFFECTED_GAMES) {
-        // Check if this team played in this game
         const gameMatch = matches.find((m: any) => m.matchId === gameId)
         if (!gameMatch) continue
         const playedInGame = (gameMatch.competitors ?? []).some(
@@ -88,53 +73,34 @@ export async function GET() {
         )
         if (!playedInGame) continue
 
-        const matchPlayersRaw = await geniusFetch(
-          `/matches/${gameId}/players?teamId=${teamId}`,
-          "short"
-        ).catch(() => null)
-        if (!matchPlayersRaw) continue
+        const raw = await geniusFetch(`/matches/${gameId}/players?teamId=${teamId}`, "short").catch(() => null)
+        const allPlayers: any[] = raw?.response?.data ?? raw?.data ?? []
+        const totals = allPlayers.filter((p: any) => p.periodNumber === 0 || p.periodNumber == null)
 
-        const matchPlayers: any[] = matchPlayersRaw?.response?.data ?? matchPlayersRaw?.data ?? []
-        // Only totals row (periodNumber=0)
-        const totals = matchPlayers.filter((p: any) => p.periodNumber === 0 || p.periodNumber == null)
-
-        for (const mp of totals) {
-          const mpId: number = mp.personId
-          if (currentIds.has(mpId)) continue // ID is current — no mismatch
-
-          // This player's SPI ID is NOT in the current roster → old/replaced ID
-          const mpName = normName(`${mp.firstName ?? mp.personName ?? ""} ${mp.familyName ?? ""}`)
-
-          // Try to find the best name match in current roster
-          let bestMatch: any = null
-          let bestScore = 0
-          for (const rp of currentRoster) {
-            const score = nameSimilarity(mpName, rp.name)
-            if (score > bestScore) { bestScore = score; bestMatch = rp }
-          }
-
-          results.push({
-            teamCode,
-            teamId,
-            gameId,
-            oldSpiId: mpId,
-            nameInMatch: `${mp.firstName ?? ""} ${mp.familyName ?? mp.personName ?? ""}`.trim(),
-            pts: mp.sPoints ?? 0,
-            minutes: mp.sMinutes ?? null,
-            participated: mp.participated,
-            bestRosterMatch: bestMatch
-              ? {
-                  newSpiId: bestMatch.personId,
-                  nameInRoster: `${bestMatch.firstName} ${bestMatch.familyName}`,
-                  score: bestScore,
-                }
-              : null,
-          })
-        }
+        results.push({
+          teamCode,
+          teamId,
+          gameId,
+          gameDate: gameMatch.matchTime?.split(" ")[0] ?? null,
+          playersInMatchData: totals.map((p: any) => ({
+            personId: p.personId,
+            name: `${p.firstName ?? ""} ${p.familyName ?? p.personName ?? ""}`.trim(),
+            inCurrentRoster: rosterById.has(p.personId),
+            rosterName: rosterById.get(p.personId) ?? null,
+            participated: p.participated,
+            sMinutes: p.sMinutes,
+            sPoints: p.sPoints,
+            sTwoPointersAttempted: p.sTwoPointersAttempted,
+            sThreePointersAttempted: p.sThreePointersAttempted,
+            sFreeThrowsAttempted: p.sFreeThrowsAttempted,
+            sReboundsTotal: p.sReboundsTotal,
+            sAssists: p.sAssists,
+          })),
+        })
       }
     }
 
-    return NextResponse.json({ compId, mismatches: results })
+    return NextResponse.json({ compId, allTeamCodes, results })
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
