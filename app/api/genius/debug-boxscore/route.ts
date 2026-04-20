@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from "next/server"
-import { geniusFetch } from "@/lib/genius-sports"
 
 export const dynamic = "force-dynamic"
+
+const API_BASE = "https://api.wh.geniussports.com/v1/basketball"
+const API_KEY = process.env.GENIUS_SPORTS_API_KEY || ""
+
+async function freshFetch(path: string) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { "x-api-key": API_KEY, "Accept": "application/json" },
+    cache: "no-store",
+  })
+  if (!res.ok) return { error: `HTTP ${res.status}` }
+  return res.json()
+}
 
 /**
  * Debug endpoint: shows raw player data from both FibaLiveStats and Genius
@@ -20,8 +31,8 @@ export async function GET(req: NextRequest) {
   }
 
   const [homePlayers, awayPlayers, fibaData] = await Promise.all([
-    geniusFetch(`/matches/${matchId}/players?teamId=${homeId}`, "long").catch((e: any) => ({ error: String(e) })),
-    geniusFetch(`/matches/${matchId}/players?teamId=${awayId}`, "long").catch((e: any) => ({ error: String(e) })),
+    freshFetch(`/matches/${matchId}/players?teamId=${homeId}`).catch((e: any) => ({ error: String(e) })),
+    freshFetch(`/matches/${matchId}/players?teamId=${awayId}`).catch((e: any) => ({ error: String(e) })),
     fetch(`https://fibalivestats.dcd.shared.geniussports.com/data/${matchId}/data.json`, {
       signal: AbortSignal.timeout(8000),
     })
