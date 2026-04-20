@@ -84,20 +84,24 @@ export async function GET(
       r.reb > 0 || r.ast > 0 || r.stl > 0 || r.blk > 0 ||
       r.to > 0 || r.pf > 0 || r.fg2a > 0 || r.fg3a > 0 || r.fta > 0
 
-    const fromFiba = (teamData: any): any[] | null => {
-      if (!teamData?.pl) return null
-      // All players in FibaLiveStats pl are official game participants — include all, no filtering
-      const players = Object.values(teamData.pl).map(mapPlayer)
-      return players.length > 0 ? players.sort(sortByStarterThenPts) : null
-    }
-
-    const fromGenius = (raw: any): any[] => {
+    const geniusPlayers = (raw: any): any[] => {
       const arr: any[] = Array.isArray(raw) ? raw : (raw?.response?.data ?? raw?.data ?? [])
       return arr
         .filter((p: any) => p.played === 1 || Number(p.sMinutes || 0) > 0)
         .map(mapPlayer)
         .filter(hasAnyActivity)
-        .sort(sortByStarterThenPts)
+    }
+
+    // Merge FibaLiveStats (authoritative) + Genius (fills in any players missing from FIBA)
+    const mergeTeamPlayers = (fibaTeam: any, geniusRaw: any): any[] => {
+      const genius = geniusPlayers(geniusRaw)
+      if (!fibaTeam?.pl) return genius.sort(sortByStarterThenPts)
+
+      const fiba: any[] = Object.values(fibaTeam.pl).map(mapPlayer)
+      const fibaNumbers = new Set(fiba.map((p: any) => p.number))
+      // Include Genius players whose shirt number isn't in FibaLiveStats
+      const geniusOnly = genius.filter((p: any) => !fibaNumbers.has(p.number))
+      return [...fiba, ...geniusOnly].sort(sortByStarterThenPts)
     }
 
     // Extract team-level stats from FibaLiveStats
@@ -120,11 +124,11 @@ export async function GET(
       matchId,
       periods,
       home: {
-        players: fromFiba(fibaHome) ?? fromGenius(homePlayers),
+        players: mergeTeamPlayers(fibaHome, homePlayers),
         stats: teamStats(fibaHome),
       },
       away: {
-        players: fromFiba(fibaAway) ?? fromGenius(awayPlayers),
+        players: mergeTeamPlayers(fibaAway, awayPlayers),
         stats: teamStats(fibaAway),
       },
     })
