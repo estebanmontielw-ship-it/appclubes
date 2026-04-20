@@ -36,14 +36,16 @@ export async function GET(request: Request) {
       teamIds.map(async (tid) => {
         try {
           const raw = await geniusFetch(
-            `/competitions/${compId}/teams/${tid}/persons?isPlayer=1&isCurrent=1`,
-            "medium"
+            `/competitions/${compId}/teams/${tid}/persons?isPlayer=1`,
+            "short"
           )
           const persons: any[] = raw?.response?.data ?? raw?.data ?? (Array.isArray(raw) ? raw : [])
           return {
             teamId: tid,
             teamName: teamMap.get(tid) ?? String(tid),
             totalPlayers: persons.length,
+            rawKeys: raw ? Object.keys(raw) : null,
+            rawSample: Array.isArray(raw) ? raw.slice(0, 2) : raw,
             players: persons.map((p: any) => ({
               personId: p.personId,
               firstName: p.firstName,
