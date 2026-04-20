@@ -89,6 +89,16 @@ export async function getTeam(teamId: string | number) {
   return geniusFetch(`/teams/${teamId}`, "long")
 }
 
+/** Official registered roster for a team in a competition (includes bench players with 0 mins) */
+export async function getCompetitionTeamPersons(competitionId: string | number, teamId: string | number) {
+  return geniusFetch(`/competitions/${competitionId}/teams/${teamId}/persons?isPlayer=1&isCurrent=1`, "medium")
+}
+
+/** Look up a single person by their Genius personId */
+export async function getPerson(personId: string | number) {
+  return geniusFetch(`/persons/${personId}`, "long")
+}
+
 export interface LeaderEntry {
   rank: number
   personId: number
