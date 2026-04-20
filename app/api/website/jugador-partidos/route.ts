@@ -39,7 +39,11 @@ export async function GET(request: Request) {
             const result = teamResults[i]
             if (!result) continue
             const players: any[] = result?.response?.data ?? result?.data ?? []
-            const player = players.find((p: any) => p.personId === personId || String(p.personId) === String(personId))
+            // Only use period=0 (totals row), not per-quarter rows
+            const player = players.find((p: any) =>
+              (p.personId === personId || String(p.personId) === String(personId)) &&
+              (p.periodNumber === 0 || p.periodNumber == null)
+            )
             if (!player) continue
 
             const teamId = teamIds[i]
