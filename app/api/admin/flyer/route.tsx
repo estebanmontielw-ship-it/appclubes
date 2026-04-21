@@ -285,6 +285,10 @@ export async function GET(req: NextRequest) {
   const jugadorFecha   = searchParams.get("jugadorFecha") ?? ""
   const jugadorTeamLogo = searchParams.get("jugadorTeamLogo") ?? ""
 
+  // Encuadre de imágenes (cover = llena y recorta, contain = ve todo con márgenes)
+  const bgFit = (searchParams.get("bgFit") ?? "cover") as "cover" | "contain"
+  const photoFit = (searchParams.get("photoFit") ?? "cover") as "cover" | "contain"
+
   // Text color palette
   const tc = {
     title:    textColor === "dark" ? "#111827" : "white",
@@ -344,7 +348,7 @@ export async function GET(req: NextRequest) {
       return new ImageResponse(
         (
           <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: "sans-serif", position: "relative", overflow: "hidden" }}>
-            {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", display: "flex" }} alt="" /> : null}
+            {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
             {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
             <div style={{ position: "absolute", bottom: -200, right: -200, width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)", display: "flex" }} />
@@ -427,15 +431,16 @@ export async function GET(req: NextRequest) {
       return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: "#0b1e3d" }}>
-            {playerPhotoUrl ? <img src={playerPhotoUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", objectPosition: "top center", display: "flex" }} alt={jugadorNombre} /> : <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: themeBg, display: "flex" }} />}
+            {playerPhotoUrl ? <img src={playerPhotoUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: photoFit, objectPosition: "top center", display: "flex" }} alt={jugadorNombre} /> : <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: themeBg, display: "flex" }} />}
+            {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 300, background: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 100%)", display: "flex" }} />
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: Math.round(H * 0.42), background: "linear-gradient(180deg, transparent 0%, rgba(10,20,50,0.92) 30%, rgba(10,20,50,0.98) 100%)", display: "flex" }} />
             {logoUrl ? <img src={logoUrl} width={Math.round(80 * logoScale)} height={Math.round(80 * logoScale)} style={{ position: "absolute", top: 36, left: 36, objectFit: "contain", display: "flex" }} alt="Logo" /> : null}
             {jugadorTeamLogo ? <img src={jugadorTeamLogo} width={120} height={120} style={{ position: "absolute", top: Math.round(H * 0.38), left: 48, objectFit: "contain", display: "flex" }} alt={jugadorClub} /> : null}
             <div style={{ position: "absolute", bottom: Math.round(H * 0.24), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
-              <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: 900, lineHeight: 0.9, letterSpacing: -3 }}>JUGADOR</span>
+              <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>JUGADOR</span>
               <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 4 }}>
-                <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: 900, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorPremio.toUpperCase()}</span>
+                <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorPremio.toUpperCase()}</span>
                 {jugadorFecha ? <div style={{ display: "flex", background: "rgba(255,255,255,0.15)", borderRadius: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}><span style={{ color: "white", fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>{jugadorFecha.toUpperCase()}</span></div> : null}
               </div>
             </div>
@@ -470,7 +475,8 @@ export async function GET(req: NextRequest) {
       return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: "#0b1e3d" }}>
-            {photoSrc ? <img src={photoSrc} width={Math.round(W * 0.55)} height={H} style={{ position: "absolute", top: 0, left: 0, width: Math.round(W * 0.55), height: H, objectFit: "cover", objectPosition: "top center", display: "flex" }} alt={leader.playerName} /> : null}
+            {photoSrc ? <img src={photoSrc} width={Math.round(W * 0.55)} height={H} style={{ position: "absolute", top: 0, left: 0, width: Math.round(W * 0.55), height: H, objectFit: photoFit, objectPosition: "top center", display: "flex" }} alt={leader.playerName} /> : null}
+            {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: "linear-gradient(90deg, transparent 0%, rgba(11,30,61,0.3) 30%, rgba(11,30,61,0.88) 52%, rgba(11,30,61,0.97) 65%, #0b1e3d 80%)", display: "flex" }} />
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 160, background: "linear-gradient(180deg, rgba(11,30,61,0.6) 0%, transparent 100%)", display: "flex" }} />
             <div style={{ position: "absolute", top: 32, left: 32, display: "flex", alignItems: "center", gap: 10 }}>
@@ -586,7 +592,7 @@ export async function GET(req: NextRequest) {
               style={{
                 position: "absolute", top: 0, left: 0,
                 width: W, height: H,
-                objectFit: "cover",
+                objectFit: bgFit,
                 display: "flex",
               }}
               alt=""
@@ -653,13 +659,13 @@ export async function GET(req: NextRequest) {
             {/* Título principal */}
             {titulo ? (
               <span style={{
-                color: tc.title, fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: 900,
+                color: tc.title, fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: titleWeight,
                 letterSpacing: -1, textAlign: "center", lineHeight: 1,
               }}>
                 {titulo.toUpperCase()}
               </span>
             ) : (
-              <span style={{ color: tc.title, fontSize: Math.round(48 * titleSize), fontWeight: 900, letterSpacing: 2 }}>
+              <span style={{ color: tc.title, fontSize: Math.round(48 * titleSize), fontWeight: titleWeight, letterSpacing: 2 }}>
                 {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
               </span>
             )}

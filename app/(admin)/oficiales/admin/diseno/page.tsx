@@ -80,6 +80,7 @@ function DisenoInner() {
   const textureInputRef = useRef<HTMLInputElement>(null)
   const [titleSize, setTitleSize] = useState(100)
   const [subtitleSize, setSubtitleSize] = useState(100)
+  const [titleWeight, setTitleWeight] = useState<400 | 700 | 900>(900)
   const [cardStyle, setCardStyle] = useState<"glass" | "solid" | "minimal">("glass")
   const [generating, setGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -115,6 +116,13 @@ function DisenoInner() {
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
   ]
+  // ── Sección (tab): Partidos (pre, resultado, jugador) vs Estadísticas (tabla, lideres) ──
+  const [section, setSection] = useState<"partidos" | "estadisticas">("partidos")
+  // Encuadre de imágenes (cover = llenar, contain = ver todo)
+  const [bgFit, setBgFit] = useState<"cover" | "contain">("cover")
+  const [photoFit, setPhotoFit] = useState<"cover" | "contain">("cover")
+  // Errores de upload inline (por campo)
+  const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({})
 
   // ── Helpers para guardar/cargar en localStorage ──
   function lsKey(key: string) { return `diseno_${key}_${ligaParam}` }
@@ -135,8 +143,11 @@ function DisenoInner() {
     setBgImageUrl(localStorage.getItem(lsKey("bgImage")) ?? null)
     setTitleSize(parseInt(localStorage.getItem(lsKey("titleSize")) ?? "100"))
     setSubtitleSize(parseInt(localStorage.getItem(lsKey("subtitleSize")) ?? "100"))
+    setTitleWeight((parseInt(localStorage.getItem(lsKey("titleWeight")) ?? "900") as 400 | 700 | 900))
     setCardStyle((localStorage.getItem(lsKey("cardStyle")) as "glass" | "solid" | "minimal") ?? "glass")
     setTextColor((localStorage.getItem(lsKey("textColor")) as "light" | "dark") ?? "light")
+    setBgFit((localStorage.getItem(lsKey("bgFit")) as "cover" | "contain") ?? "cover")
+    setPhotoFit((localStorage.getItem(lsKey("photoFit")) as "cover" | "contain") ?? "cover")
     try {
       const sp = JSON.parse(localStorage.getItem(lsKey("sponsors")) ?? "null")
       setSponsors(Array.isArray(sp) ? [...sp, ...Array(5)].slice(0, 5).map(v => v ?? null) : [null, null, null, null, null])
@@ -208,15 +219,20 @@ function DisenoInner() {
     return data.url as string
   }
 
+  function setUploadError(key: string, msg: string | null) {
+    setUploadErrors((prev) => ({ ...prev, [key]: msg }))
+  }
+
   async function handleLogoUpload(file: File) {
     setUploadingLogo(true)
+    setUploadError("logo", null)
     try {
       const url = await uploadImage(file)
       setLogoUrl(url)
       localStorage.setItem(lsKey("logo"), url)
       setPreviewUrl(null)
     } catch (e: any) {
-      setPreviewError(e.message ?? "Error al subir el logo")
+      setUploadError("logo", e.message ?? "Error al subir el logo")
     } finally {
       setUploadingLogo(false)
     }
@@ -236,13 +252,14 @@ function DisenoInner() {
 
   async function handleTextureUpload(file: File) {
     setUploadingTexture(true)
+    setUploadError("texture", null)
     try {
       const url = await uploadImage(file)
       setTextureUrl(url)
       localStorage.setItem(lsKey("texture"), url)
       setPreviewUrl(null)
     } catch (e: any) {
-      setPreviewError(e.message ?? "Error al subir textura")
+      setUploadError("texture", e.message ?? "Error al subir textura")
     } finally {
       setUploadingTexture(false)
     }
@@ -268,13 +285,14 @@ function DisenoInner() {
 
   async function handleBgUpload(file: File) {
     setUploadingBg(true)
+    setUploadError("bg", null)
     try {
       const url = await uploadImage(file)
       setBgImageUrl(url)
       localStorage.setItem(lsKey("bgImage"), url)
       setPreviewUrl(null)
     } catch (e: any) {
-      setPreviewError(e.message ?? "Error al subir el fondo")
+      setUploadError("bg", e.message ?? "Error al subir el fondo")
     } finally {
       setUploadingBg(false)
     }
@@ -288,12 +306,13 @@ function DisenoInner() {
 
   async function handlePlayerPhotoUpload(file: File) {
     setUploadingPlayerPhoto(true)
+    setUploadError("playerPhoto", null)
     try {
       const url = await uploadImage(file)
       setPlayerPhotoUrl(url)
       setPreviewUrl(null)
     } catch (e: any) {
-      setPreviewError(e.message ?? "Error al subir la foto")
+      setUploadError("playerPhoto", e.message ?? "Error al subir la foto")
     } finally {
       setUploadingPlayerPhoto(false)
     }
@@ -301,12 +320,13 @@ function DisenoInner() {
 
   async function handleJugadorLogoUpload(file: File) {
     setUploadingJugadorLogo(true)
+    setUploadError("jugadorLogo", null)
     try {
       const url = await uploadImage(file)
       setJugadorTeamLogo(url)
       setPreviewUrl(null)
     } catch (e: any) {
-      setPreviewError(e.message ?? "Error al subir el escudo")
+      setUploadError("jugadorLogo", e.message ?? "Error al subir el escudo")
     } finally {
       setUploadingJugadorLogo(false)
     }
@@ -314,6 +334,7 @@ function DisenoInner() {
 
   async function handleSponsorUpload(index: number, file: File) {
     setUploadingSponsors((prev) => { const n = [...prev]; n[index] = true; return n })
+    setUploadError(`sponsor${index}`, null)
     try {
       const url = await uploadImage(file)
       setSponsors((prev) => {
@@ -323,7 +344,7 @@ function DisenoInner() {
       })
       setPreviewUrl(null)
     } catch (e: any) {
-      setPreviewError(e.message ?? "Error al subir sponsor")
+      setUploadError(`sponsor${index}`, e.message ?? "Error al subir sponsor")
     } finally {
       setUploadingSponsors((prev) => { const n = [...prev]; n[index] = false; return n })
     }
@@ -373,10 +394,12 @@ function DisenoInner() {
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
     if (logoUrl) { params.set("logoUrl", logoUrl); if (logoScale !== 100) params.set("logoScale", String(logoScale)) }
     if (!bgImageUrl) params.set("theme", theme)
-    if (bgImageUrl) params.set("bgImageUrl", bgImageUrl)
-    if (textureUrl && !bgImageUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
+    if (bgImageUrl) { params.set("bgImageUrl", bgImageUrl); if (bgFit !== "cover") params.set("bgFit", bgFit) }
+    if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
+    if (playerPhotoUrl && photoFit !== "cover") params.set("photoFit", photoFit)
     if (titleSize !== 100) params.set("titleSize", String(titleSize))
     if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
+    if (titleWeight !== 900) params.set("titleWeight", String(titleWeight))
     if (cardStyle !== "glass") params.set("cardStyle", cardStyle)
     if (textColor !== "light") params.set("textColor", textColor)
     if (layout !== "default") params.set("layout", layout)
@@ -414,13 +437,27 @@ function DisenoInner() {
       }).catch((e) => setPreviewError(e.message ?? "Error de conexión"))
     }, 1500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
 
   // Helpers de texto/estilo con guardado + auto-preview
   function handleTitleSize(val: number) { setTitleSize(val); localStorage.setItem(lsKey("titleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
   function handleSubtitleSize(val: number) { setSubtitleSize(val); localStorage.setItem(lsKey("subtitleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
   function handleCardStyle(val: "glass" | "solid" | "minimal") { setCardStyle(val); localStorage.setItem(lsKey("cardStyle"), val); setPreviewUrl(null); scheduleAutoPreview() }
   function handleTextColor(val: "light" | "dark") { setTextColor(val); localStorage.setItem(lsKey("textColor"), val); setPreviewUrl(null); scheduleAutoPreview() }
+  function handleBgFit(val: "cover" | "contain") { setBgFit(val); localStorage.setItem(lsKey("bgFit"), val); setPreviewUrl(null); scheduleAutoPreview() }
+  function handlePhotoFit(val: "cover" | "contain") { setPhotoFit(val); localStorage.setItem(lsKey("photoFit"), val); setPreviewUrl(null); scheduleAutoPreview() }
+  function handleTitleWeight(val: 400 | 700 | 900) { setTitleWeight(val); localStorage.setItem(lsKey("titleWeight"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
+
+  // Cambiar sección (tab): setea template por defecto de la sección si el actual no pertenece
+  function handleSection(val: "partidos" | "estadisticas") {
+    setSection(val)
+    const templatesPartidos = ["pre", "resultado", "jugador"]
+    const templatesEstadisticas = ["tabla", "lideres"]
+    const currentValid = val === "partidos" ? templatesPartidos.includes(template) : templatesEstadisticas.includes(template)
+    if (!currentValid) setTemplate(val === "partidos" ? "pre" : "tabla")
+    setPreviewUrl(null)
+    setPreviewError(null)
+  }
 
   async function handleGenerate() {
     if (autoPreviewTimer.current) clearTimeout(autoPreviewTimer.current)
@@ -578,6 +615,9 @@ function DisenoInner() {
                 {uploadingLogo ? "Subiendo..." : "Subir logo"}
               </button>
             )}
+            {uploadErrors.logo && (
+              <p className="mt-1.5 text-[10px] text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{uploadErrors.logo}</p>
+            )}
           </div>
 
           {/* Color del fondo */}
@@ -622,18 +662,37 @@ function DisenoInner() {
             />
             <div className="mt-2">
               {bgImageUrl ? (
-                <div className="flex items-center gap-3 p-2 rounded-xl border border-primary/30 bg-primary/5">
-                  <img src={bgImageUrl} alt="Fondo" className="h-10 w-16 object-cover rounded" />
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-primary">Fondo propio activo</p>
-                    <p className="text-[10px] text-muted-foreground">Reemplaza el color de fondo al 100%</p>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-2 rounded-xl border border-primary/30 bg-primary/5">
+                    <img src={bgImageUrl} alt="Fondo" className="h-10 w-16 object-cover rounded" />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-primary">Fondo propio activo</p>
+                      <p className="text-[10px] text-muted-foreground">Reemplaza el color de fondo al 100%</p>
+                    </div>
+                    <button
+                      onClick={handleRemoveBg}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
+                    >
+                      <X className="h-3 w-3" /> Quitar
+                    </button>
                   </div>
-                  <button
-                    onClick={handleRemoveBg}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
-                  >
-                    <X className="h-3 w-3" /> Quitar
-                  </button>
+                  {/* Toggle encuadre */}
+                  <div className="flex gap-1.5">
+                    {([
+                      { key: "cover", label: "Llenar", desc: "Recorta bordes" },
+                      { key: "contain", label: "Ver todo", desc: "Con márgenes" },
+                    ] as const).map((o) => (
+                      <button
+                        key={o.key}
+                        onClick={() => handleBgFit(o.key)}
+                        className={`flex-1 py-1.5 rounded-lg border text-[10px] font-semibold transition-colors ${
+                          bgFit === o.key ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                        }`}
+                      >
+                        {o.label} <span className="font-normal opacity-70">· {o.desc}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <button
@@ -644,6 +703,9 @@ function DisenoInner() {
                   {uploadingBg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
                   {uploadingBg ? "Subiendo..." : "Subir propio fondo (reemplaza el color)"}
                 </button>
+              )}
+              {uploadErrors.bg && (
+                <p className="mt-1.5 text-[10px] text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{uploadErrors.bg}</p>
               )}
             </div>
           </div>
@@ -695,6 +757,9 @@ function DisenoInner() {
                 </button>
               )}
             </div>
+            {uploadErrors.texture && (
+              <p className="mt-1.5 text-[10px] text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{uploadErrors.texture}</p>
+            )}
           </div>
 
           {/* Sponsors */}
@@ -776,24 +841,47 @@ function DisenoInner() {
                 ))}
               </div>
             )}
+            {[0, 1, 2, 3, 4].map((i) => uploadErrors[`sponsor${i}`] ? (
+              <p key={i} className="mt-1 text-[10px] text-red-600 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />Sponsor {i + 1}: {uploadErrors[`sponsor${i}`]}
+              </p>
+            ) : null)}
           </div>
 
-          {/* Tipo */}
+          {/* Sección (tabs) + Tipo */}
           <div>
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Tipo</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {TEMPLATES.map((t) => (
+            {/* Tabs PARTIDOS / ESTADÍSTICAS */}
+            <div className="flex rounded-xl border border-gray-200 overflow-hidden mb-3">
+              {(["partidos", "estadisticas"] as const).map((s) => (
                 <button
-                  key={t.key}
-                  onClick={() => { setTemplate(t.key); setPreviewUrl(null); setPreviewError(null) }}
-                  className={`p-3 rounded-xl border text-left transition-colors ${
-                    template === t.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                  key={s}
+                  onClick={() => handleSection(s)}
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wide transition-colors ${
+                    section === s ? "bg-primary text-white" : "bg-white text-gray-500 hover:bg-gray-50"
                   }`}
                 >
-                  <p className={`text-sm font-semibold ${template === t.key ? "text-primary" : "text-gray-800"}`}>{t.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
+                  {s === "partidos" ? "Partidos" : "Estadísticas"}
                 </button>
               ))}
+            </div>
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Tipo</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {TEMPLATES
+                .filter((t) => section === "partidos"
+                  ? ["pre", "resultado", "jugador"].includes(t.key)
+                  : ["tabla", "lideres"].includes(t.key))
+                .map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => { setTemplate(t.key); setPreviewUrl(null); setPreviewError(null) }}
+                    className={`p-3 rounded-xl border text-left transition-colors ${
+                      template === t.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                    }`}
+                  >
+                    <p className={`text-sm font-semibold ${template === t.key ? "text-primary" : "text-gray-800"}`}>{t.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
+                  </button>
+                ))}
             </div>
           </div>
 
@@ -837,12 +925,30 @@ function DisenoInner() {
                 <input ref={playerPhotoRef} type="file" accept="image/*" className="hidden"
                   onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePlayerPhotoUpload(f); e.target.value = "" }} />
                 {playerPhotoUrl ? (
-                  <div className="flex items-center gap-2">
-                    <img src={playerPhotoUrl} alt="Foto" className="h-12 w-10 object-cover rounded border" />
-                    <button onClick={() => { setPlayerPhotoUrl(null); setPreviewUrl(null) }}
-                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50">
-                      <X className="h-3 w-3" /> Quitar
-                    </button>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <img src={playerPhotoUrl} alt="Foto" className="h-12 w-10 object-cover rounded border" />
+                      <button onClick={() => { setPlayerPhotoUrl(null); setPreviewUrl(null) }}
+                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50">
+                        <X className="h-3 w-3" /> Quitar
+                      </button>
+                    </div>
+                    <div className="flex gap-1.5">
+                      {([
+                        { key: "cover", label: "Llenar" },
+                        { key: "contain", label: "Ver todo" },
+                      ] as const).map((o) => (
+                        <button
+                          key={o.key}
+                          onClick={() => handlePhotoFit(o.key)}
+                          className={`flex-1 py-1.5 rounded-lg border text-[10px] font-semibold transition-colors ${
+                            photoFit === o.key ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                          }`}
+                        >
+                          {o.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   <button onClick={() => playerPhotoRef.current?.click()} disabled={uploadingPlayerPhoto}
@@ -850,6 +956,9 @@ function DisenoInner() {
                     {uploadingPlayerPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
                     {uploadingPlayerPhoto ? "Subiendo..." : "Subir foto"}
                   </button>
+                )}
+                {uploadErrors.playerPhoto && (
+                  <p className="mt-1.5 text-[10px] text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{uploadErrors.playerPhoto}</p>
                 )}
               </div>
             </div>
@@ -883,12 +992,30 @@ function DisenoInner() {
                   <input ref={playerPhotoRef} type="file" accept="image/*" className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePlayerPhotoUpload(f); e.target.value = "" }} />
                   {playerPhotoUrl ? (
-                    <div className="flex items-center gap-2">
-                      <img src={playerPhotoUrl} alt="Foto" className="h-12 w-10 object-cover rounded border" />
-                      <button onClick={() => { setPlayerPhotoUrl(null); setPreviewUrl(null) }}
-                        className="flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-red-600 text-xs hover:bg-red-50">
-                        <X className="h-3 w-3" />
-                      </button>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <img src={playerPhotoUrl} alt="Foto" className="h-12 w-10 object-cover rounded border" />
+                        <button onClick={() => { setPlayerPhotoUrl(null); setPreviewUrl(null) }}
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-red-600 text-xs hover:bg-red-50">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <div className="flex gap-1">
+                        {([
+                          { key: "cover", label: "Llenar" },
+                          { key: "contain", label: "Ver todo" },
+                        ] as const).map((o) => (
+                          <button
+                            key={o.key}
+                            onClick={() => handlePhotoFit(o.key)}
+                            className={`flex-1 py-1 rounded border text-[10px] font-semibold transition-colors ${
+                              photoFit === o.key ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-500 hover:border-gray-300"
+                            }`}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ) : (
                     <button onClick={() => playerPhotoRef.current?.click()} disabled={uploadingPlayerPhoto}
@@ -896,6 +1023,9 @@ function DisenoInner() {
                       {uploadingPlayerPhoto ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                       {uploadingPlayerPhoto ? "Subiendo..." : "Subir foto"}
                     </button>
+                  )}
+                  {uploadErrors.playerPhoto && (
+                    <p className="mt-1 text-[10px] text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{uploadErrors.playerPhoto}</p>
                   )}
                 </div>
                 <div>
@@ -916,6 +1046,9 @@ function DisenoInner() {
                       {uploadingJugadorLogo ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
                       {uploadingJugadorLogo ? "Subiendo..." : "Subir escudo"}
                     </button>
+                  )}
+                  {uploadErrors.jugadorLogo && (
+                    <p className="mt-1 text-[10px] text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{uploadErrors.jugadorLogo}</p>
                   )}
                 </div>
               </div>
@@ -1033,6 +1166,28 @@ function DisenoInner() {
                   onChange={(e) => handleSubtitleSize(Number(e.target.value))} className="w-full accent-primary" />
               </div>
             </div>
+
+            {/* Peso del título */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Peso del título</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { val: 400 as const, label: "Regular",  weight: "font-normal" },
+                  { val: 700 as const, label: "Bold",     weight: "font-bold" },
+                  { val: 900 as const, label: "Black",    weight: "font-black" },
+                ]).map((o) => (
+                  <button
+                    key={o.val}
+                    onClick={() => handleTitleWeight(o.val)}
+                    className={`py-1.5 rounded-lg border text-xs transition-colors ${o.weight} ${
+                      titleWeight === o.val ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Lista de partidos (solo para templates que requieren selección) */}
@@ -1146,11 +1301,9 @@ function DisenoInner() {
             <div className="max-w-[390px] mx-auto bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
               {/* Header */}
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
-                  <span className="text-white text-[9px] font-black tracking-tight">CPB</span>
-                </div>
+                <img src="https://www.cpb.com.py/logo-cpb.jpg" alt="CPB" className="h-8 w-8 rounded-full object-cover shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold leading-none text-gray-900">cpboficial</p>
+                  <p className="text-xs font-semibold leading-none text-gray-900">cpb_py</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">Paraguay</p>
                 </div>
                 <MoreHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
@@ -1185,7 +1338,7 @@ function DisenoInner() {
                 </div>
                 <p className="text-xs font-semibold text-gray-800">1.234 Me gusta</p>
                 <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed line-clamp-3">
-                  <span className="font-semibold text-gray-900">cpboficial</span>{" "}
+                  <span className="font-semibold text-gray-900">cpb_py</span>{" "}
                   <span className="text-gray-500">
                     {activeCopyIndex !== null && copies[activeCopyIndex]
                       ? copies[activeCopyIndex]
@@ -1227,10 +1380,8 @@ function DisenoInner() {
                   </div>
                   {/* Avatar + name */}
                   <div className="flex items-center gap-1.5">
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
-                      <span className="text-white text-[7px] font-black">CPB</span>
-                    </div>
-                    <span className="text-white text-[10px] font-semibold drop-shadow">cpboficial</span>
+                    <img src="https://www.cpb.com.py/logo-cpb.jpg" alt="CPB" className="h-6 w-6 rounded-full object-cover shrink-0" />
+                    <span className="text-white text-[10px] font-semibold drop-shadow">cpb_py</span>
                     <span className="text-white/60 text-[9px]">· 2h</span>
                   </div>
                 </div>
