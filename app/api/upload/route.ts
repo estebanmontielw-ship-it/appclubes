@@ -63,18 +63,29 @@ export async function POST(request: Request) {
     const isHeic = fileExt === "heic" || fileExt === "heif" ||
                    contentType === "image/heic" || contentType === "image/heif"
 
-    // Convert any image to JPEG for consistency (except PDFs)
+    // Convert any image to JPEG for consistency (except PDFs and PNGs)
     const isImage = contentType.startsWith("image/") || isHeic
     const isPdf = contentType === "application/pdf" || fileExt === "pdf"
+    const isPng = fileExt === "png" || contentType === "image/png"
 
     if (isImage && !isPdf) {
       try {
-        buffer = await sharp(buffer)
-          .rotate() // Auto-correct EXIF orientation
-          .jpeg({ quality: 85 })
-          .toBuffer() as Buffer
-        fileExt = "jpg"
-        contentType = "image/jpeg"
+        if (isPng) {
+          // Preserve PNG (needed for logos with transparency — satori/ImageResponse requires PNG)
+          buffer = await sharp(buffer)
+            .rotate()
+            .png({ compressionLevel: 8 })
+            .toBuffer() as Buffer
+          fileExt = "png"
+          contentType = "image/png"
+        } else {
+          buffer = await sharp(buffer)
+            .rotate() // Auto-correct EXIF orientation
+            .jpeg({ quality: 85 })
+            .toBuffer() as Buffer
+          fileExt = "jpg"
+          contentType = "image/jpeg"
+        }
       } catch (err) {
         console.error("Image conversion error:", err)
         if (isHeic) {

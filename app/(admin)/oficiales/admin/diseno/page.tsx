@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { Download, Image as ImageIcon, Loader2, RefreshCw, CheckSquare, Square, Upload, X, AlertCircle } from "lucide-react"
+import { Download, Image as ImageIcon, Loader2, RefreshCw, CheckSquare, Square, Upload, X, AlertCircle, Plus } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -62,12 +62,20 @@ function DisenoInner() {
   const [subtitulo, setSubtitulo] = useState("")
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [sponsors, setSponsors] = useState<(string | null)[]>([null, null, null])
+  const [uploadingSponsors, setUploadingSponsors] = useState<boolean[]>([false, false, false])
+  const [sponsorBg, setSponsorBg] = useState<"white" | "dark">("dark")
   const [generating, setGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"proximos" | "jugados">("proximos")
   const [teamFilter, setTeamFilter] = useState("")
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const sponsorRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ]
 
   useEffect(() => {
     setLoading(true)
@@ -107,21 +115,39 @@ function DisenoInner() {
       return p.homeName.toLowerCase().includes(q) || p.awayName.toLowerCase().includes(q)
     })
 
+  async function uploadImage(file: File): Promise<string> {
+    const fd = new FormData()
+    fd.append("file", file)
+    fd.append("bucket", "website")
+    const res = await fetch("/api/upload", { method: "POST", body: fd })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.error ?? "Error al subir imagen")
+    return data.url as string
+  }
+
   async function handleLogoUpload(file: File) {
     setUploadingLogo(true)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      fd.append("bucket", "website")
-      const res = await fetch("/api/upload", { method: "POST", body: fd })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Error al subir el logo")
-      setLogoUrl(data.url)
+      const url = await uploadImage(file)
+      setLogoUrl(url)
       setPreviewUrl(null)
     } catch (e: any) {
       setPreviewError(e.message ?? "Error al subir el logo")
     } finally {
       setUploadingLogo(false)
+    }
+  }
+
+  async function handleSponsorUpload(index: number, file: File) {
+    setUploadingSponsors((prev) => { const n = [...prev]; n[index] = true; return n })
+    try {
+      const url = await uploadImage(file)
+      setSponsors((prev) => { const n = [...prev]; n[index] = url; return n })
+      setPreviewUrl(null)
+    } catch (e: any) {
+      setPreviewError(e.message ?? "Error al subir sponsor")
+    } finally {
+      setUploadingSponsors((prev) => { const n = [...prev]; n[index] = false; return n })
     }
   }
 
@@ -143,6 +169,11 @@ function DisenoInner() {
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
     if (logoUrl) params.set("logoUrl", logoUrl)
+    const activeSponors = sponsors.filter(Boolean)
+    if (activeSponors.length > 0) {
+      activeSponors.forEach((s, i) => { if (s) params.set(`s${i + 1}`, s) })
+      params.set("sponsorBg", sponsorBg)
+    }
     return `/api/admin/flyer?${params.toString()}`
   }
 
@@ -219,12 +250,12 @@ function DisenoInner() {
           {/* Logo (opcional) */}
           <div>
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
-              Logo <span className="normal-case font-normal">(opcional — si no subís nada, no aparece)</span>
+              Logo <span className="normal-case font-normal">(opcional · solo PNG con fondo transparente)</span>
             </Label>
             <input
               ref={logoInputRef}
               type="file"
-              accept="image/*"
+              accept="image/png"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0]
@@ -251,6 +282,76 @@ function DisenoInner() {
                 {uploadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
                 {uploadingLogo ? "Subiendo..." : "Subir logo"}
               </button>
+            )}
+          </div>
+
+          {/* Sponsors */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Sponsors <span className="normal-case font-normal">(hasta 3 · solo PNG con fondo transparente)</span>
+              </Label>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i}>
+                  <input
+                    ref={sponsorRefs[i]}
+                    type="file"
+                    accept="image/png"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleSponsorUpload(i, file)
+                      e.target.value = ""
+                    }}
+                  />
+                  {sponsors[i] ? (
+                    <div className="relative group">
+                      <img
+                        src={sponsors[i]!}
+                        alt={`Sponsor ${i + 1}`}
+                        className="h-14 w-full object-contain rounded-lg border bg-gray-100 p-1"
+                      />
+                      <button
+                        onClick={() => { setSponsors((p) => { const n = [...p]; n[i] = null; return n }); setPreviewUrl(null) }}
+                        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => sponsorRefs[i].current?.click()}
+                      disabled={uploadingSponsors[i]}
+                      className="h-14 w-full rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors disabled:opacity-50"
+                    >
+                      {uploadingSponsors[i]
+                        ? <Loader2 className="h-4 w-4 animate-spin" />
+                        : <Plus className="h-4 w-4" />
+                      }
+                      <span className="text-[10px]">Sponsor {i + 1}</span>
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {sponsors.some(Boolean) && (
+              <div className="flex gap-2">
+                {(["dark", "white"] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    onClick={() => { setSponsorBg(opt); setPreviewUrl(null) }}
+                    className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors ${
+                      sponsorBg === opt
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-gray-200 text-gray-500 hover:border-gray-300"
+                    }`}
+                  >
+                    {opt === "dark" ? "🌑 Barra oscura (logos blancos)" : "⬜ Barra blanca (logos oscuros)"}
+                  </button>
+                ))}
+              </div>
             )}
           </div>
 

@@ -162,9 +162,15 @@ export async function GET(req: NextRequest) {
   const titulo = searchParams.get("titulo") ?? ""
   const subtitulo = searchParams.get("subtitulo") ?? ""
   const logoUrl = searchParams.get("logoUrl") ?? ""
+  const s1 = searchParams.get("s1") ?? ""
+  const s2 = searchParams.get("s2") ?? ""
+  const s3 = searchParams.get("s3") ?? ""
+  const sponsorBg = searchParams.get("sponsorBg") ?? "dark"
 
   const liga = searchParams.get("liga") ?? "lnb"
   const format = searchParams.get("format") ?? "feed"
+
+  const sponsorLogos = [s1, s2, s3].filter(Boolean)
 
   const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
   if (matchIds.length === 0) return new Response("matchIds requerido", { status: 400 })
@@ -314,15 +320,35 @@ export async function GET(req: NextRequest) {
             ))}
           </div>
 
-          {/* ── FOOTER ── */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            height: 60, width: "100%",
-          }}>
-            <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 18, fontWeight: 500, letterSpacing: 2 }}>
-              cpb.com.py
-            </span>
-          </div>
+          {/* ── FOOTER / SPONSORS ── */}
+          {sponsorLogos.length > 0 ? (
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: "100%", height: 120,
+              background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)",
+              gap: 48, padding: "0 60px",
+            }}>
+              {sponsorLogos.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  width={180}
+                  height={72}
+                  style={{ objectFit: "contain", flex: "0 0 auto" }}
+                  alt={`Sponsor ${i + 1}`}
+                />
+              ))}
+            </div>
+          ) : (
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              height: 60, width: "100%",
+            }}>
+              <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 18, fontWeight: 500, letterSpacing: 2 }}>
+                cpb.com.py
+              </span>
+            </div>
+          )}
         </div>
       ),
       { width: W, height: H }
