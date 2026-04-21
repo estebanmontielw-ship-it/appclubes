@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { Plus, Edit2, Trash2, Eye, EyeOff, Star, BarChart3 } from "lucide-react"
+import { Plus, Edit2, Trash2, Eye, EyeOff, Star, BarChart3, Sparkles } from "lucide-react"
 
 const categoryLabels: Record<string, string> = {
   GENERAL: "General",
@@ -73,13 +73,22 @@ export default function AdminNoticiasPage() {
           <h1 className="text-2xl font-bold">Noticias</h1>
           <p className="text-sm text-gray-500 mt-1">Gestión de noticias del sitio web público</p>
         </div>
-        <Link
-          href="/oficiales/admin/website/noticias/crear"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Nueva
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/oficiales/admin/website/noticias/generar-ia"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-violet-600 to-indigo-600 text-white text-sm font-semibold hover:from-violet-700 hover:to-indigo-700 transition-all shadow-md"
+          >
+            <Sparkles className="h-4 w-4" />
+            Generar con IA
+          </Link>
+          <Link
+            href="/oficiales/admin/website/noticias/crear"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva
+          </Link>
+        </div>
       </div>
 
       {viewsData?.configured && (

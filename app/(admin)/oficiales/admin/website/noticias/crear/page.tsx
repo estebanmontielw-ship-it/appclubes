@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Sparkles, Loader2, Camera } from "lucide-react"
@@ -37,6 +37,23 @@ export default function CrearNoticiaPage() {
   const [categoria, setCategoria] = useState("GENERAL")
   const [imagenUrl, setImagenUrl] = useState("")
   const [aiImageMessage, setAiImageMessage] = useState("")
+  const [autorNombre, setAutorNombre] = useState("")
+
+  // Load draft pre-filled from AI generator
+  useEffect(() => {
+    const raw = localStorage.getItem("noticia_draft")
+    if (!raw) return
+    try {
+      const draft = JSON.parse(raw)
+      if (draft.titulo) { setTitulo(draft.titulo); setSlug(draft.slug ?? slugify(draft.titulo)); setAutoSlug(false) }
+      if (draft.extracto) setExtracto(draft.extracto)
+      if (draft.contenido) setContenido(draft.contenido)
+      if (draft.categoria) setCategoria(draft.categoria)
+      if (draft.imagenUrl) setImagenUrl(draft.imagenUrl)
+      if (draft.autorNombre) setAutorNombre(draft.autorNombre)
+      localStorage.removeItem("noticia_draft")
+    } catch {}
+  }, [])
 
   // AI generator
   const [aiPrompt, setAiPrompt] = useState("")
@@ -276,6 +293,8 @@ export default function CrearNoticiaPage() {
             <input
               name="autorNombre"
               type="text"
+              value={autorNombre}
+              onChange={e => setAutorNombre(e.target.value)}
               className="w-full px-3 py-2.5 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             />
           </div>
