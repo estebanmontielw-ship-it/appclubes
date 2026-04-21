@@ -63,6 +63,9 @@ function DisenoInner() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoScale, setLogoScale] = useState(100)
   const [theme, setTheme] = useState("masc1")
+  const [bgImageUrl, setBgImageUrl] = useState<string | null>(null)
+  const [uploadingBg, setUploadingBg] = useState(false)
+  const bgInputRef = useRef<HTMLInputElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [sponsors, setSponsors] = useState<(string | null)[]>([null, null, null])
   const [sponsorScales, setSponsorScales] = useState<number[]>([1, 1, 1])
@@ -100,6 +103,7 @@ function DisenoInner() {
     setTextureUrl(localStorage.getItem(lsKey("texture")) ?? null)
     setTextureOpacity(parseInt(localStorage.getItem(lsKey("textureOpacity")) ?? "12"))
     setTheme(localStorage.getItem(lsKey("theme")) ?? "masc1")
+    setBgImageUrl(localStorage.getItem(lsKey("bgImage")) ?? null)
     try {
       const sp = JSON.parse(localStorage.getItem(lsKey("sponsors")) ?? "null")
       setSponsors(Array.isArray(sp) ? sp : [null, null, null])
@@ -221,6 +225,26 @@ function DisenoInner() {
     setPreviewUrl(null)
   }
 
+  async function handleBgUpload(file: File) {
+    setUploadingBg(true)
+    try {
+      const url = await uploadImage(file)
+      setBgImageUrl(url)
+      localStorage.setItem(lsKey("bgImage"), url)
+      setPreviewUrl(null)
+    } catch (e: any) {
+      setPreviewError(e.message ?? "Error al subir el fondo")
+    } finally {
+      setUploadingBg(false)
+    }
+  }
+
+  function handleRemoveBg() {
+    setBgImageUrl(null)
+    localStorage.removeItem(lsKey("bgImage"))
+    setPreviewUrl(null)
+  }
+
   async function handleSponsorUpload(index: number, file: File) {
     setUploadingSponsors((prev) => { const n = [...prev]; n[index] = true; return n })
     try {
@@ -280,8 +304,9 @@ function DisenoInner() {
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
     if (logoUrl) { params.set("logoUrl", logoUrl); if (logoScale !== 100) params.set("logoScale", String(logoScale)) }
-    params.set("theme", theme)
-    if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
+    if (!bgImageUrl) params.set("theme", theme)
+    if (bgImageUrl) params.set("bgImageUrl", bgImageUrl)
+    if (textureUrl && !bgImageUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -441,6 +466,44 @@ function DisenoInner() {
                   </div>
                 </button>
               ))}
+            </div>
+            {/* Subir fondo propio */}
+            <input
+              ref={bgInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleBgUpload(file)
+                e.target.value = ""
+              }}
+            />
+            <div className="mt-2">
+              {bgImageUrl ? (
+                <div className="flex items-center gap-3 p-2 rounded-xl border border-primary/30 bg-primary/5">
+                  <img src={bgImageUrl} alt="Fondo" className="h-10 w-16 object-cover rounded" />
+                  <div className="flex-1">
+                    <p className="text-xs font-semibold text-primary">Fondo propio activo</p>
+                    <p className="text-[10px] text-muted-foreground">Reemplaza el color de fondo al 100%</p>
+                  </div>
+                  <button
+                    onClick={handleRemoveBg}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
+                  >
+                    <X className="h-3 w-3" /> Quitar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => bgInputRef.current?.click()}
+                  disabled={uploadingBg}
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-gray-300 text-xs text-gray-500 hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+                >
+                  {uploadingBg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                  {uploadingBg ? "Subiendo..." : "Subir propio fondo (reemplaza el color)"}
+                </button>
+              )}
             </div>
           </div>
 
