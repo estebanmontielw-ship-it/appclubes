@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from "uuid"
 import sharp from "sharp"
 import { handleApiError } from "@/lib/api-errors"
 
-const ALLOWED_BUCKETS = ["fotos-oficiales", "documentos", "fotos-carnet", "fotos-ct", "hero-images", "recursos", "noticias", "fotos-cedula", "certificados", "comprobantes"]
+const ALLOWED_BUCKETS = ["fotos-oficiales", "documentos", "fotos-carnet", "fotos-ct", "hero-images", "recursos", "noticias", "website", "fotos-cedula", "certificados", "comprobantes"]
 
 // These buckets are used by public registration forms (user not yet authenticated)
 const PUBLIC_BUCKETS = new Set(["fotos-carnet", "fotos-cedula", "certificados", "comprobantes"])
