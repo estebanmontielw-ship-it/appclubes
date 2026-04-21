@@ -1,12 +1,24 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import {
   Select,
   SelectContent,
@@ -15,7 +27,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useToast } from "@/components/ui/use-toast"
-import { Loader2, Save, ShieldCheck } from "lucide-react"
+import { Loader2, Save, ShieldCheck, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { ProfileSkeleton } from "@/components/ui/skeleton"
 import { ROL_LABELS, CIUDADES_PY } from "@/lib/constants"
@@ -47,9 +59,28 @@ interface EditForm {
 
 export default function PerfilPage() {
   const { toast } = useToast()
+  const router = useRouter()
   const [perfil, setPerfil] = useState<PerfilData | null>(null)
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDeleteAccount = async () => {
+    setDeleting(true)
+    try {
+      const res = await fetch("/api/cuenta", { method: "DELETE" })
+      if (res.ok) {
+        router.push("/login?cuenta=eliminada")
+      } else {
+        const data = await res.json()
+        toast({ variant: "destructive", title: data.error || "Error al eliminar la cuenta" })
+      }
+    } catch {
+      toast({ variant: "destructive", title: "Error de conexión" })
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const { register, handleSubmit, setValue, reset } = useForm<EditForm>()
 
@@ -268,6 +299,50 @@ export default function PerfilPage() {
               </div>
             )}
           </form>
+        </CardContent>
+      </Card>
+      {/* Danger zone */}
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle className="text-red-600 text-base">Zona de peligro</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Eliminar tu cuenta es una acción permanente. Se borrarán tus datos personales,
+            fotos y acceso al portal. Los registros de partidos arbitrados se conservan
+            de forma anónima por requisitos deportivos.
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar mi cuenta
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>¿Eliminar tu cuenta?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Esta acción es <strong>permanente e irreversible</strong>. Se eliminarán
+                  tu nombre, email, teléfono, foto, cédula, carnet y acceso al portal.
+                  {"\n\n"}
+                  Los registros de partidos arbitrados se conservan de forma anónima
+                  por requisitos deportivos.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-600 hover:bg-red-700"
+                  onClick={handleDeleteAccount}
+                  disabled={deleting}
+                >
+                  {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Sí, eliminar mi cuenta
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </CardContent>
       </Card>
     </div>
