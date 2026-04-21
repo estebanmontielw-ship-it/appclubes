@@ -82,6 +82,31 @@ function DisenoInner() {
     useRef<HTMLInputElement>(null),
   ]
 
+  // Persist logo + sponsors per liga in localStorage
+  useEffect(() => {
+    setLogoUrl(localStorage.getItem(`diseno_logo_${ligaParam}`) ?? null)
+    try {
+      const sp = JSON.parse(localStorage.getItem(`diseno_sponsors_${ligaParam}`) ?? "null")
+      if (Array.isArray(sp)) setSponsors(sp)
+      else setSponsors([null, null, null])
+      const sc = JSON.parse(localStorage.getItem(`diseno_sponsorScales_${ligaParam}`) ?? "null")
+      if (Array.isArray(sc)) setSponsorScales(sc)
+      else setSponsorScales([1, 1, 1])
+      setSponsorBg((localStorage.getItem(`diseno_sponsorBg_${ligaParam}`) as "white" | "dark") ?? "dark")
+    } catch { setSponsors([null, null, null]); setSponsorScales([1, 1, 1]) }
+  }, [ligaParam])
+
+  useEffect(() => {
+    if (logoUrl) localStorage.setItem(`diseno_logo_${ligaParam}`, logoUrl)
+    else localStorage.removeItem(`diseno_logo_${ligaParam}`)
+  }, [logoUrl, ligaParam])
+
+  useEffect(() => {
+    localStorage.setItem(`diseno_sponsors_${ligaParam}`, JSON.stringify(sponsors))
+    localStorage.setItem(`diseno_sponsorScales_${ligaParam}`, JSON.stringify(sponsorScales))
+    localStorage.setItem(`diseno_sponsorBg_${ligaParam}`, sponsorBg)
+  }, [sponsors, sponsorScales, sponsorBg, ligaParam])
+
   useEffect(() => {
     setLoading(true)
     setPartidos([])
