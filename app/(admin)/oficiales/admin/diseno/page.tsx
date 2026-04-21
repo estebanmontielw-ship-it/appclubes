@@ -86,6 +86,7 @@ function DisenoInner() {
   const [generatingCopy, setGeneratingCopy] = useState(false)
   const [copyError, setCopyError] = useState<string | null>(null)
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
+  const [activeCopyIndex, setActiveCopyIndex] = useState<number | null>(null)
   const autoPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const sponsorRefs = [
@@ -424,6 +425,7 @@ function DisenoInner() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? "Error al generar")
       setCopies(data.copies ?? [])
+      if ((data.copies ?? []).length > 0) setActiveCopyIndex(0)
     } catch (e: any) {
       setCopyError(e.message ?? "Error al generar el copy")
     } finally {
@@ -987,10 +989,12 @@ function DisenoInner() {
                 <Bookmark className="h-5 w-5 text-gray-700 ml-auto" />
               </div>
               <p className="text-xs font-semibold text-gray-800">1.234 Me gusta</p>
-              <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">
+              <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed line-clamp-3">
                 <span className="font-semibold text-gray-900">cpboficial</span>{" "}
                 <span className="text-gray-500">
-                  {titulo
+                  {activeCopyIndex !== null && copies[activeCopyIndex]
+                    ? copies[activeCopyIndex]
+                    : titulo
                     ? titulo.toLowerCase()
                     : template === "resultado"
                     ? "así quedaron los resultados 🏀"
@@ -1040,13 +1044,28 @@ function DisenoInner() {
         {copies.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {copies.map((copy, i) => (
-              <div key={i} className="relative group rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wide">
-                  Opción {i + 1}
-                </p>
+              <div
+                key={i}
+                onClick={() => setActiveCopyIndex(i)}
+                className={`relative group rounded-xl border p-4 cursor-pointer transition-colors ${
+                  activeCopyIndex === i
+                    ? "border-primary bg-primary/5 ring-1 ring-primary/20"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${activeCopyIndex === i ? "text-primary" : "text-muted-foreground"}`}>
+                    Opción {i + 1}
+                  </p>
+                  {activeCopyIndex === i && (
+                    <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                      En mockup
+                    </span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{copy}</p>
                 <button
-                  onClick={() => handleCopyToClipboard(copy, i)}
+                  onClick={(e) => { e.stopPropagation(); handleCopyToClipboard(copy, i) }}
                   className="absolute top-3 right-3 h-7 w-7 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary transition-colors opacity-0 group-hover:opacity-100"
                   title="Copiar al portapapeles"
                 >
