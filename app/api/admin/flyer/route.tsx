@@ -5,157 +5,299 @@ import { geniusFetch } from "@/lib/genius-sports"
 
 export const dynamic = "force-dynamic"
 
-const SIZE = 1080
+const W = 1080
 
-function pad2(n: number) { return String(n).padStart(2, "0") }
+const DIAS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
+const MESES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
 
-function formatDate(matchTime: string) {
+function formatMatchTime(matchTime: string) {
+  if (!matchTime) return { date: "", time: "" }
   const [datePart, timePart] = matchTime.split(" ")
-  const [y, m, d] = datePart.split("-")
-  const months = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-  const month = months[Number(m) - 1] ?? m
-  const timeStr = timePart ? timePart.slice(0, 5) : null
-  return { date: `${d} ${month} ${y}`, time: timeStr }
+  const [y, m, d] = datePart.split("-").map(Number)
+  const dt = new Date(y, m - 1, d)
+  const dia = DIAS[dt.getDay()]
+  const mes = MESES[m - 1]
+  const time = timePart ? timePart.slice(0, 5) : ""
+  return { date: `${dia} ${d} de ${mes}`, time }
+}
+
+interface MatchData {
+  homeName: string
+  awayName: string
+  homeLogo: string | null
+  awayLogo: string | null
+  homeScore: string | null
+  awayScore: string | null
+  date: string
+  time: string
+  venue: string
+}
+
+function Logo({ url, name, size }: { url: string | null; name: string; size: number }) {
+  if (url) {
+    return (
+      <img
+        src={url}
+        width={size}
+        height={size}
+        style={{ objectFit: "contain" }}
+        alt={name}
+      />
+    )
+  }
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size / 2,
+      background: "rgba(255,255,255,0.15)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <span style={{ color: "white", fontSize: size * 0.45, fontWeight: 900 }}>{name.charAt(0)}</span>
+    </div>
+  )
+}
+
+function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, vsFontSize }: {
+  match: MatchData
+  isResultado: boolean
+  cardW: number
+  cardH: number
+  logoSize: number
+  nameFontSize: number
+  vsFontSize: number
+}) {
+  return (
+    <div style={{
+      width: cardW, height: cardH,
+      background: "rgba(255,255,255,0.08)",
+      borderRadius: 28,
+      border: "1.5px solid rgba(255,255,255,0.14)",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "0 32px",
+    }}>
+      {/* Teams row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%" }}>
+
+        {/* Home */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+          <Logo url={match.homeLogo} name={match.homeName} size={logoSize} />
+          {isResultado && match.homeScore != null && (
+            <span style={{ color: "white", fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+              {match.homeScore}
+            </span>
+          )}
+          <span style={{
+            color: "white", fontSize: nameFontSize, fontWeight: 700,
+            marginTop: isResultado ? 6 : 14, textAlign: "center",
+            maxWidth: cardW * 0.35,
+          }}>{match.homeName}</span>
+        </div>
+
+        {/* VS */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 80 }}>
+          <span style={{
+            color: isResultado ? "rgba(255,255,255,0.3)" : "#f97316",
+            fontSize: vsFontSize,
+            fontWeight: 900,
+            letterSpacing: isResultado ? 0 : -2,
+          }}>
+            {isResultado ? "–" : "VS"}
+          </span>
+        </div>
+
+        {/* Away */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+          <Logo url={match.awayLogo} name={match.awayName} size={logoSize} />
+          {isResultado && match.awayScore != null && (
+            <span style={{ color: "white", fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+              {match.awayScore}
+            </span>
+          )}
+          <span style={{
+            color: "white", fontSize: nameFontSize, fontWeight: 700,
+            marginTop: isResultado ? 6 : 14, textAlign: "center",
+            maxWidth: cardW * 0.35,
+          }}>{match.awayName}</span>
+        </div>
+      </div>
+
+      {/* Info bar */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        gap: 16, marginTop: 18,
+        background: "rgba(0,0,0,0.3)", borderRadius: 12,
+        padding: "10px 24px", width: "90%",
+      }}>
+        {match.venue && (
+          <>
+            <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 20, fontWeight: 600 }}>{match.venue}</span>
+            {(match.date || match.time) && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 18, display: "flex" }}>·</span>}
+          </>
+        )}
+        {match.date && (
+          <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 20, fontWeight: 600 }}>{match.date}</span>
+        )}
+        {match.time && (
+          <>
+            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 18, display: "flex" }}>·</span>
+            <span style={{ color: "#fbbf24", fontSize: 20, fontWeight: 700 }}>{match.time} hs</span>
+          </>
+        )}
+      </div>
+    </div>
+  )
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  const matchId = searchParams.get("matchId")
+  const matchIdsParam = searchParams.get("matchIds") ?? searchParams.get("matchId") ?? ""
   const template = searchParams.get("template") ?? "pre"
+  const titulo = searchParams.get("titulo") ?? ""
 
-  if (!matchId) {
-    return new Response("matchId requerido", { status: 400 })
-  }
+  const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
+  if (matchIds.length === 0) return new Response("matchIds requerido", { status: 400 })
+
+  const isResultado = template === "resultado"
 
   try {
     const { id: compId } = await resolveLnbCompetitionIdPublic()
     const matchesRaw = await geniusFetch(`/competitions/${compId}/matches?limit=100`, "short")
-    const matches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
+    const allMatches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
 
-    const match = matches.find((m: any) =>
-      String(m.matchId) === String(matchId) ||
-      String(m.matchExternalId) === String(matchId)
-    )
+    const matchDataList: MatchData[] = []
 
-    if (!match) return new Response("Partido no encontrado", { status: 404 })
+    for (const mid of matchIds) {
+      const m = allMatches.find((x: any) =>
+        String(x.matchId) === mid || String(x.matchExternalId) === mid
+      )
+      if (!m) continue
 
-    const home = (match.competitors ?? []).find((c: any) => Number(c.isHomeCompetitor) === 1) ?? match.competitors?.[0]
-    const away = (match.competitors ?? []).find((c: any) => Number(c.isHomeCompetitor) === 0) ?? match.competitors?.[1]
+      const home = (m.competitors ?? []).find((c: any) => Number(c.isHomeCompetitor) === 1) ?? m.competitors?.[0]
+      const away = (m.competitors ?? []).find((c: any) => Number(c.isHomeCompetitor) === 0) ?? m.competitors?.[1]
+      const { date, time } = formatMatchTime(m.matchTime ?? "")
 
-    const homeName: string = home?.competitorName ?? "Local"
-    const awayName: string = away?.competitorName ?? "Visitante"
-    const homeLogo: string | null = home?.images?.logo?.L1?.url ?? home?.images?.logo?.S1?.url ?? null
-    const awayLogo: string | null = away?.images?.logo?.L1?.url ?? away?.images?.logo?.S1?.url ?? null
-    const homeScore: string | null = template === "resultado" ? (home?.scoreString ?? null) : null
-    const awayScore: string | null = template === "resultado" ? (away?.scoreString ?? null) : null
-    const { date, time } = formatDate(match.matchTime ?? "")
-    const venue: string = match.venue?.venueName ?? match.venueName ?? ""
+      matchDataList.push({
+        homeName: home?.competitorName ?? "Local",
+        awayName: away?.competitorName ?? "Visitante",
+        homeLogo: home?.images?.logo?.L1?.url ?? home?.images?.logo?.S1?.url ?? null,
+        awayLogo: away?.images?.logo?.L1?.url ?? away?.images?.logo?.S1?.url ?? null,
+        homeScore: isResultado ? (home?.scoreString ?? null) : null,
+        awayScore: isResultado ? (away?.scoreString ?? null) : null,
+        date,
+        time,
+        venue: m.venue?.venueName ?? m.venueName ?? "",
+      })
+    }
 
-    const isResultado = template === "resultado"
+    if (matchDataList.length === 0) return new Response("Partidos no encontrados", { status: 404 })
+
+    const count = matchDataList.length
+    // Height: 1 match → square, 2+ → portrait
+    const H = count === 1 ? 1080 : count === 2 ? 1350 : 1620
+
+    // Card dimensions based on count
+    const cardW = W - 80
+    const cardH = count === 1 ? 480 : count === 2 ? 420 : 340
+    const logoSize = count === 1 ? 150 : count === 2 ? 130 : 100
+    const nameFontSize = count === 1 ? 28 : 24
+    const vsFontSize = count === 1 ? 58 : 48
+
+    const headerH = count === 1 ? 280 : 260
+    const gapBetweenCards = count === 1 ? 0 : 20
 
     return new ImageResponse(
       (
-        <div
-          style={{
-            width: SIZE,
-            height: SIZE,
-            background: "#0a1628",
+        <div style={{
+          width: W, height: H,
+          background: "linear-gradient(160deg, #0b1e3d 0%, #0d2550 50%, #091830 100%)",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          fontFamily: "sans-serif",
+          position: "relative",
+          overflow: "hidden",
+        }}>
+          {/* Background glow effects */}
+          <div style={{
+            position: "absolute", top: -200, left: -200,
+            width: 700, height: 700, borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)",
             display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            position: "relative",
-            fontFamily: "sans-serif",
-          }}
-        >
-          {/* Top red bar */}
-          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 10, background: "linear-gradient(90deg, #dc2626, #ef4444)", display: "flex" }} />
+          }} />
+          <div style={{
+            position: "absolute", bottom: -200, right: -200,
+            width: 600, height: 600, borderRadius: "50%",
+            background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)",
+            display: "flex",
+          }} />
 
-          {/* Decorative circles */}
-          <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, borderRadius: "50%", background: "rgba(239,68,68,0.07)", display: "flex" }} />
-          <div style={{ position: "absolute", bottom: -100, left: -100, width: 350, height: 350, borderRadius: "50%", background: "rgba(59,130,246,0.07)", display: "flex" }} />
-
-          {/* Header: LNB badge */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 48 }}>
-            <div style={{ background: "#ef4444", borderRadius: 8, padding: "6px 18px", display: "flex" }}>
-              <span style={{ color: "white", fontSize: 22, fontWeight: 900, letterSpacing: 3 }}>LNB 2026</span>
+          {/* ── HEADER ── */}
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            justifyContent: "center", height: headerH, width: "100%",
+          }}>
+            {/* LNB badge */}
+            <div style={{
+              display: "flex", alignItems: "center", justifyContent: "center",
+              background: "rgba(255,255,255,0.1)",
+              border: "1.5px solid rgba(255,255,255,0.2)",
+              borderRadius: 16, padding: "8px 28px", marginBottom: 16,
+            }}>
+              <span style={{ color: "white", fontSize: 22, fontWeight: 900, letterSpacing: 6 }}>🏀 LNB</span>
             </div>
-            {isResultado && (
-              <div style={{ background: "#1e3a5f", borderRadius: 8, padding: "6px 18px", display: "flex" }}>
-                <span style={{ color: "#93c5fd", fontSize: 22, fontWeight: 700, letterSpacing: 2 }}>RESULTADO FINAL</span>
-              </div>
+
+            {/* Subtitle */}
+            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 20, fontWeight: 600, letterSpacing: 4, marginBottom: 10 }}>
+              LIGA NACIONAL DE BÁSQUETBOL
+            </span>
+
+            {/* Main title */}
+            {titulo ? (
+              <span style={{ color: "white", fontSize: count === 1 ? 72 : 64, fontWeight: 900, letterSpacing: -1, textAlign: "center", lineHeight: 1 }}>
+                {titulo.toUpperCase()}
+              </span>
+            ) : (
+              <span style={{ color: "white", fontSize: 48, fontWeight: 900, letterSpacing: 2 }}>
+                {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
+              </span>
             )}
           </div>
 
-          {/* Teams row */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0, width: "100%" }}>
-
-            {/* Home team */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 340 }}>
-              {homeLogo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={homeLogo} width={180} height={180} style={{ objectFit: "contain", borderRadius: 16 }} alt={homeName} />
-              ) : (
-                <div style={{ width: 180, height: 180, borderRadius: 16, background: "#1e3a5f", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "white", fontSize: 48, fontWeight: 900 }}>{homeName.charAt(0)}</span>
-                </div>
-              )}
-              {isResultado && homeScore != null ? (
-                <span style={{ color: "white", fontSize: 100, fontWeight: 900, lineHeight: 1, marginTop: 20 }}>{homeScore}</span>
-              ) : null}
-              <span style={{ color: "#94a3b8", fontSize: 26, fontWeight: 700, marginTop: isResultado ? 12 : 24, textAlign: "center", maxWidth: 300 }}>{homeName}</span>
-            </div>
-
-            {/* VS / divider */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 140 }}>
-              {isResultado ? (
-                <span style={{ color: "#475569", fontSize: 40, fontWeight: 700 }}>–</span>
-              ) : (
-                <span style={{ color: "#ef4444", fontSize: 64, fontWeight: 900, letterSpacing: -2 }}>VS</span>
-              )}
-            </div>
-
-            {/* Away team */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 340 }}>
-              {awayLogo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={awayLogo} width={180} height={180} style={{ objectFit: "contain", borderRadius: 16 }} alt={awayName} />
-              ) : (
-                <div style={{ width: 180, height: 180, borderRadius: 16, background: "#1e3a5f", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: "white", fontSize: 48, fontWeight: 900 }}>{awayName.charAt(0)}</span>
-                </div>
-              )}
-              {isResultado && awayScore != null ? (
-                <span style={{ color: "white", fontSize: 100, fontWeight: 900, lineHeight: 1, marginTop: 20 }}>{awayScore}</span>
-              ) : null}
-              <span style={{ color: "#94a3b8", fontSize: 26, fontWeight: 700, marginTop: isResultado ? 12 : 24, textAlign: "center", maxWidth: 300 }}>{awayName}</span>
-            </div>
+          {/* ── MATCH CARDS ── */}
+          <div style={{
+            display: "flex", flexDirection: "column",
+            alignItems: "center", gap: gapBetweenCards,
+            flex: 1, justifyContent: "center",
+            width: "100%", paddingBottom: 20,
+          }}>
+            {matchDataList.map((match, i) => (
+              <MatchCard
+                key={i}
+                match={match}
+                isResultado={isResultado}
+                cardW={cardW}
+                cardH={cardH}
+                logoSize={logoSize}
+                nameFontSize={nameFontSize}
+                vsFontSize={vsFontSize}
+              />
+            ))}
           </div>
 
-          {/* Date / time / venue strip */}
-          <div style={{ display: "flex", alignItems: "center", gap: 24, marginTop: 56, background: "#0f2644", borderRadius: 20, padding: "18px 48px" }}>
-            <span style={{ color: "white", fontSize: 28, fontWeight: 700 }}>{date}</span>
-            {time && (
-              <>
-                <span style={{ color: "#475569", fontSize: 24, display: "flex" }}>·</span>
-                <span style={{ color: "#93c5fd", fontSize: 28, fontWeight: 700 }}>{time} hs</span>
-              </>
-            )}
-            {venue && (
-              <>
-                <span style={{ color: "#475569", fontSize: 24, display: "flex" }}>·</span>
-                <span style={{ color: "#64748b", fontSize: 26 }}>{venue}</span>
-              </>
-            )}
-          </div>
-
-          {/* CPB branding bottom */}
-          <div style={{ position: "absolute", bottom: 32, display: "flex", alignItems: "center", gap: 12 }}>
-            <span style={{ color: "#334155", fontSize: 22, fontWeight: 500, letterSpacing: 1 }}>cpb.com.py</span>
+          {/* ── FOOTER ── */}
+          <div style={{
+            display: "flex", alignItems: "center", justifyContent: "center",
+            height: 60, width: "100%",
+          }}>
+            <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 18, fontWeight: 500, letterSpacing: 2 }}>
+              cpb.com.py
+            </span>
           </div>
         </div>
       ),
-      { width: SIZE, height: SIZE }
+      { width: W, height: H }
     )
   } catch (e: any) {
     return new Response(e.message ?? "Error generando flyer", { status: 500 })
