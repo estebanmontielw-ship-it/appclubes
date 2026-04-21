@@ -66,9 +66,10 @@ function DisenoInner() {
   const [uploadingBg, setUploadingBg] = useState(false)
   const bgInputRef = useRef<HTMLInputElement>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
-  const [sponsors, setSponsors] = useState<(string | null)[]>([null, null, null])
-  const [sponsorScales, setSponsorScales] = useState<number[]>([1, 1, 1])
-  const [uploadingSponsors, setUploadingSponsors] = useState<boolean[]>([false, false, false])
+  const [textColor, setTextColor] = useState<"light" | "dark">("light")
+  const [sponsors, setSponsors] = useState<(string | null)[]>([null, null, null, null, null])
+  const [sponsorScales, setSponsorScales] = useState<number[]>([1, 1, 1, 1, 1])
+  const [uploadingSponsors, setUploadingSponsors] = useState<boolean[]>([false, false, false, false, false])
   const [sponsorBg, setSponsorBg] = useState<"white" | "dark">("dark")
   const [textureUrl, setTextureUrl] = useState<string | null>(null)
   const [textureOpacity, setTextureOpacity] = useState(12)
@@ -90,6 +91,8 @@ function DisenoInner() {
   const autoPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const sponsorRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -115,15 +118,16 @@ function DisenoInner() {
     setTitleSize(parseInt(localStorage.getItem(lsKey("titleSize")) ?? "100"))
     setSubtitleSize(parseInt(localStorage.getItem(lsKey("subtitleSize")) ?? "100"))
     setCardStyle((localStorage.getItem(lsKey("cardStyle")) as "glass" | "solid" | "minimal") ?? "glass")
+    setTextColor((localStorage.getItem(lsKey("textColor")) as "light" | "dark") ?? "light")
     try {
       const sp = JSON.parse(localStorage.getItem(lsKey("sponsors")) ?? "null")
-      setSponsors(Array.isArray(sp) ? sp : [null, null, null])
+      setSponsors(Array.isArray(sp) ? [...sp, ...Array(5)].slice(0, 5).map(v => v ?? null) : [null, null, null, null, null])
       const sc = JSON.parse(localStorage.getItem(lsKey("sponsorScales")) ?? "null")
-      setSponsorScales(Array.isArray(sc) ? sc : [1, 1, 1])
+      setSponsorScales(Array.isArray(sc) ? [...sc, ...Array(5)].slice(0, 5).map(v => v ?? 1) : [1, 1, 1, 1, 1])
       setSponsorBg((localStorage.getItem(lsKey("sponsorBg")) as "white" | "dark") ?? "dark")
     } catch {
-      setSponsors([null, null, null])
-      setSponsorScales([1, 1, 1])
+      setSponsors([null, null, null, null, null])
+      setSponsorScales([1, 1, 1, 1, 1])
     }
     setPreviewUrl(null)
     setPreviewError(null)
@@ -321,6 +325,7 @@ function DisenoInner() {
     if (titleSize !== 100) params.set("titleSize", String(titleSize))
     if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
     if (cardStyle !== "glass") params.set("cardStyle", cardStyle)
+    if (textColor !== "light") params.set("textColor", textColor)
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -348,12 +353,13 @@ function DisenoInner() {
       }).catch((e) => setPreviewError(e.message ?? "Error de conexión"))
     }, 1500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, cardStyle, ligaParam])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, cardStyle, textColor, ligaParam])
 
   // Helpers de texto/estilo con guardado + auto-preview
   function handleTitleSize(val: number) { setTitleSize(val); localStorage.setItem(lsKey("titleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
   function handleSubtitleSize(val: number) { setSubtitleSize(val); localStorage.setItem(lsKey("subtitleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
   function handleCardStyle(val: "glass" | "solid" | "minimal") { setCardStyle(val); localStorage.setItem(lsKey("cardStyle"), val); setPreviewUrl(null); scheduleAutoPreview() }
+  function handleTextColor(val: "light" | "dark") { setTextColor(val); localStorage.setItem(lsKey("textColor"), val); setPreviewUrl(null); scheduleAutoPreview() }
 
   async function handleGenerate() {
     if (autoPreviewTimer.current) clearTimeout(autoPreviewTimer.current)
@@ -633,11 +639,11 @@ function DisenoInner() {
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Sponsors <span className="normal-case font-normal">(hasta 3 · solo PNG con fondo transparente)</span>
+                Sponsors <span className="normal-case font-normal">(hasta 5 · solo PNG con fondo transparente)</span>
               </Label>
             </div>
-            <div className="grid grid-cols-3 gap-2 mb-2">
-              {[0, 1, 2].map((i) => (
+            <div className="grid grid-cols-5 gap-1.5 mb-2">
+              {[0, 1, 2, 3, 4].map((i) => (
                 <div key={i} className="flex flex-col gap-1">
                   <input
                     ref={sponsorRefs[i]}
@@ -774,44 +780,71 @@ function DisenoInner() {
             </div>
           </div>
 
-          {/* Texto y estilo de tarjetas */}
+          {/* Texto y tarjetas */}
           <div className="space-y-3">
-            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Texto y estilo</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Título <span className="font-medium text-gray-700">{titleSize}%</span></p>
-                <input
-                  type="range" min={40} max={200} step={5} value={titleSize}
-                  onChange={(e) => handleTitleSize(Number(e.target.value))}
-                  className="w-full accent-primary"
-                />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground mb-1">Subtítulo <span className="font-medium text-gray-700">{subtitleSize}%</span></p>
-                <input
-                  type="range" min={40} max={200} step={5} value={subtitleSize}
-                  onChange={(e) => handleSubtitleSize(Number(e.target.value))}
-                  className="w-full accent-primary"
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Texto y tarjetas</Label>
+
+            {/* Color del texto */}
+            <div className="grid grid-cols-2 gap-2">
               {([
-                { key: "glass",   label: "Vidrio",  desc: "Con transparencia" },
-                { key: "solid",   label: "Sólido",  desc: "Oscuro opaco" },
-                { key: "minimal", label: "Mínimo",  desc: "Sin relleno" },
+                { key: "light", label: "Texto claro",  desc: "Para fondos oscuros",  preview: "bg-gray-800" },
+                { key: "dark",  label: "Texto oscuro", desc: "Para fondos claros",   preview: "bg-gray-100 border" },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => handleTextColor(t.key)}
+                  className={`p-2.5 rounded-xl border text-left transition-colors flex items-center gap-2 ${
+                    textColor === t.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                  }`}
+                >
+                  <div className={`h-6 w-6 rounded shrink-0 ${t.preview} flex items-center justify-center`}>
+                    <span className={`text-[9px] font-black ${t.key === "light" ? "text-white" : "text-gray-800"}`}>Aa</span>
+                  </div>
+                  <div>
+                    <p className={`text-xs font-semibold ${textColor === t.key ? "text-primary" : "text-gray-800"}`}>{t.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {/* Estilo de tarjetas */}
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { key: "glass",  label: "Box claro",   desc: "Para fondos oscuros",  bg: "rgba(255,255,255,0.15)", border: "rgba(255,255,255,0.3)" },
+                { key: "solid",  label: "Box oscuro",  desc: "Para fondos claros",   bg: "rgba(0,0,0,0.45)",       border: "transparent" },
               ] as const).map((s) => (
                 <button
                   key={s.key}
                   onClick={() => handleCardStyle(s.key)}
-                  className={`p-2.5 rounded-xl border text-left transition-colors ${
+                  className={`p-2.5 rounded-xl border text-left transition-colors flex items-center gap-2 ${
                     cardStyle === s.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
                   }`}
                 >
-                  <p className={`text-xs font-semibold ${cardStyle === s.key ? "text-primary" : "text-gray-800"}`}>{s.label}</p>
-                  <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+                  <div
+                    className="h-6 w-6 rounded shrink-0 border border-gray-300"
+                    style={{ background: s.bg }}
+                  />
+                  <div>
+                    <p className={`text-xs font-semibold ${cardStyle === s.key ? "text-primary" : "text-gray-800"}`}>{s.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+                  </div>
                 </button>
               ))}
+            </div>
+
+            {/* Tamaños de texto */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Título <span className="font-medium text-gray-700">{titleSize}%</span></p>
+                <input type="range" min={40} max={200} step={5} value={titleSize}
+                  onChange={(e) => handleTitleSize(Number(e.target.value))} className="w-full accent-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Subtítulo <span className="font-medium text-gray-700">{subtitleSize}%</span></p>
+                <input type="range" min={40} max={200} step={5} value={subtitleSize}
+                  onChange={(e) => handleSubtitleSize(Number(e.target.value))} className="w-full accent-primary" />
+              </div>
             </div>
           </div>
 

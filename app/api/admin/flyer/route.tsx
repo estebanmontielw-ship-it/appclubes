@@ -61,7 +61,7 @@ function Logo({ url, name, size }: { url: string | null; name: string; size: num
   )
 }
 
-function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, vsFontSize, cardStyle }: {
+function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, vsFontSize, cardStyle, tc }: {
   match: MatchData
   isResultado: boolean
   cardW: number
@@ -70,6 +70,7 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
   nameFontSize: number
   vsFontSize: number
   cardStyle: "glass" | "solid" | "minimal"
+  tc: Record<string, string>
 }) {
   const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
   const cardBorder = cardStyle === "solid" ? "none" : cardStyle === "minimal" ? "1.5px solid rgba(255,255,255,0.07)" : "1.5px solid rgba(255,255,255,0.14)"
@@ -92,12 +93,12 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
           <Logo url={match.homeLogo} name={match.homeName} size={logoSize} />
           {isResultado && match.homeScore != null && (
-            <span style={{ color: "white", fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+            <span style={{ color: tc.score, fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
               {match.homeScore}
             </span>
           )}
           <span style={{
-            color: "white", fontSize: nameFontSize, fontWeight: 700,
+            color: tc.team, fontSize: nameFontSize, fontWeight: 700,
             marginTop: isResultado ? 6 : 14, textAlign: "center",
             maxWidth: cardW * 0.35,
           }}>{match.homeName}</span>
@@ -106,7 +107,7 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
         {/* VS */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 80 }}>
           <span style={{
-            color: isResultado ? "rgba(255,255,255,0.3)" : "#f97316",
+            color: isResultado ? tc.dot : "#f97316",
             fontSize: vsFontSize,
             fontWeight: 900,
             letterSpacing: isResultado ? 0 : -2,
@@ -119,12 +120,12 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
           <Logo url={match.awayLogo} name={match.awayName} size={logoSize} />
           {isResultado && match.awayScore != null && (
-            <span style={{ color: "white", fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+            <span style={{ color: tc.score, fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
               {match.awayScore}
             </span>
           )}
           <span style={{
-            color: "white", fontSize: nameFontSize, fontWeight: 700,
+            color: tc.team, fontSize: nameFontSize, fontWeight: 700,
             marginTop: isResultado ? 6 : 14, textAlign: "center",
             maxWidth: cardW * 0.35,
           }}>{match.awayName}</span>
@@ -135,22 +136,22 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "center",
         gap: 16, marginTop: 18,
-        background: "rgba(0,0,0,0.3)", borderRadius: 12,
+        background: tc.infoBg, borderRadius: 12,
         padding: "10px 24px", width: "90%",
       }}>
         {match.venue && (
           <>
-            <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 20, fontWeight: 600 }}>{match.venue}</span>
-            {(match.date || match.time) && <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 18, display: "flex" }}>·</span>}
+            <span style={{ color: tc.venue, fontSize: 20, fontWeight: 600 }}>{match.venue}</span>
+            {(match.date || match.time) && <span style={{ color: tc.dot, fontSize: 18, display: "flex" }}>·</span>}
           </>
         )}
         {match.date && (
-          <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 20, fontWeight: 600 }}>{match.date}</span>
+          <span style={{ color: tc.venue, fontSize: 20, fontWeight: 600 }}>{match.date}</span>
         )}
         {match.time && (
           <>
-            <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 18, display: "flex" }}>·</span>
-            <span style={{ color: "#fbbf24", fontSize: 20, fontWeight: 700 }}>{match.time} hs</span>
+            <span style={{ color: tc.dot, fontSize: 18, display: "flex" }}>·</span>
+            <span style={{ color: tc.time, fontSize: 20, fontWeight: 700 }}>{match.time} hs</span>
           </>
         )}
       </div>
@@ -178,17 +179,37 @@ export async function GET(req: NextRequest) {
   const textureOpacity = Math.min(40, Math.max(1, parseInt(searchParams.get("textureOpacity") ?? "12")))
   const bgImageUrl = searchParams.get("bgImageUrl") ?? ""
 
+  const s4 = searchParams.get("s4") ?? ""
+  const s5 = searchParams.get("s5") ?? ""
+  const s4scale = parseFloat(searchParams.get("s4scale") ?? "1")
+  const s5scale = parseFloat(searchParams.get("s5scale") ?? "1")
   const titleSize = Math.min(200, Math.max(40, parseFloat(searchParams.get("titleSize") ?? "100"))) / 100
   const subtitleSize = Math.min(200, Math.max(40, parseFloat(searchParams.get("subtitleSize") ?? "100"))) / 100
   const cardStyle = (searchParams.get("cardStyle") ?? "glass") as "glass" | "solid" | "minimal"
+  const textColor = (searchParams.get("textColor") ?? "light") as "light" | "dark"
 
   const liga = searchParams.get("liga") ?? "lnb"
   const format = searchParams.get("format") ?? "feed"
+
+  // Text color palette
+  const tc = {
+    title:    textColor === "dark" ? "#111827" : "white",
+    subtitle: textColor === "dark" ? "rgba(0,0,0,0.6)" : "rgba(255,255,255,0.55)",
+    team:     textColor === "dark" ? "#111827" : "white",
+    venue:    textColor === "dark" ? "rgba(0,0,0,0.7)" : "rgba(255,255,255,0.65)",
+    dot:      textColor === "dark" ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.3)",
+    time:     textColor === "dark" ? "#b45309" : "#fbbf24",
+    score:    textColor === "dark" ? "#111827" : "white",
+    infoBg:   textColor === "dark" ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.3)",
+    default:  textColor === "dark" ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.2)",
+  }
 
   const sponsorLogos = [
     { url: s1, scale: s1scale },
     { url: s2, scale: s2scale },
     { url: s3, scale: s3scale },
+    { url: s4, scale: s4scale },
+    { url: s5, scale: s5scale },
   ].filter((s) => Boolean(s.url))
 
   const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
@@ -332,7 +353,7 @@ export async function GET(req: NextRequest) {
             {/* Subtítulo del usuario (si lo puso) */}
             {subtitulo ? (
               <span style={{
-                color: "rgba(255,255,255,0.55)", fontSize: Math.round(22 * subtitleSize), fontWeight: 600,
+                color: tc.subtitle, fontSize: Math.round(22 * subtitleSize), fontWeight: 600,
                 letterSpacing: 4, marginBottom: 10, textAlign: "center",
               }}>
                 {subtitulo.toUpperCase()}
@@ -342,13 +363,13 @@ export async function GET(req: NextRequest) {
             {/* Título principal */}
             {titulo ? (
               <span style={{
-                color: "white", fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: 900,
+                color: tc.title, fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: 900,
                 letterSpacing: -1, textAlign: "center", lineHeight: 1,
               }}>
                 {titulo.toUpperCase()}
               </span>
             ) : (
-              <span style={{ color: "white", fontSize: Math.round(48 * titleSize), fontWeight: 900, letterSpacing: 2 }}>
+              <span style={{ color: tc.title, fontSize: Math.round(48 * titleSize), fontWeight: 900, letterSpacing: 2 }}>
                 {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
               </span>
             )}
@@ -372,6 +393,7 @@ export async function GET(req: NextRequest) {
                 nameFontSize={nameFontSize}
                 vsFontSize={vsFontSize}
                 cardStyle={cardStyle}
+                tc={tc}
               />
             ))}
           </div>
@@ -405,7 +427,7 @@ export async function GET(req: NextRequest) {
               display: "flex", alignItems: "center", justifyContent: "center",
               height: 60, width: "100%",
             }}>
-              <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 18, fontWeight: 500, letterSpacing: 2 }}>
+              <span style={{ color: tc.default, fontSize: 18, fontWeight: 500, letterSpacing: 2 }}>
                 cpb.com.py
               </span>
             </div>
