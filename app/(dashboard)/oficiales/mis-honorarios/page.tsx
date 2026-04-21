@@ -1228,7 +1228,7 @@ export default function MisHonorariosPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl overflow-x-hidden">
+    <div className="space-y-5 max-w-2xl w-full">
       <div>
         <h1 className="text-2xl font-bold">Mis Honorarios</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -1236,8 +1236,8 @@ export default function MisHonorariosPage() {
         </p>
       </div>
 
-      {/* Tabs — scrollable on mobile so they never cause horizontal overflow */}
-      <div className="-mx-4 px-4 md:mx-0 md:px-0 overflow-x-auto scrollbar-none border-b">
+      {/* Tabs */}
+      <div className="overflow-x-auto scrollbar-none border-b">
         <div className="flex gap-1 pb-0 min-w-max md:min-w-0">
           {([
             { key: "dashboard", label: "Dashboard" },
