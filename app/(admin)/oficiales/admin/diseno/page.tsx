@@ -97,6 +97,9 @@ function DisenoInner() {
   useEffect(() => {
     setLogoUrl(localStorage.getItem(lsKey("logo")) ?? null)
     setLogoScale(parseInt(localStorage.getItem(lsKey("logoScale")) ?? "100"))
+    setTextureUrl(localStorage.getItem(lsKey("texture")) ?? null)
+    setTextureOpacity(parseInt(localStorage.getItem(lsKey("textureOpacity")) ?? "12"))
+    setTheme(localStorage.getItem(lsKey("theme")) ?? "masc1")
     try {
       const sp = JSON.parse(localStorage.getItem(lsKey("sponsors")) ?? "null")
       setSponsors(Array.isArray(sp) ? sp : [null, null, null])
@@ -191,12 +194,31 @@ function DisenoInner() {
     try {
       const url = await uploadImage(file)
       setTextureUrl(url)
+      localStorage.setItem(lsKey("texture"), url)
       setPreviewUrl(null)
     } catch (e: any) {
       setPreviewError(e.message ?? "Error al subir textura")
     } finally {
       setUploadingTexture(false)
     }
+  }
+
+  function handleRemoveTexture() {
+    setTextureUrl(null)
+    localStorage.removeItem(lsKey("texture"))
+    setPreviewUrl(null)
+  }
+
+  function handleTextureOpacity(val: number) {
+    setTextureOpacity(val)
+    localStorage.setItem(lsKey("textureOpacity"), String(val))
+    setPreviewUrl(null)
+  }
+
+  function handleTheme(val: string) {
+    setTheme(val)
+    localStorage.setItem(lsKey("theme"), val)
+    setPreviewUrl(null)
   }
 
   async function handleSponsorUpload(index: number, file: File) {
@@ -404,7 +426,7 @@ function DisenoInner() {
               ] as const).map((t) => (
                 <button
                   key={t.key}
-                  onClick={() => { setTheme(t.key); setPreviewUrl(null) }}
+                  onClick={() => handleTheme(t.key)}
                   className={`p-2.5 rounded-xl border text-left transition-colors flex items-center gap-2 ${
                     theme === t.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
                   }`}
@@ -443,7 +465,7 @@ function DisenoInner() {
                 <>
                   <img src={textureUrl} alt="Textura" className="h-10 w-16 object-cover rounded border" />
                   <button
-                    onClick={() => { setTextureUrl(null); setPreviewUrl(null) }}
+                    onClick={handleRemoveTexture}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
                   >
                     <X className="h-3.5 w-3.5" /> Quitar
@@ -452,7 +474,7 @@ function DisenoInner() {
                     <span className="text-xs text-muted-foreground">Opacidad</span>
                     <input
                       type="range" min={5} max={40} value={textureOpacity}
-                      onChange={(e) => { setTextureOpacity(Number(e.target.value)); setPreviewUrl(null) }}
+                      onChange={(e) => handleTextureOpacity(Number(e.target.value))}
                       className="w-20 accent-primary"
                     />
                     <span className="text-xs font-medium w-8">{textureOpacity}%</span>
