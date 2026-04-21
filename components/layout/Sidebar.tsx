@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList, Calculator,
+  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList, Calculator, Palette,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -126,6 +126,11 @@ function getNavSections(
             label: "Calendario Macro",
             href: "/oficiales/admin/calendario-macro",
             icon: Calendar,
+          },
+          {
+            label: "Diseño / Flyers",
+            href: "/oficiales/admin/diseno",
+            icon: Palette,
           },
         ],
       },
