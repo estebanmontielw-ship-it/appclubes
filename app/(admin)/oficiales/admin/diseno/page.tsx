@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { Download, Image as ImageIcon, Loader2, RefreshCw, CheckSquare, Square, Upload, X, AlertCircle, Plus, Sparkles, Copy, Check } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { Download, Image as ImageIcon, Loader2, RefreshCw, CheckSquare, Square, Upload, X, AlertCircle, Plus, Sparkles, Copy, Check, Heart, MessageCircle, Send, Bookmark, MoreHorizontal } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -909,15 +908,15 @@ function DisenoInner() {
 
         {/* ── RIGHT: preview — sticky en desktop ── */}
         <div className="xl:sticky xl:top-6 space-y-3">
+
           {/* Header del panel */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
               <p className="text-[10px] text-muted-foreground">
-                {format === "feed" ? "1080 × 1350 px · Feed 4:5" : "1080 × 1920 px · Historia 9:16"}
+                {format === "feed" ? "Feed 4:5 · 1080 × 1350 px" : "Historia 9:16 · 1080 × 1920 px"}
               </p>
             </div>
-            {/* Botones de acción — en desktop van acá */}
             <div className="hidden xl:flex gap-2">
               <button
                 onClick={handleGenerate}
@@ -938,34 +937,69 @@ function DisenoInner() {
             </div>
           </div>
 
-          {/* Imagen de preview */}
-          <Card className="overflow-hidden bg-gray-900">
-            <CardContent className="p-0 flex items-center justify-center min-h-[300px] xl:min-h-[480px]">
+          {/* Instagram feed mockup */}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+
+            {/* IG post header */}
+            <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
+              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
+                <span className="text-white text-[9px] font-black tracking-tight">CPB</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold leading-none text-gray-900">cpboficial</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">Paraguay</p>
+              </div>
+              <MoreHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
+            </div>
+
+            {/* Imagen — siempre fit-to-screen */}
+            <div
+              className="relative bg-gray-900 flex items-center justify-center overflow-hidden"
+              style={{ height: "calc(100vh - 360px)", minHeight: 200 }}
+            >
               {previewError ? (
-                <div className="flex flex-col items-center gap-3 text-red-400 py-12 px-6">
-                  <AlertCircle className="h-10 w-10 opacity-70" />
-                  <p className="text-sm text-center font-medium">{previewError}</p>
+                <div className="flex flex-col items-center gap-3 text-red-400 px-6 text-center">
+                  <AlertCircle className="h-8 w-8 opacity-70 shrink-0" />
+                  <p className="text-xs font-medium">{previewError}</p>
                 </div>
               ) : previewUrl ? (
                 <img
                   src={previewUrl}
                   alt="Flyer preview"
-                  className="w-full h-auto"
+                  style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
                 />
               ) : (
-                <div className="flex flex-col items-center gap-3 text-gray-600 py-16">
-                  <ImageIcon className="h-12 w-12 opacity-20" />
-                  <p className="text-sm opacity-40 text-center px-8">
-                    {canGenerate
-                      ? "Hacé clic en Vista previa para generar"
-                      : "Seleccioná uno o más partidos para comenzar"}
+                <div className="flex flex-col items-center gap-3 text-gray-600">
+                  <ImageIcon className="h-10 w-10 opacity-20" />
+                  <p className="text-xs opacity-40 text-center px-8">
+                    {canGenerate ? "Hacé clic en Vista previa para generar" : "Seleccioná uno o más partidos para comenzar"}
                   </p>
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Info de auto-preview */}
+            {/* IG post footer */}
+            <div className="px-3 py-2.5">
+              <div className="flex items-center gap-3.5 mb-2">
+                <Heart className="h-5 w-5 text-gray-700" />
+                <MessageCircle className="h-5 w-5 text-gray-700" />
+                <Send className="h-5 w-5 text-gray-700" />
+                <Bookmark className="h-5 w-5 text-gray-700 ml-auto" />
+              </div>
+              <p className="text-xs font-semibold text-gray-800">1.234 Me gusta</p>
+              <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">
+                <span className="font-semibold text-gray-900">cpboficial</span>{" "}
+                <span className="text-gray-500">
+                  {titulo
+                    ? titulo.toLowerCase()
+                    : template === "resultado"
+                    ? "así quedaron los resultados 🏀"
+                    : "todo listo para una nueva jornada 🏀"}
+                </span>
+              </p>
+            </div>
+          </div>
+
           {canGenerate && !previewUrl && !previewError && (
             <p className="text-[10px] text-muted-foreground text-center">
               Auto-preview activo · se genera 1.5 s después del último cambio
