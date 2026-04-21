@@ -162,6 +162,8 @@ export async function GET(req: NextRequest) {
   const titulo = searchParams.get("titulo") ?? ""
   const subtitulo = searchParams.get("subtitulo") ?? ""
   const logoUrl = searchParams.get("logoUrl") ?? ""
+  const logoScale = parseFloat(searchParams.get("logoScale") ?? "100") / 100
+  const theme = searchParams.get("theme") ?? "masc1"
   const s1 = searchParams.get("s1") ?? ""
   const s2 = searchParams.get("s2") ?? ""
   const s3 = searchParams.get("s3") ?? ""
@@ -244,7 +246,12 @@ export async function GET(req: NextRequest) {
       (
         <div style={{
           width: W, height: H,
-          background: "linear-gradient(160deg, #0b1e3d 0%, #0d2550 50%, #091830 100%)",
+          background: ({
+            masc1: "linear-gradient(160deg, #0b1e3d 0%, #0d2550 50%, #091830 100%)",
+            masc2: "linear-gradient(160deg, #0a2e6e 0%, #0c3a8a 50%, #061a4a 100%)",
+            fem1:  "linear-gradient(160deg, #2d0a4e 0%, #3d1260 50%, #1a0630 100%)",
+            fem2:  "linear-gradient(160deg, #4a0a1a 0%, #5c1020 50%, #2a0610 100%)",
+          } as Record<string, string>)[theme] ?? "linear-gradient(160deg, #0b1e3d 0%, #0d2550 50%, #091830 100%)",
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
@@ -292,9 +299,9 @@ export async function GET(req: NextRequest) {
             {logoUrl ? (
               <img
                 src={logoUrl}
-                width={count === 1 ? 100 : 80}
-                height={count === 1 ? 100 : 80}
-                style={{ objectFit: "contain", marginBottom: 16 }}
+                width={Math.round((count === 1 ? 110 : 90) * logoScale)}
+                height={Math.round((count === 1 ? 110 : 90) * logoScale)}
+                style={{ objectFit: "contain", marginBottom: 14 }}
                 alt="Logo"
               />
             ) : null}

@@ -61,6 +61,8 @@ function DisenoInner() {
   const [titulo, setTitulo] = useState("")
   const [subtitulo, setSubtitulo] = useState("")
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoScale, setLogoScale] = useState(100)
+  const [theme, setTheme] = useState("masc1")
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [sponsors, setSponsors] = useState<(string | null)[]>([null, null, null])
   const [sponsorScales, setSponsorScales] = useState<number[]>([1, 1, 1])
@@ -82,30 +84,33 @@ function DisenoInner() {
     useRef<HTMLInputElement>(null),
   ]
 
-  // Persist logo + sponsors per liga in localStorage
+  // ── Helpers para guardar/cargar en localStorage ──
+  function lsKey(key: string) { return `diseno_${key}_${ligaParam}` }
+
+  function saveSponsors(sps: (string | null)[], scales: number[], bg: string) {
+    localStorage.setItem(lsKey("sponsors"), JSON.stringify(sps))
+    localStorage.setItem(lsKey("sponsorScales"), JSON.stringify(scales))
+    localStorage.setItem(lsKey("sponsorBg"), bg)
+  }
+
+  // Cargar configuración cuando cambia la liga
   useEffect(() => {
-    setLogoUrl(localStorage.getItem(`diseno_logo_${ligaParam}`) ?? null)
+    setLogoUrl(localStorage.getItem(lsKey("logo")) ?? null)
+    setLogoScale(parseInt(localStorage.getItem(lsKey("logoScale")) ?? "100"))
     try {
-      const sp = JSON.parse(localStorage.getItem(`diseno_sponsors_${ligaParam}`) ?? "null")
-      if (Array.isArray(sp)) setSponsors(sp)
-      else setSponsors([null, null, null])
-      const sc = JSON.parse(localStorage.getItem(`diseno_sponsorScales_${ligaParam}`) ?? "null")
-      if (Array.isArray(sc)) setSponsorScales(sc)
-      else setSponsorScales([1, 1, 1])
-      setSponsorBg((localStorage.getItem(`diseno_sponsorBg_${ligaParam}`) as "white" | "dark") ?? "dark")
-    } catch { setSponsors([null, null, null]); setSponsorScales([1, 1, 1]) }
+      const sp = JSON.parse(localStorage.getItem(lsKey("sponsors")) ?? "null")
+      setSponsors(Array.isArray(sp) ? sp : [null, null, null])
+      const sc = JSON.parse(localStorage.getItem(lsKey("sponsorScales")) ?? "null")
+      setSponsorScales(Array.isArray(sc) ? sc : [1, 1, 1])
+      setSponsorBg((localStorage.getItem(lsKey("sponsorBg")) as "white" | "dark") ?? "dark")
+    } catch {
+      setSponsors([null, null, null])
+      setSponsorScales([1, 1, 1])
+    }
+    setPreviewUrl(null)
+    setPreviewError(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ligaParam])
-
-  useEffect(() => {
-    if (logoUrl) localStorage.setItem(`diseno_logo_${ligaParam}`, logoUrl)
-    else localStorage.removeItem(`diseno_logo_${ligaParam}`)
-  }, [logoUrl, ligaParam])
-
-  useEffect(() => {
-    localStorage.setItem(`diseno_sponsors_${ligaParam}`, JSON.stringify(sponsors))
-    localStorage.setItem(`diseno_sponsorScales_${ligaParam}`, JSON.stringify(sponsorScales))
-    localStorage.setItem(`diseno_sponsorBg_${ligaParam}`, sponsorBg)
-  }, [sponsors, sponsorScales, sponsorBg, ligaParam])
 
   useEffect(() => {
     setLoading(true)
@@ -160,12 +165,25 @@ function DisenoInner() {
     try {
       const url = await uploadImage(file)
       setLogoUrl(url)
+      localStorage.setItem(lsKey("logo"), url)
       setPreviewUrl(null)
     } catch (e: any) {
       setPreviewError(e.message ?? "Error al subir el logo")
     } finally {
       setUploadingLogo(false)
     }
+  }
+
+  function handleRemoveLogo() {
+    setLogoUrl(null)
+    localStorage.removeItem(lsKey("logo"))
+    setPreviewUrl(null)
+  }
+
+  function handleLogoScale(val: number) {
+    setLogoScale(val)
+    localStorage.setItem(lsKey("logoScale"), String(val))
+    setPreviewUrl(null)
   }
 
   async function handleTextureUpload(file: File) {
@@ -185,13 +203,41 @@ function DisenoInner() {
     setUploadingSponsors((prev) => { const n = [...prev]; n[index] = true; return n })
     try {
       const url = await uploadImage(file)
-      setSponsors((prev) => { const n = [...prev]; n[index] = url; return n })
+      setSponsors((prev) => {
+        const n = [...prev]; n[index] = url
+        saveSponsors(n, sponsorScales, sponsorBg)
+        return n
+      })
       setPreviewUrl(null)
     } catch (e: any) {
       setPreviewError(e.message ?? "Error al subir sponsor")
     } finally {
       setUploadingSponsors((prev) => { const n = [...prev]; n[index] = false; return n })
     }
+  }
+
+  function handleRemoveSponsor(index: number) {
+    setSponsors((prev) => {
+      const n = [...prev]; n[index] = null
+      saveSponsors(n, sponsorScales, sponsorBg)
+      return n
+    })
+    setPreviewUrl(null)
+  }
+
+  function handleSponsorScale(index: number, val: number) {
+    setSponsorScales((prev) => {
+      const n = [...prev]; n[index] = val
+      saveSponsors(sponsors, n, sponsorBg)
+      return n
+    })
+    setPreviewUrl(null)
+  }
+
+  function handleSponsorBg(val: "white" | "dark") {
+    setSponsorBg(val)
+    saveSponsors(sponsors, sponsorScales, val)
+    setPreviewUrl(null)
   }
 
   function toggle(id: string) {
@@ -211,7 +257,8 @@ function DisenoInner() {
     const params = new URLSearchParams({ matchIds: ids, template, liga: ligaParam, format })
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
-    if (logoUrl) params.set("logoUrl", logoUrl)
+    if (logoUrl) { params.set("logoUrl", logoUrl); if (logoScale !== 100) params.set("logoScale", String(logoScale)) }
+    params.set("theme", theme)
     if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
@@ -313,15 +360,26 @@ function DisenoInner() {
               }}
             />
             {logoUrl ? (
-              <div className="flex items-center gap-3">
-                <img src={logoUrl} alt="Logo" className="h-14 w-14 object-contain rounded-lg border bg-gray-50 p-1" />
-                <button
-                  onClick={() => { setLogoUrl(null); setPreviewUrl(null) }}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
-                >
-                  <X className="h-3.5 w-3.5" /> Quitar logo
-                </button>
-              </div>
+              <>
+                <div className="flex items-center gap-3 mb-2">
+                  <img src={logoUrl} alt="Logo" className="h-14 w-14 object-contain rounded-lg border bg-gray-50 p-1" />
+                  <button
+                    onClick={handleRemoveLogo}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" /> Quitar logo
+                  </button>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-xs text-muted-foreground">Tamaño</span>
+                    <input
+                      type="range" min={30} max={300} value={logoScale}
+                      onChange={(e) => handleLogoScale(Number(e.target.value))}
+                      className="w-20 accent-primary"
+                    />
+                    <span className="text-xs font-medium w-8">{logoScale}%</span>
+                  </div>
+                </div>
+              </>
             ) : (
               <button
                 onClick={() => logoInputRef.current?.click()}
@@ -332,6 +390,36 @@ function DisenoInner() {
                 {uploadingLogo ? "Subiendo..." : "Subir logo"}
               </button>
             )}
+          </div>
+
+          {/* Color del fondo */}
+          <div>
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Color de fondo</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { key: "masc1", label: "Azul marino",   sub: "Masculino · clásico",  from: "#0b1e3d", to: "#091830" },
+                { key: "masc2", label: "Azul royal",    sub: "Masculino · alternativo", from: "#0a2e6e", to: "#061a4a" },
+                { key: "fem1",  label: "Violeta",       sub: "Femenino · clásico",   from: "#2d0a4e", to: "#1a0630" },
+                { key: "fem2",  label: "Bordo/rojo",    sub: "Femenino · alternativo", from: "#4a0a1a", to: "#2a0610" },
+              ] as const).map((t) => (
+                <button
+                  key={t.key}
+                  onClick={() => { setTheme(t.key); setPreviewUrl(null) }}
+                  className={`p-2.5 rounded-xl border text-left transition-colors flex items-center gap-2 ${
+                    theme === t.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                  }`}
+                >
+                  <div
+                    className="h-8 w-8 rounded-lg shrink-0"
+                    style={{ background: `linear-gradient(135deg, ${t.from}, ${t.to})` }}
+                  />
+                  <div>
+                    <p className={`text-xs font-semibold ${theme === t.key ? "text-primary" : "text-gray-800"}`}>{t.label}</p>
+                    <p className="text-[10px] text-muted-foreground">{t.sub}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Textura de fondo */}
@@ -413,7 +501,7 @@ function DisenoInner() {
                           className="h-12 w-full object-contain rounded-lg border bg-gray-100 p-1"
                         />
                         <button
-                          onClick={() => { setSponsors((p) => { const n = [...p]; n[i] = null; return n }); setPreviewUrl(null) }}
+                          onClick={() => handleRemoveSponsor(i)}
                           className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X className="h-3 w-3" />
@@ -422,12 +510,12 @@ function DisenoInner() {
                       {/* Tamaño del sponsor */}
                       <div className="flex items-center justify-between gap-1">
                         <button
-                          onClick={() => { setSponsorScales((p) => { const n=[...p]; n[i]=Math.max(0.3, +(n[i]-0.1).toFixed(1)); return n }); setPreviewUrl(null) }}
+                          onClick={() => handleSponsorScale(i, Math.max(0.3, +(sponsorScales[i]-0.1).toFixed(1)))}
                           className="h-6 w-6 rounded border text-xs font-bold text-gray-500 hover:bg-gray-100 flex items-center justify-center"
                         >−</button>
                         <span className="text-[10px] text-muted-foreground font-medium">{Math.round(sponsorScales[i]*100)}%</span>
                         <button
-                          onClick={() => { setSponsorScales((p) => { const n=[...p]; n[i]=Math.min(3, +(n[i]+0.1).toFixed(1)); return n }); setPreviewUrl(null) }}
+                          onClick={() => handleSponsorScale(i, Math.min(3, +(sponsorScales[i]+0.1).toFixed(1)))}
                           className="h-6 w-6 rounded border text-xs font-bold text-gray-500 hover:bg-gray-100 flex items-center justify-center"
                         >+</button>
                       </div>
@@ -450,7 +538,7 @@ function DisenoInner() {
                 {(["dark", "white"] as const).map((opt) => (
                   <button
                     key={opt}
-                    onClick={() => { setSponsorBg(opt); setPreviewUrl(null) }}
+                    onClick={() => handleSponsorBg(opt)}
                     className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors ${
                       sponsorBg === opt
                         ? "border-primary bg-primary/5 text-primary"
