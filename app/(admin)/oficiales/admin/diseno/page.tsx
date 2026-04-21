@@ -1275,11 +1275,9 @@ function DisenoInner() {
             <div className="max-w-[390px] mx-auto bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
               {/* Header */}
               <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
-                  <span className="text-white text-[9px] font-black tracking-tight">CPB</span>
-                </div>
+                <img src="https://www.cpb.com.py/logo-cpb.jpg" alt="CPB" className="h-8 w-8 rounded-full object-cover shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold leading-none text-gray-900">cpboficial</p>
+                  <p className="text-xs font-semibold leading-none text-gray-900">cpb_py</p>
                   <p className="text-[10px] text-gray-400 mt-0.5">Paraguay</p>
                 </div>
                 <MoreHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
@@ -1314,7 +1312,7 @@ function DisenoInner() {
                 </div>
                 <p className="text-xs font-semibold text-gray-800">1.234 Me gusta</p>
                 <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed line-clamp-3">
-                  <span className="font-semibold text-gray-900">cpboficial</span>{" "}
+                  <span className="font-semibold text-gray-900">cpb_py</span>{" "}
                   <span className="text-gray-500">
                     {activeCopyIndex !== null && copies[activeCopyIndex]
                       ? copies[activeCopyIndex]
@@ -1356,10 +1354,8 @@ function DisenoInner() {
                   </div>
                   {/* Avatar + name */}
                   <div className="flex items-center gap-1.5">
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
-                      <span className="text-white text-[7px] font-black">CPB</span>
-                    </div>
-                    <span className="text-white text-[10px] font-semibold drop-shadow">cpboficial</span>
+                    <img src="https://www.cpb.com.py/logo-cpb.jpg" alt="CPB" className="h-6 w-6 rounded-full object-cover shrink-0" />
+                    <span className="text-white text-[10px] font-semibold drop-shadow">cpb_py</span>
                     <span className="text-white/60 text-[9px]">· 2h</span>
                   </div>
                 </div>
