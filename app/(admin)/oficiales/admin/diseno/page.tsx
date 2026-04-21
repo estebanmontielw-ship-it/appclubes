@@ -63,8 +63,13 @@ function DisenoInner() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
   const [sponsors, setSponsors] = useState<(string | null)[]>([null, null, null])
+  const [sponsorScales, setSponsorScales] = useState<number[]>([1, 1, 1])
   const [uploadingSponsors, setUploadingSponsors] = useState<boolean[]>([false, false, false])
   const [sponsorBg, setSponsorBg] = useState<"white" | "dark">("dark")
+  const [textureUrl, setTextureUrl] = useState<string | null>(null)
+  const [textureOpacity, setTextureOpacity] = useState(12)
+  const [uploadingTexture, setUploadingTexture] = useState(false)
+  const textureInputRef = useRef<HTMLInputElement>(null)
   const [generating, setGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
@@ -138,6 +143,19 @@ function DisenoInner() {
     }
   }
 
+  async function handleTextureUpload(file: File) {
+    setUploadingTexture(true)
+    try {
+      const url = await uploadImage(file)
+      setTextureUrl(url)
+      setPreviewUrl(null)
+    } catch (e: any) {
+      setPreviewError(e.message ?? "Error al subir textura")
+    } finally {
+      setUploadingTexture(false)
+    }
+  }
+
   async function handleSponsorUpload(index: number, file: File) {
     setUploadingSponsors((prev) => { const n = [...prev]; n[index] = true; return n })
     try {
@@ -169,9 +187,15 @@ function DisenoInner() {
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
     if (logoUrl) params.set("logoUrl", logoUrl)
-    const activeSponors = sponsors.filter(Boolean)
-    if (activeSponors.length > 0) {
-      activeSponors.forEach((s, i) => { if (s) params.set(`s${i + 1}`, s) })
+    if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
+    const activeSponsors = sponsors.filter(Boolean)
+    if (activeSponsors.length > 0) {
+      sponsors.forEach((s, i) => {
+        if (s) {
+          params.set(`s${i + 1}`, s)
+          if (sponsorScales[i] !== 1) params.set(`s${i + 1}scale`, String(sponsorScales[i]))
+        }
+      })
       params.set("sponsorBg", sponsorBg)
     }
     return `/api/admin/flyer?${params.toString()}`
@@ -285,6 +309,55 @@ function DisenoInner() {
             )}
           </div>
 
+          {/* Textura de fondo */}
+          <div>
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
+              Textura de fondo <span className="normal-case font-normal">(opcional)</span>
+            </Label>
+            <input
+              ref={textureInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) handleTextureUpload(file)
+                e.target.value = ""
+              }}
+            />
+            <div className="flex items-center gap-3">
+              {textureUrl ? (
+                <>
+                  <img src={textureUrl} alt="Textura" className="h-10 w-16 object-cover rounded border" />
+                  <button
+                    onClick={() => { setTextureUrl(null); setPreviewUrl(null) }}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50 transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" /> Quitar
+                  </button>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <span className="text-xs text-muted-foreground">Opacidad</span>
+                    <input
+                      type="range" min={5} max={40} value={textureOpacity}
+                      onChange={(e) => { setTextureOpacity(Number(e.target.value)); setPreviewUrl(null) }}
+                      className="w-20 accent-primary"
+                    />
+                    <span className="text-xs font-medium w-8">{textureOpacity}%</span>
+                  </div>
+                </>
+              ) : (
+                <button
+                  onClick={() => textureInputRef.current?.click()}
+                  disabled={uploadingTexture}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl border border-dashed border-gray-300 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-700 transition-colors disabled:opacity-50"
+                >
+                  {uploadingTexture ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploadingTexture ? "Subiendo..." : "Subir textura"}
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Sponsors */}
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -294,7 +367,7 @@ function DisenoInner() {
             </div>
             <div className="grid grid-cols-3 gap-2 mb-2">
               {[0, 1, 2].map((i) => (
-                <div key={i}>
+                <div key={i} className="flex flex-col gap-1">
                   <input
                     ref={sponsorRefs[i]}
                     type="file"
@@ -307,29 +380,40 @@ function DisenoInner() {
                     }}
                   />
                   {sponsors[i] ? (
-                    <div className="relative group">
-                      <img
-                        src={sponsors[i]!}
-                        alt={`Sponsor ${i + 1}`}
-                        className="h-14 w-full object-contain rounded-lg border bg-gray-100 p-1"
-                      />
-                      <button
-                        onClick={() => { setSponsors((p) => { const n = [...p]; n[i] = null; return n }); setPreviewUrl(null) }}
-                        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
+                    <>
+                      <div className="relative group">
+                        <img
+                          src={sponsors[i]!}
+                          alt={`Sponsor ${i + 1}`}
+                          className="h-12 w-full object-contain rounded-lg border bg-gray-100 p-1"
+                        />
+                        <button
+                          onClick={() => { setSponsors((p) => { const n = [...p]; n[i] = null; return n }); setPreviewUrl(null) }}
+                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                      {/* Tamaño del sponsor */}
+                      <div className="flex items-center justify-between gap-1">
+                        <button
+                          onClick={() => { setSponsorScales((p) => { const n=[...p]; n[i]=Math.max(0.3, +(n[i]-0.1).toFixed(1)); return n }); setPreviewUrl(null) }}
+                          className="h-6 w-6 rounded border text-xs font-bold text-gray-500 hover:bg-gray-100 flex items-center justify-center"
+                        >−</button>
+                        <span className="text-[10px] text-muted-foreground font-medium">{Math.round(sponsorScales[i]*100)}%</span>
+                        <button
+                          onClick={() => { setSponsorScales((p) => { const n=[...p]; n[i]=Math.min(3, +(n[i]+0.1).toFixed(1)); return n }); setPreviewUrl(null) }}
+                          className="h-6 w-6 rounded border text-xs font-bold text-gray-500 hover:bg-gray-100 flex items-center justify-center"
+                        >+</button>
+                      </div>
+                    </>
                   ) : (
                     <button
                       onClick={() => sponsorRefs[i].current?.click()}
                       disabled={uploadingSponsors[i]}
-                      className="h-14 w-full rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors disabled:opacity-50"
+                      className="h-12 w-full rounded-lg border-2 border-dashed border-gray-200 flex flex-col items-center justify-center gap-1 text-gray-400 hover:border-gray-300 hover:text-gray-500 transition-colors disabled:opacity-50"
                     >
-                      {uploadingSponsors[i]
-                        ? <Loader2 className="h-4 w-4 animate-spin" />
-                        : <Plus className="h-4 w-4" />
-                      }
+                      {uploadingSponsors[i] ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                       <span className="text-[10px]">Sponsor {i + 1}</span>
                     </button>
                   )}
@@ -348,7 +432,7 @@ function DisenoInner() {
                         : "border-gray-200 text-gray-500 hover:border-gray-300"
                     }`}
                   >
-                    {opt === "dark" ? "🌑 Barra oscura (logos blancos)" : "⬜ Barra blanca (logos oscuros)"}
+                    {opt === "dark" ? "🌑 Barra oscura" : "⬜ Barra blanca"}
                   </button>
                 ))}
               </div>

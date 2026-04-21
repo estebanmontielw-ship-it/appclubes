@@ -165,12 +165,21 @@ export async function GET(req: NextRequest) {
   const s1 = searchParams.get("s1") ?? ""
   const s2 = searchParams.get("s2") ?? ""
   const s3 = searchParams.get("s3") ?? ""
+  const s1scale = parseFloat(searchParams.get("s1scale") ?? "1")
+  const s2scale = parseFloat(searchParams.get("s2scale") ?? "1")
+  const s3scale = parseFloat(searchParams.get("s3scale") ?? "1")
   const sponsorBg = searchParams.get("sponsorBg") ?? "dark"
+  const textureUrl = searchParams.get("textureUrl") ?? ""
+  const textureOpacity = Math.min(40, Math.max(1, parseInt(searchParams.get("textureOpacity") ?? "12")))
 
   const liga = searchParams.get("liga") ?? "lnb"
   const format = searchParams.get("format") ?? "feed"
 
-  const sponsorLogos = [s1, s2, s3].filter(Boolean)
+  const sponsorLogos = [
+    { url: s1, scale: s1scale },
+    { url: s2, scale: s2scale },
+    { url: s3, scale: s3scale },
+  ].filter((s) => Boolean(s.url))
 
   const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
   if (matchIds.length === 0) return new Response("matchIds requerido", { status: 400 })
@@ -243,6 +252,22 @@ export async function GET(req: NextRequest) {
           position: "relative",
           overflow: "hidden",
         }}>
+          {/* Texture overlay */}
+          {textureUrl ? (
+            <img
+              src={textureUrl}
+              width={W} height={H}
+              style={{
+                position: "absolute", top: 0, left: 0,
+                width: W, height: H,
+                objectFit: "cover",
+                opacity: textureOpacity / 100,
+                display: "flex",
+              }}
+              alt=""
+            />
+          ) : null}
+
           {/* Background glow effects */}
           <div style={{
             position: "absolute", top: -200, left: -200,
@@ -324,20 +349,25 @@ export async function GET(req: NextRequest) {
           {sponsorLogos.length > 0 ? (
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "center",
-              width: "100%", height: 120,
-              background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)",
-              gap: 48, padding: "0 60px",
+              width: "100%", height: 130,
+              background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
+              gap: 56, padding: "0 60px",
             }}>
-              {sponsorLogos.map((src, i) => (
-                <img
-                  key={i}
-                  src={src}
-                  width={180}
-                  height={72}
-                  style={{ objectFit: "contain", flex: "0 0 auto" }}
-                  alt={`Sponsor ${i + 1}`}
-                />
-              ))}
+              {sponsorLogos.map((s, i) => {
+                const baseH = 70
+                const h = Math.round(baseH * s.scale)
+                const maxW = Math.round(220 * s.scale)
+                return (
+                  <img
+                    key={i}
+                    src={s.url}
+                    width={maxW}
+                    height={h}
+                    style={{ objectFit: "contain", flex: "0 0 auto" }}
+                    alt={`Sponsor ${i + 1}`}
+                  />
+                )
+              })}
             </div>
           ) : (
             <div style={{
