@@ -77,7 +77,7 @@ export function handleApiError(
       default:
         Sentry.captureException(error, { tags: { context: ctx, prismaCode: error.code } })
         return NextResponse.json(
-          { error: `Error de base de datos (${error.code}): ${error.message.split("\n")[0]}` },
+          { error: "Error de base de datos" },
           { status: 500 }
         )
     }
@@ -98,7 +98,7 @@ export function handleApiError(
     console.error(`${ctx} Error:`, error.message)
     Sentry.captureException(error, { tags: { context: ctx } })
     return NextResponse.json(
-      { error: error.message || "Error interno del servidor" },
+      { error: "Error interno del servidor" },
       { status: 500 }
     )
   }
@@ -107,7 +107,7 @@ export function handleApiError(
   console.error(`${ctx} Unknown error:`, error)
   Sentry.captureException(error, { tags: { context: ctx } })
   return NextResponse.json(
-    { error: String(error) || "Error interno del servidor" },
+    { error: "Error interno del servidor" },
     { status: 500 }
   )
 }
