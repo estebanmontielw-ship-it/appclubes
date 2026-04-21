@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
-import { Download, Image as ImageIcon, Loader2, RefreshCw, CheckSquare, Square, Upload, X, AlertCircle, Plus } from "lucide-react"
+import { Download, Image as ImageIcon, Loader2, RefreshCw, CheckSquare, Square, Upload, X, AlertCircle, Plus, Sparkles, Copy, Check } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -83,6 +83,10 @@ function DisenoInner() {
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"proximos" | "jugados">("proximos")
   const [teamFilter, setTeamFilter] = useState("")
+  const [copies, setCopies] = useState<string[]>([])
+  const [generatingCopy, setGeneratingCopy] = useState(false)
+  const [copyError, setCopyError] = useState<string | null>(null)
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const autoPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const sponsorRefs = [
@@ -397,6 +401,42 @@ function DisenoInner() {
     } finally {
       setGenerating(false)
     }
+  }
+
+  async function handleGenerateCopy() {
+    if (selected.size === 0) return
+    setGeneratingCopy(true)
+    setCopyError(null)
+    setCopies([])
+    const selectedPartidos = partidos.filter((p) => selected.has(p.matchId))
+    const matches = selectedPartidos.map((p) => ({
+      homeName: p.homeName,
+      awayName: p.awayName,
+      homeScore: p.homeScore,
+      awayScore: p.awayScore,
+      venue: p.venue,
+    }))
+    try {
+      const res = await fetch("/api/admin/generate-copy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matches, template, liga: ligaParam, titulo, subtitulo }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? "Error al generar")
+      setCopies(data.copies ?? [])
+    } catch (e: any) {
+      setCopyError(e.message ?? "Error al generar el copy")
+    } finally {
+      setGeneratingCopy(false)
+    }
+  }
+
+  function handleCopyToClipboard(text: string, index: number) {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedIndex(index)
+      setTimeout(() => setCopiedIndex(null), 2000)
+    })
   }
 
   const canGenerate = selected.size > 0
@@ -899,6 +939,56 @@ function DisenoInner() {
             {format === "feed" ? "1080 × 1350 px · Feed 4:5" : "1080 × 1920 px · Historia 9:16"}
           </p>
         </div>
+      </div>
+
+      {/* ── Copy para Instagram ── */}
+      <div className="border-t pt-6">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-sm font-bold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              Copy para Instagram
+            </h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Generá 3 opciones de caption con IA basadas en los partidos seleccionados
+            </p>
+          </div>
+          <button
+            onClick={handleGenerateCopy}
+            disabled={!canGenerate || generatingCopy}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-40 hover:bg-primary/90 transition-colors"
+          >
+            {generatingCopy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {generatingCopy ? "Generando..." : "Generar copys"}
+          </button>
+        </div>
+
+        {copyError && (
+          <div className="flex items-center gap-2 text-red-600 text-sm py-3">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {copyError}
+          </div>
+        )}
+
+        {copies.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {copies.map((copy, i) => (
+              <div key={i} className="relative group rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-xs text-muted-foreground font-semibold mb-2 uppercase tracking-wide">
+                  Opción {i + 1}
+                </p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{copy}</p>
+                <button
+                  onClick={() => handleCopyToClipboard(copy, i)}
+                  className="absolute top-3 right-3 h-7 w-7 rounded-lg border border-gray-200 bg-white flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary transition-colors opacity-0 group-hover:opacity-100"
+                  title="Copiar al portapapeles"
+                >
+                  {copiedIndex === i ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
