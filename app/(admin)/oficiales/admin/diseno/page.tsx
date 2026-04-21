@@ -944,31 +944,13 @@ function DisenoInner() {
         {/* ── RIGHT: preview — sticky en desktop ── */}
         <div className="xl:sticky xl:top-6 space-y-3">
 
-          {/* Header del panel */}
+          {/* Header del panel — solo label e info de formato */}
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
               <p className="text-[10px] text-muted-foreground">
                 {format === "feed" ? "Feed 4:5 · 1080 × 1350 px" : "Historia 9:16 · 1080 × 1920 px"}
               </p>
-            </div>
-            <div className="hidden xl:flex gap-2">
-              <button
-                onClick={handleGenerate}
-                disabled={!canGenerate}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40 hover:bg-primary/90 transition-colors"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Vista previa
-              </button>
-              <button
-                onClick={handleDownload}
-                disabled={!canGenerate || generating}
-                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold disabled:opacity-40 hover:bg-gray-50 transition-colors"
-              >
-                {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                Descargar PNG
-              </button>
             </div>
           </div>
 
@@ -1072,6 +1054,26 @@ function DisenoInner() {
               </div>
             </div>
           )}
+
+          {/* Botones de acción — siempre visibles bajo el mockup en desktop */}
+          <div className="hidden xl:flex gap-2">
+            <button
+              onClick={handleGenerate}
+              disabled={!canGenerate}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40 hover:bg-primary/90 transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Vista previa
+            </button>
+            <button
+              onClick={handleDownload}
+              disabled={!canGenerate || generating}
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-white border border-gray-200 text-xs font-semibold disabled:opacity-40 hover:bg-gray-50 transition-colors"
+            >
+              {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              Descargar PNG
+            </button>
+          </div>
 
           {canGenerate && !previewUrl && !previewError && (
             <p className="text-[10px] text-muted-foreground text-center">
