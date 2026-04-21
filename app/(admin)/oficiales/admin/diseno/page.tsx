@@ -32,6 +32,8 @@ const TEMPLATES = [
   { key: "pre",       label: "Anuncio",   desc: "Antes del partido" },
   { key: "resultado", label: "Resultado", desc: "Con marcador"      },
   { key: "tabla",     label: "Tabla",     desc: "Posiciones"        },
+  { key: "lideres",   label: "Líderes",   desc: "Top estadísticas"  },
+  { key: "jugador",   label: "Jugador",   desc: "Premio del partido" },
 ]
 
 const FORMATS = [
@@ -94,6 +96,18 @@ function DisenoInner() {
   const [presetName, setPresetName] = useState("")
   const [showPresetInput, setShowPresetInput] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
+  const [layout, setLayout] = useState<"default" | "compact">("default")
+  const [statType, setStatType] = useState<"scoring" | "assists" | "rebounds">("scoring")
+  const [playerPhotoUrl, setPlayerPhotoUrl] = useState<string | null>(null)
+  const [uploadingPlayerPhoto, setUploadingPlayerPhoto] = useState(false)
+  const playerPhotoRef = useRef<HTMLInputElement>(null)
+  const [jugadorNombre, setJugadorNombre] = useState("")
+  const [jugadorClub, setJugadorClub] = useState("")
+  const [jugadorPremio, setJugadorPremio] = useState("BROU")
+  const [jugadorFecha, setJugadorFecha] = useState("")
+  const [jugadorTeamLogo, setJugadorTeamLogo] = useState<string | null>(null)
+  const [uploadingJugadorLogo, setUploadingJugadorLogo] = useState(false)
+  const jugadorLogoRef = useRef<HTMLInputElement>(null)
   const sponsorRefs = [
     useRef<HTMLInputElement>(null),
     useRef<HTMLInputElement>(null),
@@ -272,6 +286,32 @@ function DisenoInner() {
     setPreviewUrl(null)
   }
 
+  async function handlePlayerPhotoUpload(file: File) {
+    setUploadingPlayerPhoto(true)
+    try {
+      const url = await uploadImage(file)
+      setPlayerPhotoUrl(url)
+      setPreviewUrl(null)
+    } catch (e: any) {
+      setPreviewError(e.message ?? "Error al subir la foto")
+    } finally {
+      setUploadingPlayerPhoto(false)
+    }
+  }
+
+  async function handleJugadorLogoUpload(file: File) {
+    setUploadingJugadorLogo(true)
+    try {
+      const url = await uploadImage(file)
+      setJugadorTeamLogo(url)
+      setPreviewUrl(null)
+    } catch (e: any) {
+      setPreviewError(e.message ?? "Error al subir el escudo")
+    } finally {
+      setUploadingJugadorLogo(false)
+    }
+  }
+
   async function handleSponsorUpload(index: number, file: File) {
     setUploadingSponsors((prev) => { const n = [...prev]; n[index] = true; return n })
     try {
@@ -325,9 +365,9 @@ function DisenoInner() {
   }
 
   function buildFlyerUrl() {
-    const isTablaTemplate = template === "tabla"
-    if (!isTablaTemplate && selected.size === 0) return null
-    const ids = isTablaTemplate ? "tabla" : Array.from(selected).join(",")
+    const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador"
+    if (!isAutoTemplate && selected.size === 0) return null
+    const ids = isAutoTemplate ? template : Array.from(selected).join(",")
     const params = new URLSearchParams({ matchIds: ids, template, liga: ligaParam, format })
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
@@ -339,6 +379,14 @@ function DisenoInner() {
     if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
     if (cardStyle !== "glass") params.set("cardStyle", cardStyle)
     if (textColor !== "light") params.set("textColor", textColor)
+    if (layout !== "default") params.set("layout", layout)
+    if (template === "lideres" && statType !== "scoring") params.set("statType", statType)
+    if (playerPhotoUrl) params.set("playerPhoto", playerPhotoUrl)
+    if (jugadorNombre.trim()) params.set("jugadorNombre", jugadorNombre.trim())
+    if (jugadorClub.trim()) params.set("jugadorClub", jugadorClub.trim())
+    if (jugadorPremio.trim() && jugadorPremio !== "BROU") params.set("jugadorPremio", jugadorPremio.trim())
+    if (jugadorFecha.trim()) params.set("jugadorFecha", jugadorFecha.trim())
+    if (jugadorTeamLogo) params.set("jugadorTeamLogo", jugadorTeamLogo)
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -366,7 +414,7 @@ function DisenoInner() {
       }).catch((e) => setPreviewError(e.message ?? "Error de conexión"))
     }, 1500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, cardStyle, textColor, ligaParam])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
 
   // Helpers de texto/estilo con guardado + auto-preview
   function handleTitleSize(val: number) { setTitleSize(val); localStorage.setItem(lsKey("titleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
@@ -459,7 +507,8 @@ function DisenoInner() {
     })
   }
 
-  const canGenerate = selected.size > 0
+  const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador"
+  const canGenerate = selected.size > 0 || isAutoTemplate
 
   return (
     <div className="space-y-6">
@@ -748,6 +797,131 @@ function DisenoInner() {
             </div>
           </div>
 
+          {/* Layout (only for match card templates) */}
+          {(template === "pre" || template === "resultado") && (
+            <div>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Diseño de tarjeta</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {([
+                  { key: "default", label: "Estándar", desc: "Logos + VS centrado" },
+                  { key: "compact", label: "Compacto", desc: "Logos apilados + score" },
+                ] as const).map((l) => (
+                  <button key={l.key} onClick={() => { setLayout(l.key); setPreviewUrl(null) }}
+                    className={`p-3 rounded-xl border text-left transition-colors ${layout === l.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"}`}>
+                    <p className={`text-sm font-semibold ${layout === l.key ? "text-primary" : "text-gray-800"}`}>{l.label}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{l.desc}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Líderes config */}
+          {template === "lideres" && (
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Estadística</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {([
+                  { key: "scoring",  label: "Puntos"      },
+                  { key: "assists",  label: "Asistencias" },
+                  { key: "rebounds", label: "Rebotes"     },
+                ] as const).map((s) => (
+                  <button key={s.key} onClick={() => { setStatType(s.key); setPreviewUrl(null) }}
+                    className={`py-2 rounded-lg border text-xs font-semibold transition-colors ${statType === s.key ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}>
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Foto del líder (opcional)</Label>
+                <input ref={playerPhotoRef} type="file" accept="image/*" className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePlayerPhotoUpload(f); e.target.value = "" }} />
+                {playerPhotoUrl ? (
+                  <div className="flex items-center gap-2">
+                    <img src={playerPhotoUrl} alt="Foto" className="h-12 w-10 object-cover rounded border" />
+                    <button onClick={() => { setPlayerPhotoUrl(null); setPreviewUrl(null) }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 text-xs font-medium hover:bg-red-50">
+                      <X className="h-3 w-3" /> Quitar
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => playerPhotoRef.current?.click()} disabled={uploadingPlayerPhoto}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 disabled:opacity-50">
+                    {uploadingPlayerPhoto ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    {uploadingPlayerPhoto ? "Subiendo..." : "Subir foto"}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Jugador del partido config */}
+          {template === "jugador" && (
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Datos del jugador</Label>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Nombre completo</Label>
+                <Input value={jugadorNombre} onChange={(e) => { setJugadorNombre(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Juan Pérez" className="h-8 text-xs" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Club</Label>
+                  <Input value={jugadorClub} onChange={(e) => { setJugadorClub(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Olimpia" className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Premio</Label>
+                  <Input value={jugadorPremio} onChange={(e) => { setJugadorPremio(e.target.value); setPreviewUrl(null) }} placeholder="Ej: BROU" className="h-8 text-xs" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">Fecha / Jornada</Label>
+                <Input value={jugadorFecha} onChange={(e) => { setJugadorFecha(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Fecha 5" className="h-8 text-xs" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Foto del jugador</Label>
+                  <input ref={playerPhotoRef} type="file" accept="image/*" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePlayerPhotoUpload(f); e.target.value = "" }} />
+                  {playerPhotoUrl ? (
+                    <div className="flex items-center gap-2">
+                      <img src={playerPhotoUrl} alt="Foto" className="h-12 w-10 object-cover rounded border" />
+                      <button onClick={() => { setPlayerPhotoUrl(null); setPreviewUrl(null) }}
+                        className="flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-red-600 text-xs hover:bg-red-50">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => playerPhotoRef.current?.click()} disabled={uploadingPlayerPhoto}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 disabled:opacity-50 w-full justify-center">
+                      {uploadingPlayerPhoto ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      {uploadingPlayerPhoto ? "Subiendo..." : "Subir foto"}
+                    </button>
+                  )}
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Escudo del club</Label>
+                  <input ref={jugadorLogoRef} type="file" accept="image/png" className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleJugadorLogoUpload(f); e.target.value = "" }} />
+                  {jugadorTeamLogo ? (
+                    <div className="flex items-center gap-2">
+                      <img src={jugadorTeamLogo} alt="Escudo" className="h-12 w-12 object-contain rounded border bg-gray-50 p-0.5" />
+                      <button onClick={() => { setJugadorTeamLogo(null); setPreviewUrl(null) }}
+                        className="flex items-center gap-1 px-2 py-1 rounded border border-red-200 text-red-600 text-xs hover:bg-red-50">
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => jugadorLogoRef.current?.click()} disabled={uploadingJugadorLogo}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-dashed border-gray-300 text-xs text-gray-500 hover:border-gray-400 disabled:opacity-50 w-full justify-center">
+                      {uploadingJugadorLogo ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+                      {uploadingJugadorLogo ? "Subiendo..." : "Subir escudo"}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Formato */}
           <div>
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Formato</Label>
@@ -861,8 +1035,8 @@ function DisenoInner() {
             </div>
           </div>
 
-          {/* Lista de partidos */}
-          <div>
+          {/* Lista de partidos (solo para templates que requieren selección) */}
+          {!isAutoTemplate && <div>
             <div className="flex items-center justify-between mb-2">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                 Partidos
@@ -931,7 +1105,7 @@ function DisenoInner() {
                 })
               )}
             </div>
-          </div>
+          </div>}
 
           {/* Acciones — solo en móvil (en desktop están en el panel de preview) */}
           <div className="flex gap-2 xl:hidden">
@@ -995,7 +1169,7 @@ function DisenoInner() {
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-600">
                     <ImageIcon className="h-8 w-8 opacity-20" />
                     <p className="text-xs opacity-40 text-center px-6">
-                      {canGenerate ? "Hacé clic en Vista previa" : "Seleccioná uno o más partidos"}
+                      {canGenerate ? "Hacé clic en Vista previa" : "Seleccioná uno o más partidos para generar"}
                     </p>
                   </div>
                 )}
@@ -1110,7 +1284,7 @@ function DisenoInner() {
           </div>
           <button
             onClick={handleGenerateCopy}
-            disabled={!canGenerate || generatingCopy}
+            disabled={selected.size === 0 || generatingCopy}
             className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold disabled:opacity-40 hover:bg-primary/90 transition-colors"
           >
             {generatingCopy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
