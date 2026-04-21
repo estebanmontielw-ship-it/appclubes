@@ -167,7 +167,7 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
       // Upload
       const formData = new FormData()
       formData.append("file", croppedFile)
-      formData.append("bucket", "website")
+      formData.append("bucket", "noticias")
 
       const res = await fetch("/api/upload", { method: "POST", body: formData })
 
@@ -207,7 +207,7 @@ export default function ImageUploader({ value, onChange, onAiAnalysis }: ImageUp
 
       const formData = new FormData()
       formData.append("file", uploadFile)
-      formData.append("bucket", "website")
+      formData.append("bucket", "noticias")
 
       const res = await fetch("/api/upload", { method: "POST", body: formData })
 
