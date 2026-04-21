@@ -261,15 +261,15 @@ export async function GET(req: NextRequest) {
     const H = format === "historia" ? 1920 : 1350
 
     // Card dimensions that fit within the fixed height
-    // Feed 1350: header(240-280) + cards + gaps(20×(n-1)) + footer(60-130) must be ≤ 1350
+    // Feed 1350: header + cards + gaps(16×(n-1)) + footer(60-130) must be ≤ 1350
     const cardW = W - 80
-    const cardH = count === 1 ? 480 : count === 2 ? 400 : 295
-    const logoSize = count === 1 ? 150 : count === 2 ? 120 : 90
-    const nameFontSize = count === 1 ? 28 : count === 2 ? 24 : 20
-    const vsFontSize = count === 1 ? 58 : count === 2 ? 48 : 40
+    const cardH        = count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240
+    const logoSize     = count === 1 ? 150 : count === 2 ? 120 : count === 3 ?  90 :  75
+    const nameFontSize = count === 1 ?  28 : count === 2 ?  24 : count === 3 ?  20 :  17
+    const vsFontSize   = count === 1 ?  58 : count === 2 ?  48 : count === 3 ?  40 :  34
 
-    const headerH = count === 1 ? 280 : count === 2 ? 260 : 240
-    const gapBetweenCards = count === 1 ? 0 : 20
+    const headerH = count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210
+    const gapBetweenCards = count === 1 ? 0 : count <= 3 ? 20 : 16
 
     return new ImageResponse(
       (
