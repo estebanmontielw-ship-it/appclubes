@@ -438,9 +438,9 @@ export async function GET(req: NextRequest) {
             {logoUrl ? <img src={logoUrl} width={Math.round(80 * logoScale)} height={Math.round(80 * logoScale)} style={{ position: "absolute", top: 36, left: 36, objectFit: "contain", display: "flex" }} alt="Logo" /> : null}
             {jugadorTeamLogo ? <img src={jugadorTeamLogo} width={120} height={120} style={{ position: "absolute", top: Math.round(H * 0.38), left: 48, objectFit: "contain", display: "flex" }} alt={jugadorClub} /> : null}
             <div style={{ position: "absolute", bottom: Math.round(H * 0.24), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
-              <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: 900, lineHeight: 0.9, letterSpacing: -3 }}>JUGADOR</span>
+              <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>JUGADOR</span>
               <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 4 }}>
-                <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: 900, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorPremio.toUpperCase()}</span>
+                <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorPremio.toUpperCase()}</span>
                 {jugadorFecha ? <div style={{ display: "flex", background: "rgba(255,255,255,0.15)", borderRadius: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}><span style={{ color: "white", fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>{jugadorFecha.toUpperCase()}</span></div> : null}
               </div>
             </div>
@@ -659,13 +659,13 @@ export async function GET(req: NextRequest) {
             {/* Título principal */}
             {titulo ? (
               <span style={{
-                color: tc.title, fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: 900,
+                color: tc.title, fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: titleWeight,
                 letterSpacing: -1, textAlign: "center", lineHeight: 1,
               }}>
                 {titulo.toUpperCase()}
               </span>
             ) : (
-              <span style={{ color: tc.title, fontSize: Math.round(48 * titleSize), fontWeight: 900, letterSpacing: 2 }}>
+              <span style={{ color: tc.title, fontSize: Math.round(48 * titleSize), fontWeight: titleWeight, letterSpacing: 2 }}>
                 {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
               </span>
             )}

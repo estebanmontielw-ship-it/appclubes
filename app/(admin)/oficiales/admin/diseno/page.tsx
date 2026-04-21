@@ -80,6 +80,7 @@ function DisenoInner() {
   const textureInputRef = useRef<HTMLInputElement>(null)
   const [titleSize, setTitleSize] = useState(100)
   const [subtitleSize, setSubtitleSize] = useState(100)
+  const [titleWeight, setTitleWeight] = useState<400 | 700 | 900>(900)
   const [cardStyle, setCardStyle] = useState<"glass" | "solid" | "minimal">("glass")
   const [generating, setGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -142,6 +143,7 @@ function DisenoInner() {
     setBgImageUrl(localStorage.getItem(lsKey("bgImage")) ?? null)
     setTitleSize(parseInt(localStorage.getItem(lsKey("titleSize")) ?? "100"))
     setSubtitleSize(parseInt(localStorage.getItem(lsKey("subtitleSize")) ?? "100"))
+    setTitleWeight((parseInt(localStorage.getItem(lsKey("titleWeight")) ?? "900") as 400 | 700 | 900))
     setCardStyle((localStorage.getItem(lsKey("cardStyle")) as "glass" | "solid" | "minimal") ?? "glass")
     setTextColor((localStorage.getItem(lsKey("textColor")) as "light" | "dark") ?? "light")
     setBgFit((localStorage.getItem(lsKey("bgFit")) as "cover" | "contain") ?? "cover")
@@ -397,6 +399,7 @@ function DisenoInner() {
     if (playerPhotoUrl && photoFit !== "cover") params.set("photoFit", photoFit)
     if (titleSize !== 100) params.set("titleSize", String(titleSize))
     if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
+    if (titleWeight !== 900) params.set("titleWeight", String(titleWeight))
     if (cardStyle !== "glass") params.set("cardStyle", cardStyle)
     if (textColor !== "light") params.set("textColor", textColor)
     if (layout !== "default") params.set("layout", layout)
@@ -434,7 +437,7 @@ function DisenoInner() {
       }).catch((e) => setPreviewError(e.message ?? "Error de conexión"))
     }, 1500)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
 
   // Helpers de texto/estilo con guardado + auto-preview
   function handleTitleSize(val: number) { setTitleSize(val); localStorage.setItem(lsKey("titleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
@@ -443,6 +446,7 @@ function DisenoInner() {
   function handleTextColor(val: "light" | "dark") { setTextColor(val); localStorage.setItem(lsKey("textColor"), val); setPreviewUrl(null); scheduleAutoPreview() }
   function handleBgFit(val: "cover" | "contain") { setBgFit(val); localStorage.setItem(lsKey("bgFit"), val); setPreviewUrl(null); scheduleAutoPreview() }
   function handlePhotoFit(val: "cover" | "contain") { setPhotoFit(val); localStorage.setItem(lsKey("photoFit"), val); setPreviewUrl(null); scheduleAutoPreview() }
+  function handleTitleWeight(val: 400 | 700 | 900) { setTitleWeight(val); localStorage.setItem(lsKey("titleWeight"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
 
   // Cambiar sección (tab): setea template por defecto de la sección si el actual no pertenece
   function handleSection(val: "partidos" | "estadisticas") {
@@ -1160,6 +1164,28 @@ function DisenoInner() {
                 <p className="text-xs text-muted-foreground mb-1">Subtítulo <span className="font-medium text-gray-700">{subtitleSize}%</span></p>
                 <input type="range" min={40} max={200} step={5} value={subtitleSize}
                   onChange={(e) => handleSubtitleSize(Number(e.target.value))} className="w-full accent-primary" />
+              </div>
+            </div>
+
+            {/* Peso del título */}
+            <div>
+              <p className="text-xs text-muted-foreground mb-1.5">Peso del título</p>
+              <div className="grid grid-cols-3 gap-1.5">
+                {([
+                  { val: 400 as const, label: "Regular",  weight: "font-normal" },
+                  { val: 700 as const, label: "Bold",     weight: "font-bold" },
+                  { val: 900 as const, label: "Black",    weight: "font-black" },
+                ]).map((o) => (
+                  <button
+                    key={o.val}
+                    onClick={() => handleTitleWeight(o.val)}
+                    className={`py-1.5 rounded-lg border text-xs transition-colors ${o.weight} ${
+                      titleWeight === o.val ? "border-primary bg-primary/5 text-primary" : "border-gray-200 text-gray-600 hover:border-gray-300"
+                    }`}
+                  >
+                    {o.label}
+                  </button>
+                ))}
               </div>
             </div>
           </div>
