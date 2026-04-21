@@ -6,6 +6,8 @@ import { emailCTHabilitado, emailCTRechazado, emailCTDocumentosRequeridos } from
 import { requireRole, isAuthError } from "@/lib/api-auth"
 import { handleApiError } from "@/lib/api-errors"
 
+export const dynamic = "force-dynamic"
+
 export async function GET(
   _request: Request,
   { params }: { params: { id: string } }

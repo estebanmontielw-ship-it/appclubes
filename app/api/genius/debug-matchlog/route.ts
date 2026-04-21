@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { geniusFetch } from "@/lib/genius-sports"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 /**
  * Debug endpoint to inspect the raw /persons/{personId}/matchlog response.
@@ -8,6 +9,8 @@ import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
  * GET /api/genius/debug-matchlog?personId=X
  */
 export async function GET(request: Request) {
+  const auth = await requireRole("SUPER_ADMIN")
+  if (isAuthError(auth)) return auth
   const { searchParams } = new URL(request.url)
   const personIdStr = searchParams.get("personId")
   if (!personIdStr) return NextResponse.json({ error: "personId requerido" }, { status: 400 })

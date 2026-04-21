@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { geniusFetch, getCompetitionTeamPersons } from "@/lib/genius-sports"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 /**
  * Fetch official Genius roster for all teams in the competition.
@@ -10,6 +11,8 @@ import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
  * GET /api/genius/debug-roster?teamId=X  → single team
  */
 export async function GET(request: Request) {
+  const auth = await requireRole("SUPER_ADMIN")
+  if (isAuthError(auth)) return auth
   const { searchParams } = new URL(request.url)
   const teamIdParam = searchParams.get("teamId")
 

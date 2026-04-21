@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { geniusFetch } from "@/lib/genius-sports"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { LNB_ROSTERS } from "@/lib/rosters-lnb"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 /** Normalize for name matching: uppercase, remove accents, collapse spaces */
 function normName(s: string) {
@@ -21,6 +22,8 @@ function normName(s: string) {
  * GET /api/genius/debug-player?name=ALVARO+DOMINGUEZ → search a player by name
  */
 export async function GET(request: Request) {
+  const auth = await requireRole("SUPER_ADMIN")
+  if (isAuthError(auth)) return auth
   const { searchParams } = new URL(request.url)
   const personIdStr = searchParams.get("personId")
   const nameQuery = searchParams.get("name")

@@ -8,6 +8,8 @@ import { handleApiError } from "@/lib/api-errors"
 import { getLnbScheduleContext, resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { getStandings, getLeadersFromMatches } from "@/lib/genius-sports"
 
+export const dynamic = "force-dynamic"
+
 const anthropic = process.env.ANTHROPIC_API_KEY
   ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   : null
