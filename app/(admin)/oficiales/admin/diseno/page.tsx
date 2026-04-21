@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState, Suspense } from "react"
+import { useCallback, useEffect, useRef, useState, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { Download, Image as ImageIcon, Loader2, RefreshCw, CheckSquare, Square, Upload, X, AlertCircle, Plus } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -75,11 +75,15 @@ function DisenoInner() {
   const [textureOpacity, setTextureOpacity] = useState(12)
   const [uploadingTexture, setUploadingTexture] = useState(false)
   const textureInputRef = useRef<HTMLInputElement>(null)
+  const [titleSize, setTitleSize] = useState(100)
+  const [subtitleSize, setSubtitleSize] = useState(100)
+  const [cardStyle, setCardStyle] = useState<"glass" | "solid" | "minimal">("glass")
   const [generating, setGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [filter, setFilter] = useState<"proximos" | "jugados">("proximos")
   const [teamFilter, setTeamFilter] = useState("")
+  const autoPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const sponsorRefs = [
     useRef<HTMLInputElement>(null),
@@ -104,6 +108,9 @@ function DisenoInner() {
     setTextureOpacity(parseInt(localStorage.getItem(lsKey("textureOpacity")) ?? "12"))
     setTheme(localStorage.getItem(lsKey("theme")) ?? "masc1")
     setBgImageUrl(localStorage.getItem(lsKey("bgImage")) ?? null)
+    setTitleSize(parseInt(localStorage.getItem(lsKey("titleSize")) ?? "100"))
+    setSubtitleSize(parseInt(localStorage.getItem(lsKey("subtitleSize")) ?? "100"))
+    setCardStyle((localStorage.getItem(lsKey("cardStyle")) as "glass" | "solid" | "minimal") ?? "glass")
     try {
       const sp = JSON.parse(localStorage.getItem(lsKey("sponsors")) ?? "null")
       setSponsors(Array.isArray(sp) ? sp : [null, null, null])
@@ -307,6 +314,9 @@ function DisenoInner() {
     if (!bgImageUrl) params.set("theme", theme)
     if (bgImageUrl) params.set("bgImageUrl", bgImageUrl)
     if (textureUrl && !bgImageUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
+    if (titleSize !== 100) params.set("titleSize", String(titleSize))
+    if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
+    if (cardStyle !== "glass") params.set("cardStyle", cardStyle)
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -320,7 +330,29 @@ function DisenoInner() {
     return `/api/admin/flyer?${params.toString()}`
   }
 
+  // Auto-preview con debounce — se lanza 1.5s después del último cambio
+  const scheduleAutoPreview = useCallback(() => {
+    if (autoPreviewTimer.current) clearTimeout(autoPreviewTimer.current)
+    autoPreviewTimer.current = setTimeout(() => {
+      const url = buildFlyerUrl()
+      if (!url) return
+      setPreviewUrl(null)
+      setPreviewError(null)
+      fetch(url).then(async (res) => {
+        if (res.ok) setPreviewUrl(url)
+        else { const t = await res.text(); setPreviewError(`Error ${res.status}: ${t || "No se pudo generar"}`) }
+      }).catch((e) => setPreviewError(e.message ?? "Error de conexión"))
+    }, 1500)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, cardStyle, ligaParam])
+
+  // Helpers de texto/estilo con guardado + auto-preview
+  function handleTitleSize(val: number) { setTitleSize(val); localStorage.setItem(lsKey("titleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
+  function handleSubtitleSize(val: number) { setSubtitleSize(val); localStorage.setItem(lsKey("subtitleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
+  function handleCardStyle(val: "glass" | "solid" | "minimal") { setCardStyle(val); localStorage.setItem(lsKey("cardStyle"), val); setPreviewUrl(null); scheduleAutoPreview() }
+
   async function handleGenerate() {
+    if (autoPreviewTimer.current) clearTimeout(autoPreviewTimer.current)
     const url = buildFlyerUrl()
     if (!url) return
     setPreviewUrl(null)
@@ -698,6 +730,47 @@ function DisenoInner() {
                 placeholder="Ej: APERTURA 2026 · LIGA NACIONAL"
                 className="h-9"
               />
+            </div>
+          </div>
+
+          {/* Texto y estilo de tarjetas */}
+          <div className="space-y-3">
+            <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Texto y estilo</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Título <span className="font-medium text-gray-700">{titleSize}%</span></p>
+                <input
+                  type="range" min={40} max={200} step={5} value={titleSize}
+                  onChange={(e) => handleTitleSize(Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Subtítulo <span className="font-medium text-gray-700">{subtitleSize}%</span></p>
+                <input
+                  type="range" min={40} max={200} step={5} value={subtitleSize}
+                  onChange={(e) => handleSubtitleSize(Number(e.target.value))}
+                  className="w-full accent-primary"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { key: "glass",   label: "Vidrio",  desc: "Con transparencia" },
+                { key: "solid",   label: "Sólido",  desc: "Oscuro opaco" },
+                { key: "minimal", label: "Mínimo",  desc: "Sin relleno" },
+              ] as const).map((s) => (
+                <button
+                  key={s.key}
+                  onClick={() => handleCardStyle(s.key)}
+                  className={`p-2.5 rounded-xl border text-left transition-colors ${
+                    cardStyle === s.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                  }`}
+                >
+                  <p className={`text-xs font-semibold ${cardStyle === s.key ? "text-primary" : "text-gray-800"}`}>{s.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{s.desc}</p>
+                </button>
+              ))}
             </div>
           </div>
 

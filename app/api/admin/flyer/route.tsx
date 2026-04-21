@@ -61,7 +61,7 @@ function Logo({ url, name, size }: { url: string | null; name: string; size: num
   )
 }
 
-function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, vsFontSize }: {
+function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, vsFontSize, cardStyle }: {
   match: MatchData
   isResultado: boolean
   cardW: number
@@ -69,13 +69,16 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
   logoSize: number
   nameFontSize: number
   vsFontSize: number
+  cardStyle: "glass" | "solid" | "minimal"
 }) {
+  const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
+  const cardBorder = cardStyle === "solid" ? "none" : cardStyle === "minimal" ? "1.5px solid rgba(255,255,255,0.07)" : "1.5px solid rgba(255,255,255,0.14)"
   return (
     <div style={{
       width: cardW, height: cardH,
-      background: "rgba(255,255,255,0.08)",
+      background: cardBg,
       borderRadius: 28,
-      border: "1.5px solid rgba(255,255,255,0.14)",
+      border: cardBorder,
       display: "flex",
       flexDirection: "column",
       alignItems: "center",
@@ -174,6 +177,10 @@ export async function GET(req: NextRequest) {
   const textureUrl = searchParams.get("textureUrl") ?? ""
   const textureOpacity = Math.min(40, Math.max(1, parseInt(searchParams.get("textureOpacity") ?? "12")))
   const bgImageUrl = searchParams.get("bgImageUrl") ?? ""
+
+  const titleSize = Math.min(200, Math.max(40, parseFloat(searchParams.get("titleSize") ?? "100"))) / 100
+  const subtitleSize = Math.min(200, Math.max(40, parseFloat(searchParams.get("subtitleSize") ?? "100"))) / 100
+  const cardStyle = (searchParams.get("cardStyle") ?? "glass") as "glass" | "solid" | "minimal"
 
   const liga = searchParams.get("liga") ?? "lnb"
   const format = searchParams.get("format") ?? "feed"
@@ -325,7 +332,7 @@ export async function GET(req: NextRequest) {
             {/* Subtítulo del usuario (si lo puso) */}
             {subtitulo ? (
               <span style={{
-                color: "rgba(255,255,255,0.55)", fontSize: 22, fontWeight: 600,
+                color: "rgba(255,255,255,0.55)", fontSize: Math.round(22 * subtitleSize), fontWeight: 600,
                 letterSpacing: 4, marginBottom: 10, textAlign: "center",
               }}>
                 {subtitulo.toUpperCase()}
@@ -335,13 +342,13 @@ export async function GET(req: NextRequest) {
             {/* Título principal */}
             {titulo ? (
               <span style={{
-                color: "white", fontSize: count === 1 ? 72 : 60, fontWeight: 900,
+                color: "white", fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: 900,
                 letterSpacing: -1, textAlign: "center", lineHeight: 1,
               }}>
                 {titulo.toUpperCase()}
               </span>
             ) : (
-              <span style={{ color: "white", fontSize: 48, fontWeight: 900, letterSpacing: 2 }}>
+              <span style={{ color: "white", fontSize: Math.round(48 * titleSize), fontWeight: 900, letterSpacing: 2 }}>
                 {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
               </span>
             )}
@@ -364,6 +371,7 @@ export async function GET(req: NextRequest) {
                 logoSize={logoSize}
                 nameFontSize={nameFontSize}
                 vsFontSize={vsFontSize}
+                cardStyle={cardStyle}
               />
             ))}
           </div>
