@@ -38,6 +38,15 @@ interface MatchData {
   venue: string
 }
 
+interface StandingsRow {
+  rank: number
+  name: string
+  logo: string | null
+  gamesPlayed: number
+  wins: number
+  losses: number
+}
+
 function Logo({ url, name, size }: { url: string | null; name: string; size: number }) {
   if (url) {
     return (
@@ -92,16 +101,30 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
         {/* Home */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
           <Logo url={match.homeLogo} name={match.homeName} size={logoSize} />
-          {isResultado && match.homeScore != null && (
-            <span style={{ color: tc.score, fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
-              {match.homeScore}
-            </span>
-          )}
-          <span style={{
-            color: tc.team, fontSize: nameFontSize, fontWeight: 700,
-            marginTop: isResultado ? 6 : 14, textAlign: "center",
-            maxWidth: cardW * 0.35,
-          }}>{match.homeName}</span>
+          {isResultado && match.homeScore != null && (() => {
+            const hs = parseInt(match.homeScore ?? "")
+            const as_ = parseInt(match.awayScore ?? "")
+            const tied = isNaN(hs) || isNaN(as_) || hs === as_
+            const homeWins = !tied && hs > as_
+            return (
+              <span style={{ color: tied ? tc.score : (homeWins ? "#f97316" : tc.scoreDim), fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+                {match.homeScore}
+              </span>
+            )
+          })()}
+          {(() => {
+            const hs = parseInt(match.homeScore ?? "")
+            const as_ = parseInt(match.awayScore ?? "")
+            const tied = isNaN(hs) || isNaN(as_) || hs === as_
+            const homeWins = !tied && hs > as_
+            return (
+              <span style={{
+                color: tc.team, fontSize: nameFontSize, fontWeight: isResultado ? (homeWins ? 900 : 600) : 700,
+                marginTop: isResultado ? 6 : 14, textAlign: "center",
+                maxWidth: cardW * 0.35,
+              }}>{match.homeName}</span>
+            )
+          })()}
         </div>
 
         {/* VS */}
@@ -119,16 +142,30 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
         {/* Away */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
           <Logo url={match.awayLogo} name={match.awayName} size={logoSize} />
-          {isResultado && match.awayScore != null && (
-            <span style={{ color: tc.score, fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
-              {match.awayScore}
-            </span>
-          )}
-          <span style={{
-            color: tc.team, fontSize: nameFontSize, fontWeight: 700,
-            marginTop: isResultado ? 6 : 14, textAlign: "center",
-            maxWidth: cardW * 0.35,
-          }}>{match.awayName}</span>
+          {isResultado && match.awayScore != null && (() => {
+            const hs = parseInt(match.homeScore ?? "")
+            const as_ = parseInt(match.awayScore ?? "")
+            const tied = isNaN(hs) || isNaN(as_) || hs === as_
+            const awayWins = !tied && as_ > hs
+            return (
+              <span style={{ color: tied ? tc.score : (awayWins ? "#f97316" : tc.scoreDim), fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+                {match.awayScore}
+              </span>
+            )
+          })()}
+          {(() => {
+            const hs = parseInt(match.homeScore ?? "")
+            const as_ = parseInt(match.awayScore ?? "")
+            const tied = isNaN(hs) || isNaN(as_) || hs === as_
+            const awayWins = !tied && as_ > hs
+            return (
+              <span style={{
+                color: tc.team, fontSize: nameFontSize, fontWeight: isResultado ? (awayWins ? 900 : 600) : 700,
+                marginTop: isResultado ? 6 : 14, textAlign: "center",
+                maxWidth: cardW * 0.35,
+              }}>{match.awayName}</span>
+            )
+          })()}
         </div>
       </div>
 
@@ -200,6 +237,7 @@ export async function GET(req: NextRequest) {
     dot:      textColor === "dark" ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.3)",
     time:     textColor === "dark" ? "#b45309" : "#fbbf24",
     score:    textColor === "dark" ? "#111827" : "white",
+    scoreDim: textColor === "dark" ? "rgba(0,0,0,0.25)" : "rgba(255,255,255,0.3)",
     infoBg:   textColor === "dark" ? "rgba(0,0,0,0.07)" : "rgba(0,0,0,0.3)",
     default:  textColor === "dark" ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.2)",
   }
@@ -212,8 +250,9 @@ export async function GET(req: NextRequest) {
     { url: s5, scale: s5scale },
   ].filter((s) => Boolean(s.url))
 
+  const isTabla = template === "tabla"
   const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
-  if (matchIds.length === 0) return new Response("matchIds requerido", { status: 400 })
+  if (!isTabla && matchIds.length === 0) return new Response("matchIds requerido", { status: 400 })
 
   const isResultado = template === "resultado"
 
@@ -226,6 +265,155 @@ export async function GET(req: NextRequest) {
     }
     const resolve = resolvers[liga] ?? resolveLnbCompetitionIdPublic
     const { id: compId } = await resolve()
+
+    // ── TABLA DE POSICIONES ──
+    if (isTabla) {
+      const standingsRaw = await geniusFetch(`/competitions/${compId}/standings`, "short")
+      const allStandings: any[] = standingsRaw?.response?.data ?? standingsRaw?.data ?? standingsRaw ?? []
+      if (!allStandings || allStandings.length === 0) {
+        return new Response("No hay datos de tabla disponibles", { status: 404 })
+      }
+
+      const standingsRows: StandingsRow[] = allStandings.slice(0, 10).map((row: any, idx: number) => ({
+        rank: row.rank ?? idx + 1,
+        name: row.competitorName ?? row.name ?? "",
+        logo: row.images?.logo?.S1?.url ?? row.images?.logo?.T1?.url ?? null,
+        gamesPlayed: row.stats?.gamesPlayed ?? row.gamesPlayed ?? 0,
+        wins: row.stats?.wins ?? row.wins ?? 0,
+        losses: row.stats?.losses ?? row.losses ?? 0,
+      }))
+
+      const H = format === "historia" ? 1920 : 1350
+      const headerH = 240
+      const tituloFinal = titulo || "TABLA DE POSICIONES"
+
+      return new ImageResponse(
+        (
+          <div style={{
+            width: W, height: H,
+            background: bgImageUrl ? "#000" : (({
+              masc1: "linear-gradient(160deg, #0b1e3d 0%, #0d2550 50%, #091830 100%)",
+              masc2: "linear-gradient(160deg, #0a2e6e 0%, #0c3a8a 50%, #061a4a 100%)",
+              fem1:  "linear-gradient(160deg, #2d0a4e 0%, #3d1260 50%, #1a0630 100%)",
+              fem2:  "linear-gradient(160deg, #4a0a1a 0%, #5c1020 50%, #2a0610 100%)",
+            } as Record<string, string>)[theme] ?? "linear-gradient(160deg, #0b1e3d 0%, #0d2550 50%, #091830 100%)"),
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            fontFamily: "sans-serif",
+            position: "relative",
+            overflow: "hidden",
+          }}>
+            {bgImageUrl ? (
+              <img src={bgImageUrl} width={W} height={H}
+                style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", display: "flex" }}
+                alt="" />
+            ) : null}
+            {textureUrl && !bgImageUrl ? (
+              <img src={textureUrl} width={W} height={H}
+                style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }}
+                alt="" />
+            ) : null}
+            <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
+            <div style={{ position: "absolute", bottom: -200, right: -200, width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)", display: "flex" }} />
+
+            {/* ── HEADER ── */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: headerH, width: "100%", gap: 0 }}>
+              {logoUrl ? (
+                <img src={logoUrl} width={Math.round(90 * logoScale)} height={Math.round(90 * logoScale)}
+                  style={{ objectFit: "contain", marginBottom: 14 }} alt="Logo" />
+              ) : null}
+              {subtitulo ? (
+                <span style={{ color: tc.subtitle, fontSize: Math.round(22 * subtitleSize), fontWeight: 600, letterSpacing: 4, marginBottom: 10, textAlign: "center" }}>
+                  {subtitulo.toUpperCase()}
+                </span>
+              ) : null}
+              <span style={{ color: tc.title, fontSize: Math.round(60 * titleSize), fontWeight: 900, letterSpacing: -1, textAlign: "center", lineHeight: 1 }}>
+                {tituloFinal.toUpperCase()}
+              </span>
+            </div>
+
+            {/* ── STANDINGS TABLE ── */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, justifyContent: "center", width: "100%", paddingBottom: 20, paddingLeft: 40, paddingRight: 40 }}>
+              {/* Column headers */}
+              <div style={{ display: "flex", alignItems: "center", width: "100%", paddingLeft: 24, paddingRight: 24, marginBottom: 8 }}>
+                <div style={{ display: "flex", width: 50 }}>
+                  <span style={{ color: tc.subtitle, fontSize: 16, fontWeight: 600 }}>#</span>
+                </div>
+                <div style={{ display: "flex", flex: 1, marginLeft: 14 }}>
+                  <span style={{ color: tc.subtitle, fontSize: 16, fontWeight: 600 }}>EQUIPO</span>
+                </div>
+                <div style={{ display: "flex", width: 70, justifyContent: "center" }}>
+                  <span style={{ color: tc.subtitle, fontSize: 16, fontWeight: 600 }}>PJ</span>
+                </div>
+                <div style={{ display: "flex", width: 70, justifyContent: "center" }}>
+                  <span style={{ color: tc.subtitle, fontSize: 16, fontWeight: 600 }}>PG</span>
+                </div>
+                <div style={{ display: "flex", width: 70, justifyContent: "center" }}>
+                  <span style={{ color: tc.subtitle, fontSize: 16, fontWeight: 600 }}>PP</span>
+                </div>
+              </div>
+
+              {/* Rows */}
+              <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: 8 }}>
+                {standingsRows.map((row) => {
+                  const isTop4 = row.rank <= 4
+                  const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
+                  const rowBg = isTop4 ? "rgba(249,115,22,0.10)" : cardBg
+                  return (
+                    <div key={row.rank} style={{ display: "flex", alignItems: "center", width: "100%", height: 72, background: rowBg, borderRadius: 12, paddingLeft: 24, paddingRight: 24 }}>
+                      <div style={{ display: "flex", width: 50 }}>
+                        <span style={{ color: isTop4 ? "#f97316" : tc.subtitle, fontSize: 22, fontWeight: 700 }}>{row.rank}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", width: 48, height: 48 }}>
+                        {row.logo ? (
+                          <img src={row.logo} width={48} height={48} style={{ objectFit: "contain" }} alt={row.name} />
+                        ) : (
+                          <div style={{ width: 48, height: 48, borderRadius: 24, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                            <span style={{ color: "white", fontSize: 20, fontWeight: 900 }}>{row.name.charAt(0)}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", flex: 1, marginLeft: 14 }}>
+                        <span style={{ color: tc.team, fontSize: 22, fontWeight: 700 }}>{row.name}</span>
+                      </div>
+                      <div style={{ display: "flex", width: 70, justifyContent: "center" }}>
+                        <span style={{ color: tc.subtitle, fontSize: 20 }}>{row.gamesPlayed}</span>
+                      </div>
+                      <div style={{ display: "flex", width: 70, justifyContent: "center" }}>
+                        <span style={{ color: isTop4 ? "#f97316" : tc.team, fontSize: 20, fontWeight: 700 }}>{row.wins}</span>
+                      </div>
+                      <div style={{ display: "flex", width: 70, justifyContent: "center" }}>
+                        <span style={{ color: tc.subtitle, fontSize: 20 }}>{row.losses}</span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* ── FOOTER / SPONSORS ── */}
+            {sponsorLogos.length > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: 130, background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: 56, padding: "0 60px" }}>
+                {sponsorLogos.map((s, i) => {
+                  const baseH = 70
+                  const h = Math.round(baseH * s.scale)
+                  const maxW = Math.round(220 * s.scale)
+                  return <img key={i} src={s.url} width={maxW} height={h} style={{ objectFit: "contain", flex: "0 0 auto" }} alt={`Sponsor ${i + 1}`} />
+                })}
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60, width: "100%" }}>
+                <span style={{ color: tc.default, fontSize: 18, fontWeight: 500, letterSpacing: 2 }}>cpb.com.py</span>
+              </div>
+            )}
+          </div>
+        ),
+        { width: W, height: H }
+      )
+    }
+
+    // ── MATCH CARDS (pre / resultado) ──
     const matchesRaw = await geniusFetch(`/competitions/${compId}/matches?limit=100`, "short")
     const allMatches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
 

@@ -31,6 +31,7 @@ const LIGAS: { key: Liga; label: string; sub: string; api: string }[] = [
 const TEMPLATES = [
   { key: "pre",       label: "Anuncio",   desc: "Antes del partido" },
   { key: "resultado", label: "Resultado", desc: "Con marcador"      },
+  { key: "tabla",     label: "Tabla",     desc: "Posiciones"        },
 ]
 
 const FORMATS = [
@@ -89,6 +90,9 @@ function DisenoInner() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [activeCopyIndex, setActiveCopyIndex] = useState<number | null>(null)
   const autoPreviewTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [presets, setPresets] = useState<Array<{name: string, config: Record<string, any>}>>([])
+  const [presetName, setPresetName] = useState("")
+  const [showPresetInput, setShowPresetInput] = useState(false)
   const logoInputRef = useRef<HTMLInputElement>(null)
   const sponsorRefs = [
     useRef<HTMLInputElement>(null),
@@ -133,6 +137,14 @@ function DisenoInner() {
     setPreviewError(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ligaParam])
+
+  // Load presets on mount (global, not per-liga)
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("diseno_presets") ?? "[]")
+      setPresets(Array.isArray(saved) ? saved : [])
+    } catch { setPresets([]) }
+  }, [])
 
   useEffect(() => {
     setLoading(true)
@@ -313,8 +325,9 @@ function DisenoInner() {
   }
 
   function buildFlyerUrl() {
-    if (selected.size === 0) return null
-    const ids = Array.from(selected).join(",")
+    const isTablaTemplate = template === "tabla"
+    if (!isTablaTemplate && selected.size === 0) return null
+    const ids = isTablaTemplate ? "tabla" : Array.from(selected).join(",")
     const params = new URLSearchParams({ matchIds: ids, template, liga: ligaParam, format })
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
