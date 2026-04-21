@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client"
 import {
   Home, User, CreditCard, FileText, Bell, LogOut,
   GraduationCap, Users, History, FolderOpen, Lock,
-  Menu, X, Calendar, BarChart3,
+  Menu, X, Calendar, BarChart3, Globe,
 } from "lucide-react"
 import CTWhatsNewModal from "@/components/layout/CTWhatsNewModal"
 
@@ -122,7 +122,12 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
 
-      <div className="px-3 py-3 border-t border-gray-100">
+      <div className="px-3 py-3 border-t border-gray-100 space-y-0.5">
+        <Link href="/" onClick={() => mobile && setMobileOpen(false)}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700">
+          <Globe className="h-[18px] w-[18px] shrink-0 text-gray-400" />
+          <span>Volver al sitio CPB</span>
+        </Link>
         <button onClick={handleLogout}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50">
           <LogOut className="h-[18px] w-[18px] shrink-0" />
@@ -144,9 +149,14 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         {/* Top bar */}
-        <header className="sticky top-0 z-10 bg-white border-b border-gray-100 px-4 py-3 flex items-center justify-between md:px-6">
+        <header
+          data-navbar
+          className="sticky top-0 z-10 bg-white border-b border-gray-100"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
+        <div className="px-4 py-3 flex items-center justify-between md:px-6">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(!mobileOpen)} className="md:hidden p-2 -ml-2 rounded-lg text-gray-600 hover:bg-gray-100">
               <Menu className="h-5 w-5" />
@@ -165,6 +175,7 @@ export default function CTLayout({ children }: { children: React.ReactNode }) {
               )}
             </div>
           </div>
+        </div>
         </header>
 
         <main className="flex-1 p-4 md:p-6">{children}</main>

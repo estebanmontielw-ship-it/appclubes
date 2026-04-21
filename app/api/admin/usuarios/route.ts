@@ -103,6 +103,7 @@ export async function GET(request: Request) {
       where,
       include: { roles: true },
       orderBy: { createdAt: "desc" },
+      take: 200,
     })
 
     return NextResponse.json({ usuarios })

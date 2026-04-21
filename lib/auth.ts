@@ -5,17 +5,23 @@ import type { TipoRol } from "@prisma/client"
 export async function getSession() {
   const supabase = createServerClient()
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
-  return session
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+  if (error || !user) return null
+  return { user }
 }
 
 export async function getCurrentUser() {
-  const session = await getSession()
-  if (!session?.user) return null
+  const supabase = createServerClient()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+  if (error || !user) return null
 
   const usuario = await prisma.usuario.findUnique({
-    where: { id: session.user.id },
+    where: { id: user.id },
     include: { roles: true },
   })
 

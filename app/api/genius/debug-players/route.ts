@@ -20,7 +20,7 @@ export async function GET() {
     const [rawAll, ...rawPerTeam] = await Promise.all([
       geniusFetch(`/matches/${m.matchId}/players`, "short").catch(() => null),
       ...teamIds.map((tid: number) =>
-        geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "short").catch(() => null)
+        geniusFetch(`/matches/${m.matchId}/teams/${tid}/players?limit=100`, "short").catch(() => null)
       ),
     ])
 
@@ -30,8 +30,11 @@ export async function GET() {
       return {
         teamId: teamIds[i],
         count: players.length,
-        sample: players.slice(0, 3).map((p: any) => ({
-          personName: p.personName, teamId: p.teamId, teamName: p.teamName,
+        sample: players.slice(0, 5).map((p: any) => ({
+          personId: p.personId,
+          personName: p.personName,
+          firstName: p.firstName, familyName: p.familyName,
+          teamId: p.teamId, teamName: p.teamName,
           periodNumber: p.periodNumber, participated: p.participated,
           sMinutes: p.sMinutes, sPoints: p.sPoints,
         })),

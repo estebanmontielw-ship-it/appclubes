@@ -1228,7 +1228,7 @@ export default function MisHonorariosPage() {
   }
 
   return (
-    <div className="space-y-5 max-w-2xl">
+    <div className="space-y-5 max-w-2xl w-full">
       <div>
         <h1 className="text-2xl font-bold">Mis Honorarios</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -1237,24 +1237,26 @@ export default function MisHonorariosPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b pb-1">
-        {([
-          { key: "dashboard", label: "Dashboard" },
-          { key: "historial", label: `Historial${registros.length > 0 ? ` (${registros.length})` : ""}` },
-          { key: "cargar", label: "Cargar partido" },
-        ] as const).map(({ key, label }) => (
-          <button
-            key={key}
-            onClick={() => setTab(key)}
-            className={`px-3 py-2 text-sm font-medium rounded-t-lg transition-colors border-b-2 -mb-[1px] ${
-              tab === key
-                ? "border-primary text-primary"
-                : "border-transparent text-gray-500 hover:text-gray-800"
-            }`}
-          >
-            {label}
-          </button>
-        ))}
+      <div className="overflow-x-auto scrollbar-none border-b">
+        <div className="flex gap-1 pb-0 min-w-max md:min-w-0">
+          {([
+            { key: "dashboard", label: "Dashboard" },
+            { key: "historial", label: `Historial${registros.length > 0 ? ` (${registros.length})` : ""}` },
+            { key: "cargar", label: "Cargar partido" },
+          ] as const).map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key)}
+              className={`px-3 py-2 text-sm font-medium whitespace-nowrap rounded-t-lg transition-colors border-b-2 -mb-[1px] ${
+                tab === key
+                  ? "border-primary text-primary"
+                  : "border-transparent text-gray-500 hover:text-gray-800"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Contenido por tab */}

@@ -9,38 +9,16 @@
 const API_BASE = "https://api.wh.geniussports.com/v1/basketball"
 const API_KEY = process.env.GENIUS_SPORTS_API_KEY || ""
 
-// In-memory cache
-const cache = new Map<string, { data: any; expires: number }>()
-
-const CACHE_TTL = {
-  short: 30 * 1000,        // 30 seconds — live match data
-  medium: 5 * 60 * 1000,   // 5 minutes — standings, schedule
-  long: 60 * 60 * 1000,    // 1 hour — competitions, teams
+// Revalidation seconds for Next.js Data Cache (shared across all serverless instances)
+const CACHE_TTL_SECONDS = {
+  short: 30,         // 30s — live match data
+  medium: 300,       // 5 min — standings, schedule
+  long: 3600,        // 1 hour — competitions, teams
 } as const
 
-type CacheTTL = keyof typeof CACHE_TTL
-
-function getCached(key: string): any | null {
-  const entry = cache.get(key)
-  if (!entry) return null
-  if (Date.now() > entry.expires) {
-    cache.delete(key)
-    return null
-  }
-  return entry.data
-}
-
-function setCache(key: string, data: any, ttl: CacheTTL) {
-  cache.set(key, { data, expires: Date.now() + CACHE_TTL[ttl] })
-}
+type CacheTTL = keyof typeof CACHE_TTL_SECONDS
 
 export async function geniusFetch(path: string, ttl: CacheTTL = "medium"): Promise<any> {
-  const cacheKey = path
-
-  // Check cache first
-  const cached = getCached(cacheKey)
-  if (cached) return cached
-
   const url = `${API_BASE}${path}`
 
   const res = await fetch(url, {
@@ -48,7 +26,7 @@ export async function geniusFetch(path: string, ttl: CacheTTL = "medium"): Promi
       "x-api-key": API_KEY,
       "Accept": "application/json",
     },
-    next: { revalidate: 0 }, // Don't use Next.js cache, we manage our own
+    next: { revalidate: CACHE_TTL_SECONDS[ttl] }, // Vercel Data Cache — shared across instances
   })
 
   if (!res.ok) {
@@ -56,9 +34,7 @@ export async function geniusFetch(path: string, ttl: CacheTTL = "medium"): Promi
     throw new Error(`Genius Sports API error ${res.status}: ${text}`)
   }
 
-  const data = await res.json()
-  setCache(cacheKey, data, ttl)
-  return data
+  return res.json()
 }
 
 // --- High-level helpers ---
@@ -113,6 +89,16 @@ export async function getTeam(teamId: string | number) {
   return geniusFetch(`/teams/${teamId}`, "long")
 }
 
+/** Official registered roster for a team in a competition (includes bench players with 0 mins) */
+export async function getCompetitionTeamPersons(competitionId: string | number, teamId: string | number) {
+  return geniusFetch(`/competitions/${competitionId}/teams/${teamId}/persons?isPlayer=1&limit=100`, "medium")
+}
+
+/** Look up a single person by their Genius personId */
+export async function getPerson(personId: string | number) {
+  return geniusFetch(`/persons/${personId}`, "long")
+}
+
 export interface LeaderEntry {
   rank: number
   personId: number
@@ -161,7 +147,7 @@ export async function getLeadersFromMatches(competitionId: string | number): Pro
       const perTeam = await Promise.all(
         teamIds.map(async (tid: number) => {
           try {
-            const raw = await geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "medium")
+            const raw = await geniusFetch(`/matches/${m.matchId}/teams/${tid}/players?limit=100`, "medium")
             return raw?.response?.data ?? raw?.data ?? []
           } catch { return [] }
         })
@@ -325,7 +311,7 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
         const perTeam = await Promise.all(
           teamIds.map(async (tid: number) => {
             try {
-              const raw = await geniusFetch(`/matches/${m.matchId}/players?teamId=${tid}`, "medium")
+              const raw = await geniusFetch(`/matches/${m.matchId}/teams/${tid}/players?limit=100`, "medium")
               return raw?.response?.data ?? raw?.data ?? []
             } catch { return [] }
           })
@@ -347,8 +333,18 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
   const playerMap = new Map<number, Acc>()
   const teamMap = new Map<number, Acc & { teamGames: Set<number> }>()
 
-  // A player "played" if participated=1 OR has minutes > 0 (flag sometimes incorrect in LiveStats)
-  const didPlay = (p: any) => p.periodNumber === 0 && (p.participated === 1 || p.participated === "1" || (p.sMinutes != null && p.sMinutes > 0))
+  // A player "played" if participated=1, has minutes > 0, or has any recorded activity
+  // (participated flag is sometimes incorrect in Genius data)
+  const didPlay = (p: any) => {
+    if (p.periodNumber !== 0) return false
+    if (p.participated === 1 || p.participated === "1") return true
+    if (p.sMinutes != null && p.sMinutes > 0) return true
+    return (p.sPoints ?? 0) > 0 || (p.sReboundsTotal ?? 0) > 0 ||
+      (p.sAssists ?? 0) > 0 || (p.sSteals ?? 0) > 0 || (p.sBlocks ?? 0) > 0 ||
+      (p.sTurnovers ?? 0) > 0 || (p.sFoulsPersonal ?? 0) > 0 ||
+      (p.sTwoPointersAttempted ?? 0) > 0 || (p.sThreePointersAttempted ?? 0) > 0 ||
+      (p.sFreeThrowsAttempted ?? 0) > 0
+  }
 
   for (let i = 0; i < playerDataArrays.length; i++) {
     const matchId = completed[i].matchId
@@ -401,11 +397,38 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
     }
   }
 
+  // Merge official team rosters so registered players with 0 games still appear
+  await Promise.all(
+    Array.from(allTeamsMap.keys()).map(async (tid) => {
+      try {
+        const raw = await geniusFetch(`/competitions/${competitionId}/teams/${tid}/persons?isPlayer=1&limit=100`, "long")
+        const persons: any[] = raw?.response?.data ?? raw?.data ?? []
+        const teamInfo = allTeamsMap.get(tid)
+        for (const person of persons) {
+          const pid: number = person.personId
+          if (!pid || playerMap.has(pid)) continue
+          playerMap.set(pid, {
+            personId: pid,
+            playerName: `${person.firstName ?? ""} ${person.familyName ?? ""}`.trim(),
+            teamName: person.primaryTeamName ?? teamInfo?.teamName ?? "",
+            teamId: tid,
+            teamSigla: teamInfo?.teamSigla ?? null,
+            teamLogo: teamLogoMap.get(tid) ?? null,
+            photoUrl: person.images?.photo?.T1?.url ?? null,
+            games: 0, pts: 0, reb: 0, rebOff: 0, rebDef: 0,
+            ast: 0, stl: 0, blk: 0, to: 0, min: 0,
+            fgm: 0, fga: 0, threePtM: 0, threePtA: 0,
+            ftm: 0, fta: 0, fouls: 0, eff: 0,
+          })
+        }
+      } catch { /* roster unavailable for this team */ }
+    })
+  )
+
   const avg = (total: number, games: number) => games > 0 ? Math.round((total / games) * 10) / 10 : 0
   const pct = (made: number, att: number) => att > 0 ? Math.round((made / att) * 1000) / 10 : null
 
   const players: PlayerStatFull[] = Array.from(playerMap.values())
-    .filter(p => p.games > 0)
     .map(p => ({
       ...p,
       ptsAvg: avg(p.pts, p.games), rebAvg: avg(p.reb, p.games),
@@ -414,7 +437,12 @@ export async function getAllPlayerStats(competitionId: string | number): Promise
       minAvg: avg(p.min, p.games), effAvg: avg(p.eff, p.games),
       fgPct: pct(p.fgm, p.fga), threePtPct: pct(p.threePtM, p.threePtA), ftPct: pct(p.ftm, p.fta),
     }))
-    .sort((a, b) => b.ptsAvg - a.ptsAvg)
+    .sort((a, b) => {
+      // Players who haven't played yet go to the bottom
+      if (a.games === 0 && b.games > 0) return 1
+      if (a.games > 0 && b.games === 0) return -1
+      return b.ptsAvg - a.ptsAvg
+    })
 
   const teamsFromStats: TeamStatFull[] = Array.from(teamMap.values()).map(t => {
     const g = t.teamGames.size

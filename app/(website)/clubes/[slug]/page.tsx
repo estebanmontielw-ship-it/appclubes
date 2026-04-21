@@ -22,7 +22,11 @@ function normalizeName(s: string) {
 function namesMatch(a: string, b: string) {
   const na = normalizeName(a)
   const nb = normalizeName(b)
-  return na === nb || na.includes(nb) || nb.includes(na)
+  if (na === nb || na.includes(nb) || nb.includes(na)) return true
+  // Space-agnostic: handles "DEPORTIVO CAMPOALTO" vs "Club Deportivo Campo Alto"
+  const naC = na.replace(/\s+/g, "")
+  const nbC = nb.replace(/\s+/g, "")
+  return naC === nbC || naC.includes(nbC) || nbC.includes(naC)
 }
 
 // Which leagues each club belongs to (hardcoded to match clubes/page.tsx)
@@ -89,6 +93,13 @@ function MatchCard({ m, clubName }: { m: NormalizedMatch; clubName: string }) {
   const isLive = m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
   const hasScore = m.homeScore != null && m.awayScore != null
 
+  // Shortcut link: live/≤30min → FibaLiveStats; otherwise → internal previa
+  const matchStartMs = m.isoDateTime ? Date.parse(m.isoDateTime) : null
+  const minutesUntilStart = matchStartMs ? (matchStartMs - Date.now()) / 60000 : null
+  const goToStats = isLive || isComplete || (minutesUntilStart != null && minutesUntilStart <= 30)
+  const shortcutUrl = goToStats ? m.statsUrl : `/partido/${m.id}`
+  const shortcutExternal = goToStats
+
   const myScore = isHome ? m.homeScore : m.awayScore
   const oppScore = isHome ? m.awayScore : m.homeScore
   const oppName = isHome ? m.awayName : m.homeName
@@ -147,8 +158,12 @@ function MatchCard({ m, clubName }: { m: NormalizedMatch; clubName: string }) {
           )}
         </div>
       ) : (
-        m.statsUrl ? (
-          <a href={m.statsUrl} target="_blank" rel="noopener noreferrer" className="shrink-0 text-blue-500 hover:text-blue-700">
+        shortcutUrl ? (
+          <a
+            href={shortcutUrl}
+            {...(shortcutExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+            className="shrink-0 text-blue-500 hover:text-blue-700"
+          >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         ) : null
@@ -252,8 +267,23 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
 
   const displayLogo = club.logoUrl || teamLogo
 
-  // FibaLiveStats link: use first match that has a statsUrl
-  const statsBaseUrl = lnbMatches.find((m) => m.statsUrl)?.statsUrl?.replace(/\/\d+\/$/, "") ?? null
+  // Match button: live or starting within 30 min → FibaLiveStats; otherwise → internal previa
+  const liveMatch = lnbMatches.find(
+    (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+  )
+  const nextMatch = upcoming[0] ?? null
+  const nextMatchStartMs = nextMatch?.isoDateTime ? Date.parse(nextMatch.isoDateTime) : null
+  const minutesUntilNext = nextMatchStartMs ? (nextMatchStartMs - Date.now()) / 60000 : null
+  const nextIsSoon = minutesUntilNext != null && minutesUntilNext <= 30
+
+  const fibaStatsMatch = liveMatch ?? nextMatch ?? null
+  const fibaStatsIsLive = !!liveMatch
+  const showStatsLink = fibaStatsIsLive || nextIsSoon
+  const fibaStatsUrl = showStatsLink
+    ? fibaStatsMatch?.statsUrl ?? null
+    : fibaStatsMatch?.id
+      ? `/partido/${fibaStatsMatch.id}`
+      : null
 
   const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
   const clubSchema = {
@@ -451,17 +481,36 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
             </div>
           )}
 
-          {/* FibaLiveStats link */}
-          {statsBaseUrl && (
+          {/* Match button: FibaLiveStats (live/≤30min) or internal previa (>30min) */}
+          {fibaStatsUrl && (
             <a
-              href={statsBaseUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-between gap-2 bg-[#0a1628] hover:bg-[#132043] text-white rounded-xl p-3.5 transition-colors"
+              href={fibaStatsUrl}
+              {...(showStatsLink ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              className={`flex items-center justify-between gap-2 text-white rounded-xl p-3.5 transition-colors ${
+                fibaStatsIsLive
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-[#0a1628] hover:bg-[#132043]"
+              }`}
             >
               <div>
-                <p className="text-xs font-black uppercase tracking-wider text-blue-300">FibaLiveStats</p>
-                <p className="text-sm font-bold mt-0.5">Estadísticas en vivo</p>
+                <p className="text-xs font-black uppercase tracking-wider text-blue-200 flex items-center gap-1.5">
+                  {fibaStatsIsLive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse inline-block" />
+                  )}
+                  {showStatsLink ? "FibaLiveStats" : "Próximo partido"}
+                </p>
+                <p className="text-sm font-bold mt-0.5">
+                  {fibaStatsIsLive
+                    ? "En vivo ahora"
+                    : showStatsLink
+                      ? "Estadísticas — empieza pronto"
+                      : "Ver previa del partido"}
+                </p>
+                {!fibaStatsIsLive && fibaStatsMatch && (
+                  <p className="text-[11px] text-white/50 mt-0.5">
+                    {fmtDate(fibaStatsMatch.date, fibaStatsMatch.time)}
+                  </p>
+                )}
               </div>
               <ExternalLink className="w-4 h-4 text-white/50 shrink-0" />
             </a>
@@ -527,9 +576,9 @@ export default async function ClubDetailPage({ params }: { params: { slug: strin
                       </Link>
                     </td>
                     <td className="px-3 py-2.5 text-center font-semibold text-gray-500">{p.games}</td>
-                    <td className="px-3 py-2.5 text-center font-black text-[#0a1628]">{p.ptsAvg.toFixed(1)}</td>
-                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.rebAvg.toFixed(1)}</td>
-                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.astAvg.toFixed(1)}</td>
+                    <td className="px-3 py-2.5 text-center font-black text-[#0a1628]">{p.games > 0 ? p.ptsAvg.toFixed(1) : "—"}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.games > 0 ? p.rebAvg.toFixed(1) : "—"}</td>
+                    <td className="px-3 py-2.5 text-center font-semibold text-gray-600">{p.games > 0 ? p.astAvg.toFixed(1) : "—"}</td>
                   </tr>
                 ))}
               </tbody>

@@ -6,9 +6,8 @@
  * Returns the FCM token string, or null if unavailable/denied.
  */
 
-export function isNative(): boolean {
-  return typeof window !== "undefined" && !!(window as any).Capacitor?.isNative
-}
+import { isNative } from "@/lib/capacitor"
+export { isNative }
 
 export async function registerNativePush(): Promise<string | null> {
   if (!isNative()) return null
@@ -24,6 +23,9 @@ export async function registerNativePush(): Promise<string | null> {
     }
 
     if (permStatus.receive !== "granted") return null
+
+    // Remove any previously registered listeners to prevent duplicates on re-registration
+    await PushNotifications.removeAllListeners()
 
     // Register and wait for token
     return new Promise((resolve) => {

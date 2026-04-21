@@ -90,6 +90,7 @@ export default function DashboardLayout({
           onClick={() => setMenuOpen(false)}
         />
         <div
+          aria-hidden={!menuOpen}
           className={`fixed inset-y-0 left-0 w-72 bg-white z-50 shadow-2xl transition-transform duration-200 ease-out ${
             menuOpen ? "translate-x-0" : "-translate-x-full"
           }`}
@@ -106,7 +107,7 @@ export default function DashboardLayout({
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         <Navbar
           userName={userData ? `${userData.nombre} ${userData.apellido}` : "..."}
           unreadCount={unreadCount}

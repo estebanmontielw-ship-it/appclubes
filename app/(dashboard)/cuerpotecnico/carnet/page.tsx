@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { CreditCard, User } from "lucide-react"
+import { CreditCard, User, Wallet } from "lucide-react"
+import { Button } from "@/components/ui/button"
 
 const rolLabels: Record<string, string> = {
   ENTRENADOR_NACIONAL: "Entrenador Nacional",
@@ -15,10 +16,25 @@ const rolLabels: Record<string, string> = {
 
 export default function CTCarnetPage() {
   const [ct, setCt] = useState<any>(null)
+  const [walletLoading, setWalletLoading] = useState(false)
 
   useEffect(() => {
     fetch("/api/ct/me").then(r => r.json()).then(data => setCt(data.ct)).catch(() => {})
   }, [])
+
+  const isIOS = typeof navigator !== "undefined" && /iPhone|iPad|iPod/.test(navigator.userAgent)
+
+  const handleAddToWallet = async () => {
+    setWalletLoading(true)
+    try {
+      const { openWalletPass } = await import("@/lib/wallet-download")
+      await openWalletPass("/api/ct/carnet/wallet/ios")
+    } catch {
+      // silent — Share dialog cancel also throws
+    } finally {
+      setWalletLoading(false)
+    }
+  }
 
   if (!ct) return <div className="py-12 text-center text-gray-400">Cargando...</div>
 
@@ -71,6 +87,17 @@ export default function CTCarnetPage() {
           )}
         </div>
       </div>
+
+      {isIOS && (
+        <Button
+          onClick={handleAddToWallet}
+          disabled={walletLoading}
+          className="w-full mt-4 bg-black hover:bg-zinc-900 text-white"
+        >
+          <Wallet className="mr-2 h-4 w-4" />
+          {walletLoading ? "Abriendo Wallet..." : "Agregar a Apple Wallet"}
+        </Button>
+      )}
 
       <p className="text-xs text-gray-400 text-center mt-4">Mostrá este carnet digital para verificar tu habilitación</p>
     </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
-import { ChevronLeft, ChevronRight, X, MapPin, ChevronDown, Users } from "lucide-react"
+import { ChevronLeft, ChevronRight, X, MapPin, ChevronDown, Users, BarChart2 } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
 
 type CompKey = "lnb" | "lnbf" | "u22m" | "u22f"
@@ -237,7 +237,39 @@ function DayMatches({ entries }: { entries: MatchEntry[] }) {
               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: cfg.color }} />
               <span className="text-[11px] font-black uppercase tracking-wide" style={{ color: cfg.color }}>{cfg.label}</span>
               {isLive && <span className="ml-auto text-[9px] font-black text-red-600 bg-red-100 px-1.5 py-0.5 rounded-full">EN VIVO</span>}
-              {isComplete && <span className="ml-auto text-[9px] font-bold text-gray-400 uppercase">Final</span>}
+              {isComplete && (
+                <div className="ml-auto flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold text-gray-400 uppercase">Final</span>
+                  {(comp === "lnb" || comp === "lnbf") && match.id && match.homeId && match.awayId && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const q = new URLSearchParams({
+                          homeId: String(match.homeId),
+                          awayId: String(match.awayId),
+                          homeName: match.homeName,
+                          awayName: match.awayName,
+                          homeSigla: match.homeSigla ?? "",
+                          awaySigla: match.awaySigla ?? "",
+                          homeLogo: match.homeLogo ?? "",
+                          awayLogo: match.awayLogo ?? "",
+                          homeScore: String(match.homeScore ?? ""),
+                          awayScore: String(match.awayScore ?? ""),
+                          venue: match.venue ?? "",
+                          date: match.date ?? "",
+                          comp,
+                        })
+                        window.open(`/boxscore/${match.id}?${q}`, "_blank")
+                      }}
+                      title="Ver Box Score"
+                      className="flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                    >
+                      <BarChart2 className="h-3 w-3" />
+                      Box Score
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
             {/* Teams + score */}
             <div className="px-3 py-2.5">

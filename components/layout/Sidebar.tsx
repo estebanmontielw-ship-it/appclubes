@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList, Calculator,
+  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList, Calculator, Palette,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -51,6 +51,8 @@ function getNavSections(
         label: "MI CUENTA",
         items: [
           { label: "Dashboard", href: "/oficiales/admin", icon: Home },
+          { label: "Mi perfil", href: "/oficiales/perfil", icon: User },
+          { label: "Mi carnet", href: "/oficiales/carnet", icon: CreditCard },
         ],
       },
       {
@@ -124,6 +126,16 @@ function getNavSections(
             label: "Calendario Macro",
             href: "/oficiales/admin/calendario-macro",
             icon: Calendar,
+          },
+          {
+            label: "Diseño / Flyers",
+            icon: Palette,
+            subItems: [
+              { label: "LNB", href: "/oficiales/admin/diseno?liga=lnb" },
+              { label: "LNBF", href: "/oficiales/admin/diseno?liga=lnbf" },
+              { label: "U22 Masc", href: "/oficiales/admin/diseno?liga=u22m" },
+              { label: "U22 Fem", href: "/oficiales/admin/diseno?liga=u22f" },
+            ],
           },
         ],
       },
@@ -526,8 +538,16 @@ export default function Sidebar({
         ))}
       </nav>
 
-      {/* Footer — Notificaciones + Logout */}
+      {/* Footer — Site link + Notificaciones + Logout */}
       <div className="px-3 py-3 border-t border-gray-100 space-y-0.5">
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-all duration-150"
+        >
+          <Globe className="h-[18px] w-[18px] shrink-0 text-gray-400" />
+          <span>Volver al sitio CPB</span>
+        </Link>
         <Link
           href="/oficiales/notificaciones"
           onClick={onNavigate}

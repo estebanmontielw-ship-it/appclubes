@@ -181,13 +181,18 @@ GET https://live.wh.sportingpulseinternational.com/v2/basketball/readlog/{matchI
 
 | Campo en FIBA Organizer | Campo en Genius Sports | Descripción |
 |-------------------------|------------------------|-------------|
-| `spi_id` (persona) | `personId` en teams / action messages | **Mismo ID** |
+| `spi_id` (persona) | `personId` en teams / action messages | **⚠️ NO son el mismo ID — ver nota** |
 | `team_id` | `teamId` en detail | ID del equipo |
 | `competition_id` | `competitionId` | ID de la competencia |
 | `league_id` | `leagueId` | ID de la liga |
 | `game_id` | `matchId` | ID del partido |
 
-**CRÍTICO:** `personId` en el stream de LiveStats = `spi_id` en FIBA Organizer. Si ese ID no existe en FO → error "Person with SPI id XXXXXXX cannot be found".
+**⚠️ CRÍTICO — IDs de persona NO coinciden:**
+- El campo "Person Id" que muestra FIBA Organizer en sus rosters (rango 5M–7M, ej. `7039138`) es un ID interno de FIBA.
+- El `personId` que devuelve Genius Sports Warehouse API en `/matches/{matchId}/players` (rango 1M–3M, ej. `2734598`) es un ID interno de Genius/SPI.
+- Son sistemas **completamente separados**. El mismo jugador tiene un ID distinto en cada sistema.
+- **Para cruzar jugadores entre los dos sistemas, usar normalización de nombre** (`firstName + familyName`), no el ID.
+- El error "Person with SPI id XXXXXXX cannot be found" en FibaLiveStats se refiere al ID de Genius (1M–3M range), que debe existir en FIBA Organizer como `spi_id`.
 
 ### IDs de la LNB APERTURA 2026
 ```

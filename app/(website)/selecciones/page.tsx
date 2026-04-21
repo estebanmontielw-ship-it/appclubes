@@ -145,6 +145,13 @@ const eventos2026: Evento[] = [
   },
 ]
 
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/javascript:/gi, "")
+}
+
 function getModalidadColor(modalidad: string) {
   return modalidad === "3x3"
     ? "bg-orange-100 text-orange-700"
@@ -361,7 +368,7 @@ export default async function SeleccionesPage() {
                         {sel.descripcion && (
                           <div
                             className="mt-3 text-sm text-gray-600 line-clamp-3"
-                            dangerouslySetInnerHTML={{ __html: sel.descripcion }}
+                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(sel.descripcion) }}
                           />
                         )}
                       </div>

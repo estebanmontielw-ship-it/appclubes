@@ -14,10 +14,9 @@ export default function CapacitorInit() {
 
     async function init() {
       try {
-        // Configure status bar
+        // Configure status bar — transparent bg so each page's header color shows through
         const { StatusBar, Style } = await import("@capacitor/status-bar")
         await StatusBar.setStyle({ style: Style.Dark })
-        await StatusBar.setBackgroundColor({ color: "#0a1628" })
       } catch {}
 
       try {
@@ -38,18 +37,10 @@ export default function CapacitorInit() {
         })
       } catch {}
 
-      // Register for push notifications silently if already granted
+      // Register for push notifications — requests permission if not yet asked
       try {
-        if (typeof window !== "undefined" && "Notification" in window) {
-          if ((window as any).Capacitor?.isNative) {
-            const { PushNotifications } = await import("@capacitor/push-notifications")
-            const perm = await PushNotifications.checkPermissions()
-            if (perm.receive === "granted") {
-              const token = await registerNativePush()
-              if (token) await savePushToken(token)
-            }
-          }
-        }
+        const token = await registerNativePush()
+        if (token) await savePushToken(token)
       } catch {}
     }
 

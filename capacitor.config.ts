@@ -7,11 +7,12 @@ const config: CapacitorConfig = {
 
   // ─── Load the production web app (server URL mode) ────────
   // No static export needed — the native WebView loads cpb.com.py directly.
-  webDir: "out",
+  webDir: "out", // unused (app loads via server.url above), but required by Capacitor schema
   server: {
     url: "https://cpb.com.py",
     cleartext: false, // HTTPS only
     androidScheme: "https",
+    allowNavigation: ["cpb.com.py", "*.cpb.com.py"],
   },
 
   // ─── iOS ──────────────────────────────────────────────────
@@ -20,7 +21,7 @@ const config: CapacitorConfig = {
     backgroundColor: "#0a1628",
     allowsLinkPreview: false,
     scrollEnabled: true,
-    limitsNavigationsToAppBoundDomains: false,
+    limitsNavigationsToAppBoundDomains: true, // defense in depth — restricts WKWebView navigation to declared domains
   },
 
   // ─── Android ──────────────────────────────────────────────
@@ -47,9 +48,8 @@ const config: CapacitorConfig = {
       spinnerColor: "#ffffff",
     },
     StatusBar: {
-      style: "DARK",            // white icons on dark background
-      backgroundColor: "#0a1628",
-      overlaysWebView: false,
+      style: "DEFAULT",         // iOS auto-adjusts icon color based on content underneath
+      overlaysWebView: true,    // el color de la página se extiende hasta el borde superior
     },
     App: {
       // handle back button on Android — prevents accidental exit

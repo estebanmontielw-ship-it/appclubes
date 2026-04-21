@@ -1,8 +1,15 @@
 import { createServiceClient } from "@/lib/supabase"
+import { createClient } from "@/utils/supabase/server"
+import { cookies } from "next/headers"
 import { NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
 import sharp from "sharp"
 import { handleApiError } from "@/lib/api-errors"
+
+const ALLOWED_BUCKETS = ["fotos-oficiales", "documentos", "fotos-carnet", "fotos-ct", "hero-images", "recursos", "noticias", "website", "fotos-cedula", "certificados", "comprobantes"]
+
+// These buckets are used by public registration forms (user not yet authenticated)
+const PUBLIC_BUCKETS = new Set(["fotos-carnet", "fotos-cedula", "certificados", "comprobantes"])
 
 export async function POST(request: Request) {
   try {
@@ -10,9 +17,29 @@ export async function POST(request: Request) {
     const file = formData.get("file") as File
     const bucket = formData.get("bucket") as string
 
+    const isPublicBucket = PUBLIC_BUCKETS.has(bucket)
+
+    // Auth check — skip for public registration buckets
+    if (!isPublicBucket) {
+      const cookieStore = cookies()
+      const supabase = createClient(cookieStore)
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        return NextResponse.json({ error: "No autenticado" }, { status: 401 })
+      }
+    }
+
     if (!file || !bucket) {
       return NextResponse.json(
         { error: "Archivo y bucket son requeridos" },
+        { status: 400 }
+      )
+    }
+
+    // Bucket allowlist check
+    if (!ALLOWED_BUCKETS.includes(bucket)) {
+      return NextResponse.json(
+        { error: "Bucket no permitido" },
         { status: 400 }
       )
     }
@@ -27,7 +54,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const supabase = createServiceClient()
+    const serviceClient = createServiceClient()
     let buffer: Buffer = Buffer.from(await file.arrayBuffer()) as Buffer
     let fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg"
     let contentType = file.type
@@ -62,7 +89,7 @@ export async function POST(request: Request) {
 
     const fileName = `${uuidv4()}.${fileExt}`
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await serviceClient.storage
       .from(bucket)
       .upload(fileName, buffer, {
         cacheControl: "3600",
@@ -77,7 +104,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = serviceClient.storage
       .from(bucket)
       .getPublicUrl(fileName)
 

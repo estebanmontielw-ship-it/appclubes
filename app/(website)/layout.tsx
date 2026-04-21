@@ -5,6 +5,7 @@ import ChatWidget from "@/components/website/ChatWidget"
 import InstallPrompt from "@/components/website/InstallPrompt"
 import ServiceWorkerRegister from "@/components/website/ServiceWorkerRegister"
 import CapacitorInit from "@/components/website/CapacitorInit"
+import StatusBarScrollEffect from "@/components/StatusBarScrollEffect"
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
 
@@ -79,6 +80,7 @@ export default function WebsiteLayout({
       <InstallPrompt />
       <ServiceWorkerRegister />
       <CapacitorInit />
+      <StatusBarScrollEffect />
     </div>
   )
 }

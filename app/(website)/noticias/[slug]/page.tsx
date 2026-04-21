@@ -63,6 +63,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
+function sanitizeHtml(html: string): string {
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+    .replace(/\son\w+\s*=\s*["'][^"']*["']/gi, "")
+    .replace(/javascript:/gi, "")
+}
+
 function fmtViews(n: number): string {
   if (n >= 1000) return `${(n / 1000).toFixed(1)}k`
   return String(n)
@@ -77,6 +84,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
         day: "numeric",
         month: "long",
         year: "numeric",
+        timeZone: "America/Asuncion",
       })
     : null
 
@@ -85,6 +93,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
+        timeZone: "America/Asuncion",
       })
     : null
 
@@ -178,7 +187,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
       {/* Content */}
       <div
         className="prose prose-gray max-w-none"
-        dangerouslySetInnerHTML={{ __html: noticia.contenido }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(noticia.contenido) }}
       />
 
       {/* Video */}
