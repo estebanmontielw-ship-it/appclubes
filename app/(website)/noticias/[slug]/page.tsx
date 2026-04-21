@@ -84,6 +84,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
         day: "numeric",
         month: "long",
         year: "numeric",
+        timeZone: "America/Asuncion",
       })
     : null
 
@@ -92,6 +93,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
         hour: "2-digit",
         minute: "2-digit",
         hour12: false,
+        timeZone: "America/Asuncion",
       })
     : null
 

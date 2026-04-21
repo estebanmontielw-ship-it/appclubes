@@ -28,7 +28,7 @@ const categoryLabels: Record<string, string> = {
 
 export default function NewsCard({ titulo, slug, extracto, imagenUrl, categoria, publicadaEn, vistas }: NewsCardProps) {
   const fecha = publicadaEn
-    ? new Date(publicadaEn).toLocaleDateString("es-PY", { day: "numeric", month: "long", year: "numeric" })
+    ? new Date(publicadaEn).toLocaleDateString("es-PY", { day: "numeric", month: "long", year: "numeric", timeZone: "America/Asuncion" })
     : null
 
   const cover = parseFocalPoint(imagenUrl)
