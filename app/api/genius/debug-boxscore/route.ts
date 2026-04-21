@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -21,6 +22,8 @@ async function freshFetch(path: string) {
  * GET /api/genius/debug-boxscore?matchId=X&homeId=Y&awayId=Z
  */
 export async function GET(req: NextRequest) {
+  const auth = await requireRole("SUPER_ADMIN")
+  if (isAuthError(auth)) return auth
   const { searchParams } = req.nextUrl
   const matchId = searchParams.get("matchId")
   const homeId = searchParams.get("homeId")

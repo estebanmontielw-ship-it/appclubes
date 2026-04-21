@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { geniusFetch } from "@/lib/genius-sports"
 import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { requireRole, isAuthError } from "@/lib/api-auth"
 
 /**
  * Diagnostics: shows exactly what Genius Warehouse returns for CIU and FPC
@@ -17,6 +18,8 @@ function normName(s: string) {
 }
 
 export async function GET() {
+  const auth = await requireRole("SUPER_ADMIN")
+  if (isAuthError(auth)) return auth
   try {
     const { id: compId } = await resolveLnbCompetitionIdPublic()
     if (!compId) return NextResponse.json({ error: "No competition ID" }, { status: 404 })
