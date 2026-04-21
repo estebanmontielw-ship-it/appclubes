@@ -160,6 +160,8 @@ export async function GET(req: NextRequest) {
   const matchIdsParam = searchParams.get("matchIds") ?? searchParams.get("matchId") ?? ""
   const template = searchParams.get("template") ?? "pre"
   const titulo = searchParams.get("titulo") ?? ""
+  const subtitulo = searchParams.get("subtitulo") ?? ""
+  const logoUrl = searchParams.get("logoUrl") ?? ""
 
   const liga = searchParams.get("liga") ?? "lnb"
   const format = searchParams.get("format") ?? "feed"
@@ -253,27 +255,35 @@ export async function GET(req: NextRequest) {
           <div style={{
             display: "flex", flexDirection: "column", alignItems: "center",
             justifyContent: "center", height: headerH, width: "100%",
+            gap: 0,
           }}>
-            {/* Liga badge */}
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              background: "rgba(255,255,255,0.1)",
-              border: "1.5px solid rgba(255,255,255,0.2)",
-              borderRadius: 16, padding: "8px 28px", marginBottom: 16,
-            }}>
-              <span style={{ color: "white", fontSize: 22, fontWeight: 900, letterSpacing: 6 }}>
-                🏀 {liga === "lnbf" ? "LNBF" : liga === "u22m" ? "U22 MASC" : liga === "u22f" ? "U22 FEM" : "LNB"}
+            {/* Logo — solo si el usuario subió uno */}
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                width={count === 1 ? 100 : 80}
+                height={count === 1 ? 100 : 80}
+                style={{ objectFit: "contain", marginBottom: 16 }}
+                alt="Logo"
+              />
+            ) : null}
+
+            {/* Subtítulo del usuario (si lo puso) */}
+            {subtitulo ? (
+              <span style={{
+                color: "rgba(255,255,255,0.55)", fontSize: 22, fontWeight: 600,
+                letterSpacing: 4, marginBottom: 10, textAlign: "center",
+              }}>
+                {subtitulo.toUpperCase()}
               </span>
-            </div>
+            ) : null}
 
-            {/* Subtitle */}
-            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 20, fontWeight: 600, letterSpacing: 4, marginBottom: 10 }}>
-              {liga === "lnbf" ? "LIGA NACIONAL FEMENINA" : liga === "u22m" ? "SUB 22 MASCULINO" : liga === "u22f" ? "SUB 22 FEMENINO" : "LIGA NACIONAL DE BÁSQUETBOL"}
-            </span>
-
-            {/* Main title */}
+            {/* Título principal */}
             {titulo ? (
-              <span style={{ color: "white", fontSize: count === 1 ? 72 : 64, fontWeight: 900, letterSpacing: -1, textAlign: "center", lineHeight: 1 }}>
+              <span style={{
+                color: "white", fontSize: count === 1 ? 72 : 60, fontWeight: 900,
+                letterSpacing: -1, textAlign: "center", lineHeight: 1,
+              }}>
                 {titulo.toUpperCase()}
               </span>
             ) : (
