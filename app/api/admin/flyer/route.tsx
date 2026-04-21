@@ -1,6 +1,11 @@
 import { ImageResponse } from "next/og"
 import { NextRequest } from "next/server"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import {
+  resolveLnbCompetitionIdPublic,
+  resolveLnbfCompetitionIdPublic,
+  resolveU22MCompetitionIdPublic,
+  resolveU22FCompetitionIdPublic,
+} from "@/lib/programacion-lnb"
 import { geniusFetch } from "@/lib/genius-sports"
 
 export const dynamic = "force-dynamic"
@@ -156,13 +161,23 @@ export async function GET(req: NextRequest) {
   const template = searchParams.get("template") ?? "pre"
   const titulo = searchParams.get("titulo") ?? ""
 
+  const liga = searchParams.get("liga") ?? "lnb"
+  const format = searchParams.get("format") ?? "feed"
+
   const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
   if (matchIds.length === 0) return new Response("matchIds requerido", { status: 400 })
 
   const isResultado = template === "resultado"
 
   try {
-    const { id: compId } = await resolveLnbCompetitionIdPublic()
+    const resolvers: Record<string, () => Promise<{ id: string | null; name: string | null }>> = {
+      lnb:  resolveLnbCompetitionIdPublic,
+      lnbf: resolveLnbfCompetitionIdPublic,
+      u22m: resolveU22MCompetitionIdPublic,
+      u22f: resolveU22FCompetitionIdPublic,
+    }
+    const resolve = resolvers[liga] ?? resolveLnbCompetitionIdPublic
+    const { id: compId } = await resolve()
     const matchesRaw = await geniusFetch(`/competitions/${compId}/matches?limit=100`, "short")
     const allMatches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
 
@@ -194,8 +209,9 @@ export async function GET(req: NextRequest) {
     if (matchDataList.length === 0) return new Response("Partidos no encontrados", { status: 404 })
 
     const count = matchDataList.length
-    // Height: 1 match → square, 2+ → portrait
-    const H = count === 1 ? 1080 : count === 2 ? 1350 : 1620
+    const isHistoria = format === "historia"
+    // Feed 4:5 = 1080×1350, Historia 9:16 = 1080×1920
+    const H = isHistoria ? 1920 : (count === 1 ? 1080 : count === 2 ? 1350 : 1620)
 
     // Card dimensions based on count
     const cardW = W - 80
@@ -238,19 +254,21 @@ export async function GET(req: NextRequest) {
             display: "flex", flexDirection: "column", alignItems: "center",
             justifyContent: "center", height: headerH, width: "100%",
           }}>
-            {/* LNB badge */}
+            {/* Liga badge */}
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               background: "rgba(255,255,255,0.1)",
               border: "1.5px solid rgba(255,255,255,0.2)",
               borderRadius: 16, padding: "8px 28px", marginBottom: 16,
             }}>
-              <span style={{ color: "white", fontSize: 22, fontWeight: 900, letterSpacing: 6 }}>🏀 LNB</span>
+              <span style={{ color: "white", fontSize: 22, fontWeight: 900, letterSpacing: 6 }}>
+                🏀 {liga === "lnbf" ? "LNBF" : liga === "u22m" ? "U22 MASC" : liga === "u22f" ? "U22 FEM" : "LNB"}
+              </span>
             </div>
 
             {/* Subtitle */}
             <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 20, fontWeight: 600, letterSpacing: 4, marginBottom: 10 }}>
-              LIGA NACIONAL DE BÁSQUETBOL
+              {liga === "lnbf" ? "LIGA NACIONAL FEMENINA" : liga === "u22m" ? "SUB 22 MASCULINO" : liga === "u22f" ? "SUB 22 FEMENINO" : "LIGA NACIONAL DE BÁSQUETBOL"}
             </span>
 
             {/* Main title */}

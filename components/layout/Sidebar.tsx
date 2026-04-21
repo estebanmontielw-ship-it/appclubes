@@ -129,8 +129,13 @@ function getNavSections(
           },
           {
             label: "Diseño / Flyers",
-            href: "/oficiales/admin/diseno",
             icon: Palette,
+            subItems: [
+              { label: "LNB", href: "/oficiales/admin/diseno?liga=lnb" },
+              { label: "LNBF", href: "/oficiales/admin/diseno?liga=lnbf" },
+              { label: "U22 Masc", href: "/oficiales/admin/diseno?liga=u22m" },
+              { label: "U22 Fem", href: "/oficiales/admin/diseno?liga=u22f" },
+            ],
           },
         ],
       },
