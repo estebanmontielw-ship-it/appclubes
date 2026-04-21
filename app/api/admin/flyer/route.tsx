@@ -257,18 +257,18 @@ export async function GET(req: NextRequest) {
     if (matchDataList.length === 0) return new Response("Partidos no encontrados", { status: 404 })
 
     const count = matchDataList.length
-    const isHistoria = format === "historia"
-    // Feed 4:5 = 1080×1350, Historia 9:16 = 1080×1920
-    const H = isHistoria ? 1920 : (count === 1 ? 1080 : count === 2 ? 1350 : 1620)
+    // Always respect the selected format — Feed is always 1350, Historia always 1920
+    const H = format === "historia" ? 1920 : 1350
 
-    // Card dimensions based on count
+    // Card dimensions that fit within the fixed height
+    // Feed 1350: header(240-280) + cards + gaps(20×(n-1)) + footer(60-130) must be ≤ 1350
     const cardW = W - 80
-    const cardH = count === 1 ? 480 : count === 2 ? 420 : 340
-    const logoSize = count === 1 ? 150 : count === 2 ? 130 : 100
-    const nameFontSize = count === 1 ? 28 : 24
-    const vsFontSize = count === 1 ? 58 : 48
+    const cardH = count === 1 ? 480 : count === 2 ? 400 : 295
+    const logoSize = count === 1 ? 150 : count === 2 ? 120 : 90
+    const nameFontSize = count === 1 ? 28 : count === 2 ? 24 : 20
+    const vsFontSize = count === 1 ? 58 : count === 2 ? 48 : 40
 
-    const headerH = count === 1 ? 280 : 260
+    const headerH = count === 1 ? 280 : count === 2 ? 260 : 240
     const gapBetweenCards = count === 1 ? 0 : 20
 
     return new ImageResponse(
