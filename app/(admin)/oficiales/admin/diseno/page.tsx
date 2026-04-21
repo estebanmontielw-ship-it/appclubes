@@ -939,70 +939,106 @@ function DisenoInner() {
             </div>
           </div>
 
-          {/* Instagram feed mockup */}
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-
-            {/* IG post header */}
-            <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
-                <span className="text-white text-[9px] font-black tracking-tight">CPB</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold leading-none text-gray-900">cpboficial</p>
-                <p className="text-[10px] text-gray-400 mt-0.5">Paraguay</p>
-              </div>
-              <MoreHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
-            </div>
-
-            {/* Imagen — siempre fit-to-screen */}
-            <div
-              className="relative bg-gray-900 flex items-center justify-center overflow-hidden"
-              style={{ height: "calc(100vh - 360px)", minHeight: 200 }}
-            >
-              {previewError ? (
-                <div className="flex flex-col items-center gap-3 text-red-400 px-6 text-center">
-                  <AlertCircle className="h-8 w-8 opacity-70 shrink-0" />
-                  <p className="text-xs font-medium">{previewError}</p>
+          {format === "feed" ? (
+            /* ── Instagram Feed mockup (4:5) ── */
+            <div className="max-w-[390px] mx-auto bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+              {/* Header */}
+              <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-gray-100">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
+                  <span className="text-white text-[9px] font-black tracking-tight">CPB</span>
                 </div>
-              ) : previewUrl ? (
-                <img
-                  src={previewUrl}
-                  alt="Flyer preview"
-                  style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
-                />
-              ) : (
-                <div className="flex flex-col items-center gap-3 text-gray-600">
-                  <ImageIcon className="h-10 w-10 opacity-20" />
-                  <p className="text-xs opacity-40 text-center px-8">
-                    {canGenerate ? "Hacé clic en Vista previa para generar" : "Seleccioná uno o más partidos para comenzar"}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold leading-none text-gray-900">cpboficial</p>
+                  <p className="text-[10px] text-gray-400 mt-0.5">Paraguay</p>
                 </div>
-              )}
-            </div>
-
-            {/* IG post footer */}
-            <div className="px-3 py-2.5">
-              <div className="flex items-center gap-3.5 mb-2">
-                <Heart className="h-5 w-5 text-gray-700" />
-                <MessageCircle className="h-5 w-5 text-gray-700" />
-                <Send className="h-5 w-5 text-gray-700" />
-                <Bookmark className="h-5 w-5 text-gray-700 ml-auto" />
+                <MoreHorizontal className="h-4 w-4 text-gray-400 shrink-0" />
               </div>
-              <p className="text-xs font-semibold text-gray-800">1.234 Me gusta</p>
-              <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed line-clamp-3">
-                <span className="font-semibold text-gray-900">cpboficial</span>{" "}
-                <span className="text-gray-500">
-                  {activeCopyIndex !== null && copies[activeCopyIndex]
-                    ? copies[activeCopyIndex]
-                    : titulo
-                    ? titulo.toLowerCase()
-                    : template === "resultado"
-                    ? "así quedaron los resultados 🏀"
-                    : "todo listo para una nueva jornada 🏀"}
-                </span>
-              </p>
+
+              {/* Image — aspect 4:5 */}
+              <div className="relative bg-gray-900 overflow-hidden" style={{ aspectRatio: "4/5" }}>
+                {previewError ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-red-400 px-4 text-center">
+                    <AlertCircle className="h-7 w-7 opacity-70 shrink-0" />
+                    <p className="text-xs font-medium">{previewError}</p>
+                  </div>
+                ) : previewUrl ? (
+                  <img src={previewUrl} alt="Flyer" className="absolute inset-0 w-full h-full object-contain" />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-600">
+                    <ImageIcon className="h-8 w-8 opacity-20" />
+                    <p className="text-xs opacity-40 text-center px-6">
+                      {canGenerate ? "Hacé clic en Vista previa" : "Seleccioná uno o más partidos"}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-3 py-2.5">
+                <div className="flex items-center gap-3.5 mb-2">
+                  <Heart className="h-5 w-5 text-gray-700" />
+                  <MessageCircle className="h-5 w-5 text-gray-700" />
+                  <Send className="h-5 w-5 text-gray-700" />
+                  <Bookmark className="h-5 w-5 text-gray-700 ml-auto" />
+                </div>
+                <p className="text-xs font-semibold text-gray-800">1.234 Me gusta</p>
+                <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed line-clamp-3">
+                  <span className="font-semibold text-gray-900">cpboficial</span>{" "}
+                  <span className="text-gray-500">
+                    {activeCopyIndex !== null && copies[activeCopyIndex]
+                      ? copies[activeCopyIndex]
+                      : titulo ? titulo.toLowerCase()
+                      : template === "resultado" ? "así quedaron los resultados 🏀"
+                      : "todo listo para una nueva jornada 🏀"}
+                  </span>
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* ── Phone mockup — Historia (9:16) ── */
+            <div className="max-w-[260px] mx-auto">
+              <div className="relative bg-black rounded-[36px] border-[7px] border-gray-800 shadow-2xl overflow-hidden" style={{ aspectRatio: "9/16" }}>
+                {/* Image */}
+                {previewError ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-red-400 px-4 text-center">
+                    <AlertCircle className="h-6 w-6 opacity-70" />
+                    <p className="text-[10px] font-medium">{previewError}</p>
+                  </div>
+                ) : previewUrl ? (
+                  <img src={previewUrl} alt="Historia" className="absolute inset-0 w-full h-full object-contain" />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-600">
+                    <ImageIcon className="h-8 w-8 opacity-20" />
+                    <p className="text-[10px] opacity-40 text-center px-4">
+                      {canGenerate ? "Vista previa" : "Seleccioná partidos"}
+                    </p>
+                  </div>
+                )}
+
+                {/* Story UI overlay */}
+                <div className="absolute top-0 left-0 right-0 px-2 pt-2 space-y-2 pointer-events-none">
+                  {/* Progress bars */}
+                  <div className="flex gap-1">
+                    <div className="h-0.5 flex-1 rounded-full bg-white/80" />
+                    <div className="h-0.5 flex-1 rounded-full bg-white/30" />
+                    <div className="h-0.5 flex-1 rounded-full bg-white/30" />
+                  </div>
+                  {/* Avatar + name */}
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shrink-0">
+                      <span className="text-white text-[7px] font-black">CPB</span>
+                    </div>
+                    <span className="text-white text-[10px] font-semibold drop-shadow">cpboficial</span>
+                    <span className="text-white/60 text-[9px]">· 2h</span>
+                  </div>
+                </div>
+              </div>
+              {/* Pill debajo del phone */}
+              <div className="flex justify-center mt-2">
+                <span className="text-[10px] text-muted-foreground bg-gray-100 px-3 py-1 rounded-full">Historia · 1080 × 1920 px</span>
+              </div>
+            </div>
+          )}
 
           {canGenerate && !previewUrl && !previewError && (
             <p className="text-[10px] text-muted-foreground text-center">
