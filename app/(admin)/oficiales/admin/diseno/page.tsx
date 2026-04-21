@@ -442,7 +442,7 @@ function DisenoInner() {
   const canGenerate = selected.size > 0
 
   return (
-    <div className="space-y-6 max-w-5xl">
+    <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Diseño / Flyers</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -450,7 +450,7 @@ function DisenoInner() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-[520px_1fr] gap-8 items-start">
 
         {/* ── LEFT: configuración ── */}
         <div className="space-y-5">
@@ -886,8 +886,8 @@ function DisenoInner() {
             </div>
           </div>
 
-          {/* Acciones */}
-          <div className="flex gap-2">
+          {/* Acciones — solo en móvil (en desktop están en el panel de preview) */}
+          <div className="flex gap-2 xl:hidden">
             <button
               onClick={handleGenerate}
               disabled={!canGenerate}
@@ -907,11 +907,40 @@ function DisenoInner() {
           </div>
         </div>
 
-        {/* ── RIGHT: preview ── */}
-        <div>
-          <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Preview</Label>
+        {/* ── RIGHT: preview — sticky en desktop ── */}
+        <div className="xl:sticky xl:top-6 space-y-3">
+          {/* Header del panel */}
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Preview</p>
+              <p className="text-[10px] text-muted-foreground">
+                {format === "feed" ? "1080 × 1350 px · Feed 4:5" : "1080 × 1920 px · Historia 9:16"}
+              </p>
+            </div>
+            {/* Botones de acción — en desktop van acá */}
+            <div className="hidden xl:flex gap-2">
+              <button
+                onClick={handleGenerate}
+                disabled={!canGenerate}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-primary text-white text-xs font-semibold disabled:opacity-40 hover:bg-primary/90 transition-colors"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Vista previa
+              </button>
+              <button
+                onClick={handleDownload}
+                disabled={!canGenerate || generating}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white border border-gray-200 text-xs font-semibold disabled:opacity-40 hover:bg-gray-50 transition-colors"
+              >
+                {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                Descargar PNG
+              </button>
+            </div>
+          </div>
+
+          {/* Imagen de preview */}
           <Card className="overflow-hidden bg-gray-900">
-            <CardContent className="p-0 flex items-center justify-center min-h-[400px]">
+            <CardContent className="p-0 flex items-center justify-center min-h-[300px] xl:min-h-[480px]">
               {previewError ? (
                 <div className="flex flex-col items-center gap-3 text-red-400 py-12 px-6">
                   <AlertCircle className="h-10 w-10 opacity-70" />
@@ -935,9 +964,13 @@ function DisenoInner() {
               )}
             </CardContent>
           </Card>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
-            {format === "feed" ? "1080 × 1350 px · Feed 4:5" : "1080 × 1920 px · Historia 9:16"}
-          </p>
+
+          {/* Info de auto-preview */}
+          {canGenerate && !previewUrl && !previewError && (
+            <p className="text-[10px] text-muted-foreground text-center">
+              Auto-preview activo · se genera 1.5 s después del último cambio
+            </p>
+          )}
         </div>
       </div>
 
