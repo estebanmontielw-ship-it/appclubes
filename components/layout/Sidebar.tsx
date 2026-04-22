@@ -137,6 +137,13 @@ function getNavSections(
               { label: "U22 Fem", href: "/oficiales/admin/diseno?liga=u22f" },
             ],
           },
+          {
+            label: "Diseño V2 (Beta)",
+            icon: Palette,
+            subItems: [
+              { label: "LNBF", href: "/oficiales/admin/diseno-v2?liga=lnbf" },
+            ],
+          },
         ],
       },
       {
