@@ -34,13 +34,22 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const noticia = await getNoticia(params.slug)
   if (!noticia) return { title: "Noticia no encontrada" }
 
-  // Clean image URL (strip focal point hash — not valid in og:image)
-  const ogImage = noticia.imagenUrl
-    ? parseFocalPoint(noticia.imagenUrl).src
+  // Build absolute image URL — WhatsApp requires absolute HTTPS URLs and
+  // caches aggressively, so we also append a cache-buster derived from the
+  // article's updatedAt timestamp so edits invalidate the preview.
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
+  const rawImage = noticia.imagenUrl ? parseFocalPoint(noticia.imagenUrl).src : ""
+  const absoluteImage = rawImage
+    ? rawImage.startsWith("http")
+      ? rawImage
+      : `${baseUrl}${rawImage.startsWith("/") ? "" : "/"}${rawImage}`
+    : ""
+  const ogImage = absoluteImage
+    ? `${absoluteImage}${absoluteImage.includes("?") ? "&" : "?"}v=${noticia.updatedAt?.getTime() ?? ""}`
     : undefined
 
   const images = ogImage
-    ? [{ url: ogImage, width: 1200, height: 630, alt: noticia.titulo }]
+    ? [{ url: ogImage, width: 1200, height: 630, alt: noticia.titulo, type: "image/jpeg" }]
     : []
 
   return {
@@ -50,8 +59,11 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       type: "article",
       title: noticia.titulo,
       description: noticia.extracto,
-      url: `/noticias/${params.slug}`,
+      url: `${baseUrl}/noticias/${params.slug}`,
+      siteName: "Confederación Paraguaya de Básquetbol",
+      locale: "es_PY",
       publishedTime: noticia.publicadaEn?.toISOString(),
+      modifiedTime: noticia.updatedAt?.toISOString(),
       ...(images.length > 0 && { images }),
     },
     twitter: {
@@ -167,9 +179,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
         <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 leading-tight">
           {noticia.titulo}
         </h1>
-        {noticia.autorNombre && (
-          <p className="mt-2 text-sm text-gray-500">Por {noticia.autorNombre}</p>
-        )}
+        <p className="mt-2 text-sm text-gray-500">Por {noticia.autorNombre || "CPB"}</p>
       </header>
 
       {/* Cover image */}
@@ -186,7 +196,7 @@ export default async function NoticiaDetailPage({ params }: { params: { slug: st
 
       {/* Content */}
       <div
-        className="prose prose-gray max-w-none"
+        className="prose-cpb max-w-none"
         dangerouslySetInnerHTML={{ __html: sanitizeHtml(noticia.contenido) }}
       />
 

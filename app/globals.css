@@ -184,11 +184,26 @@
 
 /* Prose styles for article content */
 @layer components {
+  .prose-cpb {
+    @apply text-gray-700;
+  }
   .prose-cpb p {
     @apply mb-4 leading-relaxed;
   }
-  .prose-cpb strong {
+  .prose-cpb strong, .prose-cpb b {
     @apply font-semibold text-gray-900;
+  }
+  .prose-cpb em, .prose-cpb i {
+    @apply italic;
+  }
+  .prose-cpb u {
+    @apply underline;
+  }
+  .prose-cpb h1 {
+    @apply text-3xl font-bold text-gray-900 mt-8 mb-4 leading-tight;
+  }
+  .prose-cpb h2 {
+    @apply text-2xl font-bold text-gray-900 mt-8 mb-3 leading-tight;
   }
   .prose-cpb h3 {
     @apply text-xl font-bold text-gray-900 mt-6 mb-3;
@@ -196,8 +211,17 @@
   .prose-cpb ul {
     @apply list-disc pl-6 mb-4 space-y-1;
   }
+  .prose-cpb ol {
+    @apply list-decimal pl-6 mb-4 space-y-1;
+  }
+  .prose-cpb blockquote {
+    @apply border-l-4 border-primary/40 pl-4 italic text-gray-600 my-4;
+  }
   .prose-cpb a {
     @apply text-primary hover:underline;
+  }
+  .prose-cpb img {
+    @apply rounded-lg my-4;
   }
 }
 
