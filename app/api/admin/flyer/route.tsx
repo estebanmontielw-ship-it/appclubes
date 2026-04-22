@@ -354,6 +354,13 @@ export async function GET(req: NextRequest) {
   // Encuadre de imágenes (cover = llena y recorta, contain = ve todo con márgenes)
   const bgFit = (searchParams.get("bgFit") ?? "cover") as "cover" | "contain"
   const photoFit = (searchParams.get("photoFit") ?? "cover") as "cover" | "contain"
+  // Safe zones de Instagram Stories: cuando está activo, deja ~240px
+  // arriba y ~280px abajo para evitar que el username/música tape el
+  // título o que las reactions/Activity tape los sponsors.
+  const safeZones = searchParams.get("safeZones") === "true"
+  const isStorySafe = (fmt: string) => fmt === "historia" && safeZones
+  const safeTopFor = (fmt: string) => isStorySafe(fmt) ? 240 : 0
+  const safeBottomFor = (fmt: string) => isStorySafe(fmt) ? 280 : 0
   // Control de foto del jugador: posición X/Y del crop + zoom.
   // Defaults: X=50 (centro horizontal), Y=0 (arriba — la cara suele
   // estar en la parte superior), zoom=100 (sin zoom).
@@ -414,7 +421,7 @@ export async function GET(req: NextRequest) {
       if (allRows.length === 0) return new Response("No hay datos de tabla disponibles", { status: 404 })
 
       const H = format === "historia" ? 1920 : 1350
-      const vMult = format === "historia" ? 1.4 : 1.0
+      const vMult = format === "historia" ? (safeZones ? 1.0 : 1.4) : 1.0
       // Header dinámico: crece si el user escaló título, subtítulo o logo
       // para que nunca se encime con los headers de columna de la tabla.
       const baseHeaderH = Math.round(240 * vMult)
@@ -462,7 +469,7 @@ export async function GET(req: NextRequest) {
 
       return new ImageResponse(
         (
-          <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: "sans-serif", position: "relative", overflow: "hidden" }}>
+          <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: "sans-serif", position: "relative", overflow: "hidden", paddingTop: safeTopFor(format), paddingBottom: safeBottomFor(format) }}>
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
             {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
@@ -565,24 +572,24 @@ export async function GET(req: NextRequest) {
             {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 300, background: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 100%)", display: "flex" }} />
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: Math.round(H * 0.42), background: "linear-gradient(180deg, transparent 0%, rgba(10,20,50,0.92) 30%, rgba(10,20,50,0.98) 100%)", display: "flex" }} />
-            {logoUrl ? <img src={logoUrl} width={Math.round(80 * logoScale)} height={Math.round(80 * logoScale)} style={{ position: "absolute", top: 36, left: 36, objectFit: "contain", display: "flex" }} alt="Logo" /> : null}
+            {logoUrl ? <img src={logoUrl} width={Math.round(80 * logoScale)} height={Math.round(80 * logoScale)} style={{ position: "absolute", top: 36 + safeTopFor(format), left: 36, objectFit: "contain", display: "flex" }} alt="Logo" /> : null}
             {jugadorTeamLogo ? <img src={jugadorTeamLogo} width={120} height={120} style={{ position: "absolute", top: Math.round(H * 0.38), left: 48, objectFit: "contain", display: "flex" }} alt={jugadorClub} /> : null}
-            <div style={{ position: "absolute", bottom: Math.round(H * 0.24), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
+            <div style={{ position: "absolute", bottom: Math.round(H * 0.24) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
               <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>JUGADOR</span>
               <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 4 }}>
                 <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorPremio.toUpperCase()}</span>
                 {jugadorFecha ? <div style={{ display: "flex", background: "rgba(255,255,255,0.15)", borderRadius: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}><span style={{ color: "white", fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>{jugadorFecha.toUpperCase()}</span></div> : null}
               </div>
             </div>
-            <div style={{ position: "absolute", bottom: Math.round(H * 0.11), left: 48, right: 48, display: "flex", flexDirection: "column", gap: 4 }}>
+            <div style={{ position: "absolute", bottom: Math.round(H * 0.11) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column", gap: 4 }}>
               <span style={{ color: "white", fontSize: 34, fontWeight: 800, letterSpacing: 1 }}>{jugadorNombre.toUpperCase()}</span>
               {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 20, fontWeight: 600, letterSpacing: 2 }}>{jugadorClub.toUpperCase()}</span> : null}
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 90, background: sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(48 * s.scale); return <img key={i} src={s.url} width={Math.round(150 * s.scale)} height={h} style={{ objectFit: "contain" }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
-            ) : <div style={{ position: "absolute", bottom: 28, right: 48, display: "flex" }}><span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, letterSpacing: 2 }}>CPB · cpb.com.py</span></div>}
+            ) : <div style={{ position: "absolute", bottom: 28 + safeBottomFor(format), right: 48, display: "flex" }}><span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, letterSpacing: 2 }}>CPB · cpb.com.py</span></div>}
           </div>
         ),
         { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
@@ -600,7 +607,7 @@ export async function GET(req: NextRequest) {
       const statUnit  = STAT_UNIT[statType] ?? "PTS/PJ"
       const leader = rows[0]
       const H = format === "historia" ? 1920 : 1350
-      const vMult = format === "historia" ? 1.4 : 1.0
+      const vMult = format === "historia" ? (safeZones ? 1.0 : 1.4) : 1.0
       const tituloFinal = titulo || `Líder en ${statLabel.toLowerCase()}`
       const photoSrc = playerPhotoUrl || leader.photoUrl || ""
       return new ImageResponse(
@@ -621,10 +628,10 @@ export async function GET(req: NextRequest) {
             {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: "linear-gradient(90deg, transparent 0%, rgba(11,30,61,0.3) 30%, rgba(11,30,61,0.88) 52%, rgba(11,30,61,0.97) 65%, #0b1e3d 80%)", display: "flex" }} />
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 160, background: "linear-gradient(180deg, rgba(11,30,61,0.6) 0%, transparent 100%)", display: "flex" }} />
-            <div style={{ position: "absolute", top: 32, left: 32, display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ position: "absolute", top: 32 + safeTopFor(format), left: 32, display: "flex", alignItems: "center", gap: 10 }}>
               {logoUrl ? <img src={logoUrl} width={Math.round(72 * logoScale)} height={Math.round(72 * logoScale)} style={{ objectFit: "contain" }} alt="Logo" /> : null}
             </div>
-            <div style={{ position: "absolute", top: 0, right: 0, width: Math.round(W * 0.52), height: H, display: "flex", flexDirection: "column", paddingTop: 40, paddingBottom: 40, paddingLeft: 24, paddingRight: 36 }}>
+            <div style={{ position: "absolute", top: 0, right: 0, width: Math.round(W * 0.52), height: H, display: "flex", flexDirection: "column", paddingTop: 40 + safeTopFor(format), paddingBottom: 40 + safeBottomFor(format), paddingLeft: 24, paddingRight: 36 }}>
               <div style={{ display: "flex", flexDirection: "column", marginBottom: Math.round(28 * vMult) }}>
                 <span style={{ color: "rgba(255,255,255,0.5)", fontSize: Math.round(18 * vMult), fontWeight: 700, letterSpacing: 3, marginBottom: 6 }}>{statLabel}</span>
                 <span style={{ color: "white", fontSize: Math.round(56 * vMult * titleSize), fontWeight: titleWeight, lineHeight: 1.05, letterSpacing: -1 }}>{tituloFinal}</span>
@@ -658,7 +665,7 @@ export async function GET(req: NextRequest) {
               </div>
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 80, background: sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 80, background: sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(44 * s.scale); return <img key={i} src={s.url} width={Math.round(140 * s.scale)} height={h} style={{ objectFit: "contain" }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : null}
@@ -707,7 +714,11 @@ export async function GET(req: NextRequest) {
     // quedaban en blanco. Todo lo que depende de la altura (tarjetas,
     // logos, fuentes, header, paddings) escala por este factor para que
     // el flyer aproveche bien el espacio.
-    const vMult = format === "historia" ? 1.4 : 1.0
+    const vMult = format === "historia" ? (safeZones ? 1.0 : 1.4) : 1.0
+    // Safe zone padding para Instagram Stories — empuja todo el contenido
+    // hacia el área visible cuando se postea como Story.
+    const safeTop = safeTopFor(format)
+    const safeBottom = safeBottomFor(format)
 
     // Card dimensions that fit within the fixed height
     // Feed 1350: header + cards + gaps(16×(n-1)) + footer(60-130) must be ≤ 1350
@@ -748,6 +759,8 @@ export async function GET(req: NextRequest) {
           fontFamily: "sans-serif",
           position: "relative",
           overflow: "hidden",
+          paddingTop: safeTop,
+          paddingBottom: safeBottom,
         }}>
           {/* Fondo propio (imagen al 100%, reemplaza gradiente) */}
           {bgImageUrl ? (

@@ -128,6 +128,7 @@ function DisenoInner() {
   const [photoPosX, setPhotoPosX] = useState(50)
   const [photoPosY, setPhotoPosY] = useState(0)
   const [photoScale, setPhotoScale] = useState(100)
+  const [safeZones, setSafeZones] = useState(false)
   // Errores de upload inline (por campo)
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({})
 
@@ -198,6 +199,7 @@ function DisenoInner() {
           setCardStyle((c.cardStyle as "glass" | "solid" | "minimal") ?? "glass")
           setTextColor((c.textColor as "light" | "dark") ?? "light")
           setLayout((c.layout as "default" | "compact") ?? "default")
+          setSafeZones(Boolean(c.safeZones))
         } else {
           loadFromLocalStorage()
         }
@@ -456,6 +458,7 @@ function DisenoInner() {
     if (!isAutoTemplate && selected.size === 0) return null
     const ids = isAutoTemplate ? template : Array.from(selected).join(",")
     const params = new URLSearchParams({ matchIds: ids, template, liga: ligaParam, format })
+    if (safeZones && format === "historia") params.set("safeZones", "true")
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
     else if (suggestedSubtitle) params.set("subtitulo", suggestedSubtitle)
@@ -511,7 +514,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -536,7 +539,7 @@ function DisenoInner() {
           textureUrl, textureOpacity,
           sponsors, sponsorScales, sponsorBg,
           titleSize, subtitleSize, titleWeight,
-          cardStyle, textColor, layout,
+          cardStyle, textColor, layout, safeZones,
         }),
       }).catch(() => {
         // Silencioso — localStorage sigue siendo el fallback offline.
@@ -551,7 +554,7 @@ function DisenoInner() {
     textureUrl, textureOpacity,
     sponsors, sponsorScales, sponsorBg,
     titleSize, subtitleSize, titleWeight,
-    cardStyle, textColor, layout,
+    cardStyle, textColor, layout, safeZones,
   ])
 
   // Helpers de texto/estilo con guardado + auto-preview
@@ -1229,6 +1232,24 @@ function DisenoInner() {
                 </button>
               ))}
             </div>
+            {format === "historia" && (
+              <button
+                onClick={() => setSafeZones(!safeZones)}
+                className={`mt-2 w-full p-3 rounded-xl border text-left transition-colors flex items-center gap-3 ${
+                  safeZones ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
+                }`}
+              >
+                <div className={`h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
+                  safeZones ? "border-primary bg-primary" : "border-gray-300 bg-white"
+                }`}>
+                  {safeZones && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${safeZones ? "text-primary" : "text-gray-800"}`}>Optimizar para Stories</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Padding seguro para que no tape username/sponsors</p>
+                </div>
+              </button>
+            )}
           </div>
 
           {/* Título y Subtítulo */}

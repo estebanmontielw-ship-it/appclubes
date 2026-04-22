@@ -55,6 +55,7 @@ export async function PATCH(req: NextRequest) {
     const stringFields = ["logoUrl", "theme", "bgImageUrl", "bgFit", "textureUrl", "sponsorBg", "cardStyle", "textColor", "layout"] as const
     const intFields = ["logoScale", "textureOpacity", "titleSize", "subtitleSize", "titleWeight"] as const
     const jsonFields = ["sponsors", "sponsorScales"] as const
+    const boolFields = ["safeZones"] as const
 
     for (const f of stringFields) {
       if (f in body) allowed[f] = body[f] === null ? null : String(body[f])
@@ -67,6 +68,9 @@ export async function PATCH(req: NextRequest) {
     }
     for (const f of jsonFields) {
       if (f in body && Array.isArray(body[f])) allowed[f] = body[f]
+    }
+    for (const f of boolFields) {
+      if (f in body) allowed[f] = Boolean(body[f])
     }
 
     const saved = await prisma.disenoConfig.upsert({

@@ -931,6 +931,7 @@ model DisenoConfig {
   cardStyle      String   @default("glass")
   textColor      String   @default("light")
   layout         String   @default("default")
+  safeZones      Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
