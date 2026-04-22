@@ -125,6 +125,7 @@ function DisenoInner() {
   // Encuadre de imágenes (cover = llenar, contain = ver todo)
   const [bgFit, setBgFit] = useState<"cover" | "contain">("cover")
   const [photoFit, setPhotoFit] = useState<"cover" | "contain">("cover")
+  const [photoPosY, setPhotoPosY] = useState(0)
   // Errores de upload inline (por campo)
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({})
 
@@ -461,6 +462,7 @@ function DisenoInner() {
     if (bgImageUrl) { params.set("bgImageUrl", bgImageUrl); if (bgFit !== "cover") params.set("bgFit", bgFit) }
     if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
     if (playerPhotoUrl && photoFit !== "cover") params.set("photoFit", photoFit)
+    if (playerPhotoUrl && photoPosY !== 0) params.set("photoPosY", String(photoPosY))
     if (titleSize !== 100) params.set("titleSize", String(titleSize))
     if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
     if (titleWeight !== 900) params.set("titleWeight", String(titleWeight))
@@ -502,7 +504,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosY, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -1055,6 +1057,15 @@ function DisenoInner() {
                         </button>
                       ))}
                     </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">Posición Y</span>
+                      <input
+                        type="range" min={0} max={100} value={photoPosY}
+                        onChange={(e) => setPhotoPosY(Number(e.target.value))}
+                        className="flex-1 accent-primary"
+                      />
+                      <span className="text-[10px] font-medium w-8 text-right">{photoPosY}%</span>
+                    </div>
                   </div>
                 ) : (
                   <button onClick={() => playerPhotoRef.current?.click()} disabled={uploadingPlayerPhoto}
@@ -1121,6 +1132,15 @@ function DisenoInner() {
                             {o.label}
                           </button>
                         ))}
+                      </div>
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">Posición Y</span>
+                        <input
+                          type="range" min={0} max={100} value={photoPosY}
+                          onChange={(e) => setPhotoPosY(Number(e.target.value))}
+                          className="flex-1 accent-primary"
+                        />
+                        <span className="text-[10px] font-medium w-8 text-right">{photoPosY}%</span>
                       </div>
                     </div>
                   ) : (

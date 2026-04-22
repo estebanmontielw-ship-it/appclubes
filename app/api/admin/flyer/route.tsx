@@ -584,12 +584,16 @@ export async function GET(req: NextRequest) {
       const statUnit  = STAT_UNIT[statType] ?? "PTS/PJ"
       const leader = rows[0]
       const H = format === "historia" ? 1920 : 1350
+      const vMult = format === "historia" ? 1.4 : 1.0
       const tituloFinal = titulo || `Líder en ${statLabel.toLowerCase()}`
       const photoSrc = playerPhotoUrl || leader.photoUrl || ""
+      // Posición vertical de la foto: 0 = top, 100 = bottom. Permite al
+      // usuario ajustar si la cara del jugador queda fuera del frame.
+      const photoPosY = Math.max(0, Math.min(100, parseInt(searchParams.get("photoPosY") ?? "0", 10)))
       return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: "#0b1e3d" }}>
-            {photoSrc ? <img src={photoSrc} width={Math.round(W * 0.55)} height={H} style={{ position: "absolute", top: 0, left: 0, width: Math.round(W * 0.55), height: H, objectFit: photoFit, objectPosition: "top center", display: "flex" }} alt={leader.playerName} /> : null}
+            {photoSrc ? <img src={photoSrc} width={Math.round(W * 0.55)} height={H} style={{ position: "absolute", top: 0, left: 0, width: Math.round(W * 0.55), height: H, objectFit: photoFit, objectPosition: `center ${photoPosY}%`, display: "flex" }} alt={leader.playerName} /> : null}
             {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: "linear-gradient(90deg, transparent 0%, rgba(11,30,61,0.3) 30%, rgba(11,30,61,0.88) 52%, rgba(11,30,61,0.97) 65%, #0b1e3d 80%)", display: "flex" }} />
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 160, background: "linear-gradient(180deg, rgba(11,30,61,0.6) 0%, transparent 100%)", display: "flex" }} />
@@ -597,9 +601,9 @@ export async function GET(req: NextRequest) {
               {logoUrl ? <img src={logoUrl} width={Math.round(72 * logoScale)} height={Math.round(72 * logoScale)} style={{ objectFit: "contain" }} alt="Logo" /> : null}
             </div>
             <div style={{ position: "absolute", top: 0, right: 0, width: Math.round(W * 0.52), height: H, display: "flex", flexDirection: "column", paddingTop: 40, paddingBottom: 40, paddingLeft: 24, paddingRight: 36 }}>
-              <div style={{ display: "flex", flexDirection: "column", marginBottom: 28 }}>
-                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 18, fontWeight: 700, letterSpacing: 3, marginBottom: 6 }}>{statLabel}</span>
-                <span style={{ color: "white", fontSize: Math.round(42 * titleSize), fontWeight: titleWeight, lineHeight: 1.1, letterSpacing: -1 }}>{tituloFinal}</span>
+              <div style={{ display: "flex", flexDirection: "column", marginBottom: Math.round(28 * vMult) }}>
+                <span style={{ color: "rgba(255,255,255,0.5)", fontSize: Math.round(18 * vMult), fontWeight: 700, letterSpacing: 3, marginBottom: 6 }}>{statLabel}</span>
+                <span style={{ color: "white", fontSize: Math.round(56 * vMult * titleSize), fontWeight: titleWeight, lineHeight: 1.05, letterSpacing: -1 }}>{tituloFinal}</span>
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10, paddingRight: 4 }}>
                 <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>{statUnit}</span>
