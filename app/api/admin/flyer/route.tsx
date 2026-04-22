@@ -108,7 +108,7 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
             const tied = isNaN(hs) || isNaN(as_) || hs === as_
             const homeWins = !tied && hs > as_
             return (
-              <span style={{ color: tied ? tc.score : (homeWins ? "#f97316" : tc.scoreDim), fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+              <span style={{ color: tc.score, fontSize: vsFontSize * 1.6, fontWeight: tied ? 700 : (homeWins ? 900 : 500), marginTop: 8, lineHeight: 1 }}>
                 {match.homeScore}
               </span>
             )
@@ -149,7 +149,7 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
             const tied = isNaN(hs) || isNaN(as_) || hs === as_
             const awayWins = !tied && as_ > hs
             return (
-              <span style={{ color: tied ? tc.score : (awayWins ? "#f97316" : tc.scoreDim), fontSize: vsFontSize * 1.6, fontWeight: 900, marginTop: 8, lineHeight: 1 }}>
+              <span style={{ color: tc.score, fontSize: vsFontSize * 1.6, fontWeight: tied ? 700 : (awayWins ? 900 : 500), marginTop: 8, lineHeight: 1 }}>
                 {match.awayScore}
               </span>
             )
