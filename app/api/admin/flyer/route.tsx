@@ -422,7 +422,7 @@ export async function GET(req: NextRequest) {
       const blockPaddingV = Math.round(30 * vMult)
       const availableForRows = H - headerH - footerH - colHeaderH - blockPaddingV
       const rowH = Math.min(
-        130,
+        160,
         Math.max(60, Math.floor((availableForRows - rowGap * (rowsCount - 1)) / rowsCount))
       )
       // Fuentes/logos proporcionales al rowH, con tope para que no se vean
@@ -450,14 +450,14 @@ export async function GET(req: NextRequest) {
             <div style={{ position: "absolute", bottom: -200, right: -200, width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)", display: "flex" }} />
 
             {/* HEADER */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: headerH, width: "100%", gap: 0 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: headerH, width: "100%", gap: 0, paddingTop: Math.round(36 * vMult) }}>
               {logoUrl ? <img src={logoUrl} width={Math.round(90 * vMult * logoScale)} height={Math.round(90 * vMult * logoScale)} style={{ objectFit: "contain", marginBottom: Math.round(14 * vMult) }} alt="Logo" /> : null}
               {subtitulo ? <span style={{ color: tc.subtitle, fontSize: Math.round(22 * vMult * subtitleSize), fontWeight: 600, letterSpacing: 4, marginBottom: Math.round(10 * vMult), textAlign: "center" }}>{subtitulo.toUpperCase()}</span> : null}
               <span style={{ color: tc.title, fontSize: Math.round(60 * vMult * titleSize), fontWeight: titleWeight, letterSpacing: -1, textAlign: "center", lineHeight: 1 }}>{tituloFinal.toUpperCase()}</span>
             </div>
 
             {/* STANDINGS TABLE */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, justifyContent: "center", width: "100%", paddingBottom: Math.round(16 * vMult), paddingLeft: Math.round(36 * vMult), paddingRight: Math.round(36 * vMult) }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, justifyContent: "flex-start", width: "100%", paddingTop: Math.round(10 * vMult), paddingBottom: Math.round(16 * vMult), paddingLeft: Math.round(36 * vMult), paddingRight: Math.round(36 * vMult) }}>
               {/* Column headers */}
               <div style={{ display: "flex", alignItems: "center", width: "100%", paddingLeft: 20, paddingRight: 20, marginBottom: rowGap, height: colHeaderH }}>
                 <div style={{ display: "flex", width: Math.round(44 * vMult) }}><span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>#</span></div>
