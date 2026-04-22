@@ -564,12 +564,22 @@ export async function GET(req: NextRequest) {
     // Card dimensions that fit within the fixed height
     // Feed 1350: header + cards + gaps(16×(n-1)) + footer(60-130) must be ≤ 1350
     const cardW = W - 80
-    const cardH        = count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240
+    const baseCardH    = count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240
     const logoSize     = count === 1 ? 150 : count === 2 ? 120 : count === 3 ?  90 :  75
     const nameFontSize = count === 1 ?  28 : count === 2 ?  24 : count === 3 ?  20 :  17
     const vsFontSize   = count === 1 ?  58 : count === 2 ?  48 : count === 3 ?  40 :  34
 
-    const headerH = count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210
+    // When the user scales the title/subtitle beyond 100%, the header box
+    // would overflow into the first match card. Grow headerH by the extra
+    // pixels the scaled text needs, and steal that growth from each card
+    // so the total still fits in the fixed format height.
+    const baseHeaderH = count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210
+    const titleBaseFontSize = count === 1 ? 72 : 60
+    const extraTitle = Math.max(0, Math.round(titleBaseFontSize * (titleSize - 1)))
+    const extraSubtitle = subtitulo ? Math.max(0, Math.round(22 * (subtitleSize - 1))) : 0
+    const extraHeader = extraTitle + extraSubtitle
+    const headerH = baseHeaderH + extraHeader
+    const cardH = Math.max(160, baseCardH - Math.ceil(extraHeader / count))
     const gapBetweenCards = count === 1 ? 0 : count <= 3 ? 20 : 16
 
     return new ImageResponse(
