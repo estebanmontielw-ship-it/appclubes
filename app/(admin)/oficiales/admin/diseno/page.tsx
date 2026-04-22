@@ -87,6 +87,8 @@ function DisenoInner() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
   const [previewLoading, setPreviewLoading] = useState(false)
+  const [configLoaded, setConfigLoaded] = useState(false)
+  const saveConfigTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filter, setFilter] = useState<"proximos" | "jugados">("proximos")
   const [teamFilter, setTeamFilter] = useState("")
   const [copies, setCopies] = useState<string[]>([])
@@ -135,8 +137,7 @@ function DisenoInner() {
     localStorage.setItem(lsKey("sponsorBg"), bg)
   }
 
-  // Cargar configuración cuando cambia la liga
-  useEffect(() => {
+  function loadFromLocalStorage() {
     setLogoUrl(localStorage.getItem(lsKey("logo")) ?? null)
     setLogoScale(parseInt(localStorage.getItem(lsKey("logoScale")) ?? "100"))
     setTextureUrl(localStorage.getItem(lsKey("texture")) ?? null)
@@ -160,8 +161,56 @@ function DisenoInner() {
       setSponsors([null, null, null, null, null])
       setSponsorScales([1, 1, 1, 1, 1])
     }
-    setPreviewUrl(null)
-    setPreviewError(null)
+  }
+
+  // Cargar configuración cuando cambia la liga: primero intentamos desde
+  // la DB (sincronización entre dispositivos), y si no hay nada o falla
+  // la API, caemos a localStorage (modo offline + migración de datos
+  // existentes).
+  useEffect(() => {
+    let cancelled = false
+    setConfigLoaded(false)
+
+    fetch(`/api/admin/diseno-config?liga=${ligaParam}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled) return
+        const c = data?.config
+        if (c) {
+          setLogoUrl(c.logoUrl ?? null)
+          setLogoScale(typeof c.logoScale === "number" ? c.logoScale : 100)
+          setTheme(c.theme ?? "masc1")
+          setBgImageUrl(c.bgImageUrl ?? null)
+          setBgFit((c.bgFit as "cover" | "contain") ?? "cover")
+          setTextureUrl(c.textureUrl ?? null)
+          setTextureOpacity(typeof c.textureOpacity === "number" ? c.textureOpacity : 12)
+          const sp = Array.isArray(c.sponsors) ? c.sponsors : []
+          const sc = Array.isArray(c.sponsorScales) ? c.sponsorScales : []
+          setSponsors([...sp, ...Array(5)].slice(0, 5).map((v: any) => v ?? null))
+          setSponsorScales([...sc, ...Array(5)].slice(0, 5).map((v: any) => (typeof v === "number" ? v : 1)))
+          setSponsorBg((c.sponsorBg as "white" | "dark") ?? "dark")
+          setTitleSize(typeof c.titleSize === "number" ? c.titleSize : 100)
+          setSubtitleSize(typeof c.subtitleSize === "number" ? c.subtitleSize : 100)
+          setTitleWeight((c.titleWeight ?? 900) as 400 | 700 | 900)
+          setCardStyle((c.cardStyle as "glass" | "solid" | "minimal") ?? "glass")
+          setTextColor((c.textColor as "light" | "dark") ?? "light")
+          setLayout((c.layout as "default" | "compact") ?? "default")
+        } else {
+          loadFromLocalStorage()
+        }
+      })
+      .catch(() => {
+        if (!cancelled) loadFromLocalStorage()
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setConfigLoaded(true)
+          setPreviewUrl(null)
+          setPreviewError(null)
+        }
+      })
+
+    return () => { cancelled = true }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ligaParam])
 
@@ -461,6 +510,40 @@ function DisenoInner() {
   useEffect(() => {
     scheduleAutoPreview()
   }, [scheduleAutoPreview])
+
+  // Auto-save de la config a la DB con debounce de 1500ms. Se dispara en
+  // cualquier cambio de los campos persistidos, después de que la carga
+  // inicial (de DB o localStorage) terminó — así evitamos sobreescribir
+  // la DB con los defaults vacíos antes de recibir la respuesta.
+  useEffect(() => {
+    if (!configLoaded) return
+    if (saveConfigTimer.current) clearTimeout(saveConfigTimer.current)
+    saveConfigTimer.current = setTimeout(() => {
+      fetch(`/api/admin/diseno-config?liga=${ligaParam}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          logoUrl, logoScale, theme, bgImageUrl, bgFit,
+          textureUrl, textureOpacity,
+          sponsors, sponsorScales, sponsorBg,
+          titleSize, subtitleSize, titleWeight,
+          cardStyle, textColor, layout,
+        }),
+      }).catch(() => {
+        // Silencioso — localStorage sigue siendo el fallback offline.
+      })
+    }, 1500)
+    return () => {
+      if (saveConfigTimer.current) clearTimeout(saveConfigTimer.current)
+    }
+  }, [
+    configLoaded, ligaParam,
+    logoUrl, logoScale, theme, bgImageUrl, bgFit,
+    textureUrl, textureOpacity,
+    sponsors, sponsorScales, sponsorBg,
+    titleSize, subtitleSize, titleWeight,
+    cardStyle, textColor, layout,
+  ])
 
   // Helpers de texto/estilo con guardado + auto-preview
   function handleTitleSize(val: number) { setTitleSize(val); localStorage.setItem(lsKey("titleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }

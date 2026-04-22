@@ -908,3 +908,32 @@ model Torneo3x3Jugador {
   @@map("torneo3x3_jugadores")
 }
 
+// ─── DISEÑO / FLYERS ─────────────────────────────────────
+// Una fila por liga. Guarda la configuración persistente del diseñador
+// para que sponsors, logo y preferencias queden sincronizadas entre
+// dispositivos (antes todo vivía en localStorage).
+model DisenoConfig {
+  id             String   @id @default(uuid())
+  liga           String   @unique
+  logoUrl        String?  @db.Text
+  logoScale      Int      @default(100)
+  theme          String   @default("masc1")
+  bgImageUrl     String?  @db.Text
+  bgFit          String   @default("cover")
+  textureUrl     String?  @db.Text
+  textureOpacity Int      @default(12)
+  sponsors       Json     @default("[]")
+  sponsorScales  Json     @default("[]")
+  sponsorBg      String   @default("dark")
+  titleSize      Int      @default(100)
+  subtitleSize   Int      @default(100)
+  titleWeight    Int      @default(900)
+  cardStyle      String   @default("glass")
+  textColor      String   @default("light")
+  layout         String   @default("default")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@map("diseno_configs")
+}
+
