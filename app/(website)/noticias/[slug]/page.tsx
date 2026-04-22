@@ -34,27 +34,25 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const noticia = await getNoticia(params.slug)
   if (!noticia) return { title: "Noticia no encontrada" }
 
-  // Build absolute image URL — WhatsApp requires absolute HTTPS URLs and
-  // caches aggressively, so we also append a cache-buster derived from the
-  // article's updatedAt timestamp so edits invalidate the preview.
+  // Build absolute HTTPS image URL for og:image. WhatsApp/Facebook require
+  // absolute URLs and the image must be publicly fetchable.
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
   const rawImage = noticia.imagenUrl ? parseFocalPoint(noticia.imagenUrl).src : ""
-  const absoluteImage = rawImage
+  const ogImage = rawImage
     ? rawImage.startsWith("http")
       ? rawImage
       : `${baseUrl}${rawImage.startsWith("/") ? "" : "/"}${rawImage}`
-    : ""
-  const ogImage = absoluteImage
-    ? `${absoluteImage}${absoluteImage.includes("?") ? "&" : "?"}v=${noticia.updatedAt?.getTime() ?? ""}`
     : undefined
-
-  const images = ogImage
-    ? [{ url: ogImage, width: 1200, height: 630, alt: noticia.titulo, type: "image/jpeg" }]
-    : []
 
   return {
     title: noticia.titulo,
     description: noticia.extracto,
+    ...(ogImage && {
+      other: {
+        "og:image": ogImage,
+        "og:image:secure_url": ogImage,
+      },
+    }),
     openGraph: {
       type: "article",
       title: noticia.titulo,
@@ -64,7 +62,9 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       locale: "es_PY",
       publishedTime: noticia.publicadaEn?.toISOString(),
       modifiedTime: noticia.updatedAt?.toISOString(),
-      ...(images.length > 0 && { images }),
+      ...(ogImage && {
+        images: [{ url: ogImage, width: 1200, height: 630, alt: noticia.titulo }],
+      }),
     },
     twitter: {
       card: "summary_large_image",
