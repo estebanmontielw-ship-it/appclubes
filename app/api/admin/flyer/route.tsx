@@ -417,6 +417,10 @@ export async function GET(req: NextRequest) {
       // razonable (130px) para que con pocas filas no se estire sin sentido
       // ni los textos queden gigantes.
       const rowsCount = allRows.length
+      // PJ máximo en la liga — los equipos con menos PJ se muestran en
+      // ámbar + negrita para señalar que están abajo por haber jugado
+      // menos, no necesariamente por mal rendimiento.
+      const maxPJ = Math.max(...allRows.map((r) => r.gamesPlayed))
       const rowGap = Math.round(6 * vMult)
       const colHeaderH = Math.round(30 * vMult)
       const blockPaddingV = Math.round(30 * vMult)
@@ -475,6 +479,7 @@ export async function GET(req: NextRequest) {
               <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: rowGap }}>
                 {allRows.map((row) => {
                   const isTop4 = row.rank <= 4
+                  const hasLessGames = row.gamesPlayed < maxPJ
                   const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
                   const rowBg = isTop4 ? "rgba(255,255,255,0.12)" : cardBg
                   const pts = row.wins * 2 + row.losses
@@ -495,7 +500,7 @@ export async function GET(req: NextRequest) {
                           <span style={{ color: tc.team, fontSize: teamFontSize, fontWeight: isTop4 ? 900 : 700, whiteSpace: "nowrap", overflow: "hidden" }}>{row.teamName}</span>
                         )}
                       </div>
-                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statFontSize }}>{row.gamesPlayed}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: hasLessGames ? "#fbbf24" : tc.subtitle, fontSize: statFontSize, fontWeight: hasLessGames ? 900 : 400 }}>{row.gamesPlayed}</span></div>
                       <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.team, fontSize: statFontSize, fontWeight: isTop4 ? 900 : 600 }}>{row.wins}</span></div>
                       <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statFontSize }}>{row.losses}</span></div>
                       <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.team, fontSize: statFontSize, fontWeight: isTop4 ? 900 : 600 }}>{pts}</span></div>
