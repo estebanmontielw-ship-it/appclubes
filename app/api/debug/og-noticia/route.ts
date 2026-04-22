@@ -31,11 +31,13 @@ export async function GET(req: NextRequest) {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
   const parsed = parseFocalPoint(noticia.imagenUrl)
   const rawImage = parsed.src
-  const ogImage = rawImage
+  const sourceImage = rawImage
     ? rawImage.startsWith("http")
       ? rawImage
       : `${baseUrl}${rawImage.startsWith("/") ? "" : "/"}${rawImage}`
     : null
+  // og:image ahora apunta al endpoint que resizea a 1200x630
+  const ogImage = sourceImage ? `${baseUrl}/api/og-image/${slug}` : null
 
   // HEAD fetch on the image — does it respond 200? what size/type?
   let imageReachable: { status: number; contentType: string | null; size: string | null } | null = null
@@ -128,6 +130,7 @@ export async function GET(req: NextRequest) {
     },
     ogComputed: {
       "og:image": ogImage,
+      sourceImage,
     },
     imageReachable,
     imageDimensions,

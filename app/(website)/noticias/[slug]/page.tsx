@@ -34,15 +34,12 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const noticia = await getNoticia(params.slug)
   if (!noticia) return { title: "Noticia no encontrada" }
 
-  // Build absolute HTTPS image URL for og:image. WhatsApp/Facebook require
-  // absolute URLs and the image must be publicly fetchable.
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
-  const rawImage = noticia.imagenUrl ? parseFocalPoint(noticia.imagenUrl).src : ""
-  const ogImage = rawImage
-    ? rawImage.startsWith("http")
-      ? rawImage
-      : `${baseUrl}${rawImage.startsWith("/") ? "" : "/"}${rawImage}`
-    : undefined
+
+  // og:image siempre sale por /api/og-image/[slug], que resizea la
+  // portada a 1200x630 exactos (aspect 1.91:1) para que WhatsApp/Facebook/
+  // Twitter muestren siempre el preview grande.
+  const ogImage = noticia.imagenUrl ? `${baseUrl}/api/og-image/${params.slug}` : undefined
 
   return {
     title: noticia.titulo,
@@ -56,10 +53,15 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       locale: "es_PY",
       publishedTime: noticia.publicadaEn?.toISOString(),
       modifiedTime: noticia.updatedAt?.toISOString(),
-      // No declaramos width/height: si no matchean las dimensiones
-      // reales de la imagen, WhatsApp rechaza el preview y cae al favicon.
-      // Dejamos que el scraper las detecte solo.
-      ...(ogImage && { images: [{ url: ogImage, alt: noticia.titulo }] }),
+      ...(ogImage && {
+        images: [{
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: noticia.titulo,
+          type: "image/jpeg",
+        }],
+      }),
     },
     twitter: {
       card: "summary_large_image",
