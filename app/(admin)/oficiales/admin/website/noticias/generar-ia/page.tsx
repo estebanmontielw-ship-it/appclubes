@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ArrowLeft, Sparkles, Loader2, RefreshCw, Send, ImageIcon, ChevronDown, ChevronUp, Check, Wand2 } from "lucide-react"
@@ -48,6 +48,26 @@ function formatMatchTime(matchTime: string) {
   return { date: `${DIAS[dt.getDay()]} ${d} ${MESES[m - 1]}`, time }
 }
 
+// Days from today; 0 = today, 1 = yesterday, -1 = tomorrow
+function daysBetween(isoDate: string): number {
+  if (!isoDate) return Infinity
+  const [y, m, d] = isoDate.split("-").map(Number)
+  const dt = new Date(y, m - 1, d).setHours(0, 0, 0, 0)
+  const today = new Date().setHours(0, 0, 0, 0)
+  return Math.round((today - dt) / 86400000)
+}
+
+function formatDateHeader(isoDate: string): string {
+  if (!isoDate) return "Sin fecha"
+  const [y, m, d] = isoDate.split("-").map(Number)
+  const DIAS_LONG = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+  const MESES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+  const dt = new Date(y, m - 1, d)
+  const diff = daysBetween(isoDate)
+  const rel = diff === 0 ? "Hoy · " : diff === 1 ? "Ayer · " : diff === -1 ? "Mañana · " : ""
+  return `${rel}${DIAS_LONG[dt.getDay()]} ${d} ${MESES[m - 1]}`
+}
+
 interface MatchItem {
   matchId: number
   homeName: string
@@ -56,6 +76,7 @@ interface MatchItem {
   awayScore: string | null
   date: string
   time: string
+  rawDate: string
   venue: string
   status: string
 }
@@ -101,23 +122,16 @@ export default function GenerarIAPage() {
 
   const loadMatches = useCallback(async () => {
     setMatchesLoading(true)
-    setSelected(new Set())
     try {
-      // Load both scheduled and complete matches
-      const [scheduled, complete] = await Promise.all([
-        fetch(`/api/genius/matches?status=SCHEDULED&liga=${liga}`).then(r => r.json()).catch(() => ({ data: [] })),
-        fetch(`/api/genius/matches?status=COMPLETE&liga=${liga}`).then(r => r.json()).catch(() => ({ data: [] })),
-      ])
+      const raw: any[] = await fetch(`/api/genius/matches?liga=${liga}`)
+        .then(r => r.json())
+        .then(res => res?.response?.data ?? res?.data ?? [])
+        .catch(() => [])
 
-      const raw: any[] = [
-        ...(complete?.response?.data ?? complete?.data ?? []),
-        ...(scheduled?.response?.data ?? scheduled?.data ?? []),
-      ]
-
-      // Sort: most recent complete first, then upcoming
       const items: MatchItem[] = raw.map((m: any) => {
         const home = m.competitors?.find((c: any) => c.isHomeCompetitor === 1) ?? m.competitors?.[0]
         const away = m.competitors?.find((c: any) => c.isHomeCompetitor === 0) ?? m.competitors?.[1]
+        const rawDate = (m.matchTime ?? "").split(" ")[0] ?? ""
         const { date, time } = formatMatchTime(m.matchTime ?? "")
         return {
           matchId: m.matchId,
@@ -127,15 +141,13 @@ export default function GenerarIAPage() {
           awayScore: away?.scoreString || null,
           date,
           time,
+          rawDate,
           venue: m.venue?.venueName ?? m.venueName ?? "",
           status: m.matchStatus ?? "",
         }
       }).filter(m => m.matchId)
 
-      // Sort: complete first (most recent by date desc), then scheduled
-      const complete_ = items.filter(m => m.status === "COMPLETE").slice(0, 8)
-      const scheduled_ = items.filter(m => m.status !== "COMPLETE").slice(0, 6)
-      setMatches([...complete_, ...scheduled_])
+      setMatches(items)
     } catch {
       setMatches([])
     } finally {
@@ -144,6 +156,63 @@ export default function GenerarIAPage() {
   }, [liga])
 
   useEffect(() => { loadMatches() }, [loadMatches])
+
+  // Grouped & filtered matches: resultado → COMPLETE (newest first),
+  // previa → not COMPLETE (soonest first), general → all (newest first)
+  const groupedMatches = useMemo<Array<[string, MatchItem[]]>>(() => {
+    const visible =
+      tipoNota === "resultado" ? matches.filter(m => m.status === "COMPLETE")
+      : tipoNota === "previa" ? matches.filter(m => m.status !== "COMPLETE")
+      : matches
+    const groups = new Map<string, MatchItem[]>()
+    for (const m of visible) {
+      const k = m.rawDate || "sin-fecha"
+      if (!groups.has(k)) groups.set(k, [])
+      groups.get(k)!.push(m)
+    }
+    const entries: Array<[string, MatchItem[]]> = Array.from(groups.entries())
+    entries.sort((a, b) =>
+      tipoNota === "previa" ? a[0].localeCompare(b[0]) : b[0].localeCompare(a[0])
+    )
+    return entries
+  }, [matches, tipoNota])
+
+  // Auto-preselect on matches/tipoNota change: last 7 days for resultado,
+  // next 7 days for previa, nothing for general.
+  useEffect(() => {
+    if (matches.length === 0) { setSelected(new Set()); return }
+    const next = new Set<number>()
+    if (tipoNota === "resultado") {
+      for (const m of matches) {
+        const d = daysBetween(m.rawDate)
+        if (m.status === "COMPLETE" && d >= 0 && d <= 7) next.add(m.matchId)
+      }
+    } else if (tipoNota === "previa") {
+      for (const m of matches) {
+        const d = daysBetween(m.rawDate)
+        if (m.status !== "COMPLETE" && d <= 0 && d >= -7) next.add(m.matchId)
+      }
+    }
+    setSelected(next)
+  }, [matches, tipoNota])
+
+  function toggleGroup(items: MatchItem[]) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      const allSelected = items.every(m => next.has(m.matchId))
+      if (allSelected) items.forEach(m => next.delete(m.matchId))
+      else items.forEach(m => next.add(m.matchId))
+      return next
+    })
+  }
+
+  function selectAllVisible() {
+    const next = new Set<number>()
+    for (const [, items] of groupedMatches) items.forEach(m => next.add(m.matchId))
+    setSelected(next)
+  }
+
+  function clearSelection() { setSelected(new Set()) }
 
   function toggleMatch(id: number) {
     setSelected(prev => {
@@ -355,49 +424,90 @@ export default function GenerarIAPage() {
 
                 {/* Matches */}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
                       Seleccionar partidos
+                      {selectedCount > 0 && (
+                        <span className="ml-2 text-violet-600 normal-case font-bold">({selectedCount})</span>
+                      )}
                     </label>
-                    <button type="button" onClick={loadMatches} className="text-xs text-violet-600 hover:underline flex items-center gap-1">
-                      <RefreshCw className="h-3 w-3" /> Actualizar
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={selectAllVisible} className="text-xs text-violet-600 hover:underline">
+                        Todos
+                      </button>
+                      <button type="button" onClick={clearSelection} className="text-xs text-gray-500 hover:underline">
+                        Limpiar
+                      </button>
+                      <button type="button" onClick={loadMatches} className="text-xs text-violet-600 hover:underline flex items-center gap-1">
+                        <RefreshCw className="h-3 w-3" /> Actualizar
+                      </button>
+                    </div>
                   </div>
                   {matchesLoading ? (
                     <div className="flex items-center justify-center py-8 text-gray-400">
                       <Loader2 className="h-5 w-5 animate-spin mr-2" /> Cargando partidos...
                     </div>
-                  ) : matches.length === 0 ? (
+                  ) : groupedMatches.length === 0 ? (
                     <p className="text-sm text-gray-400 py-4 text-center">No se encontraron partidos para esta liga</p>
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-                      {matches.map(m => {
-                        const isSelected = selected.has(m.matchId)
-                        const isComplete = m.status === "COMPLETE"
+                    <div className="max-h-96 overflow-y-auto pr-1 space-y-4">
+                      {groupedMatches.map(([rawDate, items]) => {
+                        const allSelected = items.every(m => selected.has(m.matchId))
+                        const someSelected = !allSelected && items.some(m => selected.has(m.matchId))
                         return (
-                          <button
-                            key={m.matchId}
-                            type="button"
-                            onClick={() => toggleMatch(m.matchId)}
-                            className={`text-left p-3 rounded-lg border-2 transition-all ${isSelected ? "border-violet-400 bg-violet-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"}`}
-                          >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isComplete ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
-                                {isComplete ? "Jugado" : "Próximo"}
+                          <div key={rawDate}>
+                            <button
+                              type="button"
+                              onClick={() => toggleGroup(items)}
+                              className="flex items-center gap-2 text-left mb-1.5 group"
+                            >
+                              <span className={`h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                allSelected ? "bg-violet-600 border-violet-600"
+                                : someSelected ? "bg-violet-100 border-violet-400"
+                                : "border-gray-300 group-hover:border-violet-400"
+                              }`}>
+                                {allSelected && <Check className="h-3 w-3 text-white" strokeWidth={4} />}
+                                {someSelected && <span className="h-0.5 w-2 bg-violet-500 rounded-sm" />}
                               </span>
-                              {isSelected && <Check className="h-3.5 w-3.5 text-violet-500" />}
+                              <span className="text-[11px] font-bold text-gray-600 uppercase tracking-wide">
+                                {formatDateHeader(rawDate)}
+                              </span>
+                              <span className="text-[11px] text-gray-400 font-normal">
+                                · {items.length} partido{items.length !== 1 ? "s" : ""}
+                              </span>
+                            </button>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {items.map(m => {
+                                const isSelected = selected.has(m.matchId)
+                                const isComplete = m.status === "COMPLETE"
+                                return (
+                                  <button
+                                    key={m.matchId}
+                                    type="button"
+                                    onClick={() => toggleMatch(m.matchId)}
+                                    className={`text-left p-3 rounded-lg border-2 transition-all ${isSelected ? "border-violet-400 bg-violet-50" : "border-gray-100 bg-gray-50 hover:border-gray-200"}`}
+                                  >
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isComplete ? "bg-green-100 text-green-700" : "bg-blue-100 text-blue-700"}`}>
+                                        {isComplete ? "Jugado" : "Próximo"}
+                                      </span>
+                                      {isSelected && <Check className="h-3.5 w-3.5 text-violet-500" />}
+                                    </div>
+                                    <p className="text-xs font-bold text-gray-900 leading-tight">
+                                      {m.homeName}
+                                      {isComplete && m.homeScore && m.awayScore
+                                        ? <span className="text-violet-700"> {m.homeScore}–{m.awayScore} </span>
+                                        : " vs "}
+                                      {m.awayName}
+                                    </p>
+                                    {(m.time || m.venue) && (
+                                      <p className="text-[10px] text-gray-400 mt-0.5">{m.time}{m.venue ? ` · ${m.venue}` : ""}</p>
+                                    )}
+                                  </button>
+                                )
+                              })}
                             </div>
-                            <p className="text-xs font-bold text-gray-900 leading-tight">
-                              {m.homeName}
-                              {isComplete && m.homeScore && m.awayScore
-                                ? <span className="text-violet-700"> {m.homeScore}–{m.awayScore} </span>
-                                : " vs "}
-                              {m.awayName}
-                            </p>
-                            {(m.date || m.time) && (
-                              <p className="text-[10px] text-gray-400 mt-0.5">{m.date}{m.time ? ` · ${m.time}` : ""}{m.venue ? ` · ${m.venue}` : ""}</p>
-                            )}
-                          </button>
+                          </div>
                         )
                       })}
                     </div>
