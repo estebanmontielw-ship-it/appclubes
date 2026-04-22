@@ -17,6 +17,7 @@ interface Partido {
   homeScore: string | null
   awayScore: string | null
   venue: string
+  round: number | null
 }
 
 type Liga = "lnb" | "lnbf" | "u22m" | "u22f"
@@ -85,6 +86,7 @@ function DisenoInner() {
   const [generating, setGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
   const [filter, setFilter] = useState<"proximos" | "jugados">("proximos")
   const [teamFilter, setTeamFilter] = useState("")
   const [copies, setCopies] = useState<string[]>([])
@@ -194,6 +196,7 @@ function DisenoInner() {
           homeScore: m.homeScore != null ? String(m.homeScore) : null,
           awayScore: m.awayScore != null ? String(m.awayScore) : null,
           venue: m.venue ?? "",
+          round: typeof m.round === "number" ? m.round : null,
         }))
         setPartidos(mapped)
       })
@@ -385,6 +388,17 @@ function DisenoInner() {
     setPreviewError(null)
   }
 
+  // Si todos los partidos seleccionados pertenecen a la misma jornada,
+  // usamos "FECHA X" como subtítulo por defecto cuando el usuario no puso
+  // uno custom.
+  const suggestedSubtitle = (() => {
+    if (selected.size === 0) return ""
+    const selPartidos = partidos.filter((p) => selected.has(p.matchId))
+    const rounds = Array.from(new Set(selPartidos.map((p) => p.round).filter((r): r is number => typeof r === "number")))
+    if (rounds.length === 1) return `FECHA ${rounds[0]}`
+    return ""
+  })()
+
   function buildFlyerUrl() {
     const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador"
     if (!isAutoTemplate && selected.size === 0) return null
@@ -392,6 +406,7 @@ function DisenoInner() {
     const params = new URLSearchParams({ matchIds: ids, template, liga: ligaParam, format })
     if (titulo.trim()) params.set("titulo", titulo.trim())
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
+    else if (suggestedSubtitle) params.set("subtitulo", suggestedSubtitle)
     if (logoUrl) { params.set("logoUrl", logoUrl); if (logoScale !== 100) params.set("logoScale", String(logoScale)) }
     if (!bgImageUrl) params.set("theme", theme)
     if (bgImageUrl) { params.set("bgImageUrl", bgImageUrl); if (bgFit !== "cover") params.set("bgFit", bgFit) }
@@ -423,21 +438,29 @@ function DisenoInner() {
     return `/api/admin/flyer?${params.toString()}`
   }
 
-  // Auto-preview con debounce — se lanza 1.5s después del último cambio
+  // Auto-preview con debounce — se lanza 700ms después del último cambio
   const scheduleAutoPreview = useCallback(() => {
     if (autoPreviewTimer.current) clearTimeout(autoPreviewTimer.current)
     autoPreviewTimer.current = setTimeout(() => {
       const url = buildFlyerUrl()
-      if (!url) return
-      setPreviewUrl(null)
+      if (!url) { setPreviewLoading(false); return }
       setPreviewError(null)
+      setPreviewLoading(true)
       fetch(url).then(async (res) => {
         if (res.ok) setPreviewUrl(url)
         else { const t = await res.text(); setPreviewError(`Error ${res.status}: ${t || "No se pudo generar"}`) }
       }).catch((e) => setPreviewError(e.message ?? "Error de conexión"))
-    }, 1500)
+        .finally(() => setPreviewLoading(false))
+    }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
+
+  // Cualquier cambio de las deps re-dispara el preview (incluye escribir
+  // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
+  // handlers lo llamaban explícitamente).
+  useEffect(() => {
+    scheduleAutoPreview()
+  }, [scheduleAutoPreview])
 
   // Helpers de texto/estilo con guardado + auto-preview
   function handleTitleSize(val: number) { setTitleSize(val); localStorage.setItem(lsKey("titleSize"), String(val)); setPreviewUrl(null); scheduleAutoPreview() }
@@ -1318,12 +1341,24 @@ function DisenoInner() {
                   </div>
                 ) : previewUrl ? (
                   <img src={previewUrl} alt="Flyer" className="absolute inset-0 w-full h-full object-contain" />
+                ) : previewLoading ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <p className="text-xs">Generando preview...</p>
+                  </div>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-600">
                     <ImageIcon className="h-8 w-8 opacity-20" />
                     <p className="text-xs opacity-40 text-center px-6">
-                      {canGenerate ? "Hacé clic en Vista previa" : "Seleccioná uno o más partidos para generar"}
+                      {canGenerate ? "Vista previa en vivo" : "Seleccioná uno o más partidos para generar"}
                     </p>
+                  </div>
+                )}
+                {/* Mini indicator while refreshing an existing preview */}
+                {previewLoading && previewUrl && (
+                  <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1.5 backdrop-blur-sm">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Actualizando</span>
                   </div>
                 )}
               </div>
@@ -1361,12 +1396,22 @@ function DisenoInner() {
                   </div>
                 ) : previewUrl ? (
                   <img src={previewUrl} alt="Historia" className="absolute inset-0 w-full h-full object-contain" />
+                ) : previewLoading ? (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-white/70">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <p className="text-[10px]">Generando...</p>
+                  </div>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-600">
                     <ImageIcon className="h-8 w-8 opacity-20" />
                     <p className="text-[10px] opacity-40 text-center px-4">
-                      {canGenerate ? "Vista previa" : "Seleccioná partidos"}
+                      {canGenerate ? "Vista previa en vivo" : "Seleccioná partidos"}
                     </p>
+                  </div>
+                )}
+                {previewLoading && previewUrl && (
+                  <div className="absolute top-10 right-2 bg-black/60 text-white text-[9px] px-1.5 py-0.5 rounded-full flex items-center gap-1 backdrop-blur-sm z-10">
+                    <Loader2 className="h-2.5 w-2.5 animate-spin" />
                   </div>
                 )}
 
