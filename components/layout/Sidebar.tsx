@@ -144,6 +144,13 @@ function getNavSections(
               { label: "LNBF", href: "/oficiales/admin/diseno-v2?liga=lnbf" },
             ],
           },
+          {
+            label: "Logos de equipos",
+            icon: Palette,
+            subItems: [
+              { label: "LNB", href: "/oficiales/admin/logos-liga?liga=lnb" },
+            ],
+          },
         ],
       },
       {
