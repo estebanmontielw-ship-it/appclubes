@@ -48,11 +48,18 @@ interface StandingsRow {
   losses: number
 }
 
+const LOGO_NORM_BASE = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
+
 function Logo({ url, name, size }: { url: string | null; name: string; size: number }) {
   if (url) {
+    // Pasamos el logo por /api/logo-norm que trimea el padding transparente
+    // y reencuadra el contenido en un marco estándar, para que todos los
+    // escudos ocupen aprox. el mismo espacio visual aunque los archivos
+    // originales tengan distinto padding.
+    const normalized = `${LOGO_NORM_BASE}/api/logo-norm?url=${encodeURIComponent(url)}&size=${size}`
     return (
       <img
-        src={url}
+        src={normalized}
         width={size}
         height={size}
         style={{ objectFit: "contain" }}
@@ -564,7 +571,11 @@ export async function GET(req: NextRequest) {
     // Card dimensions that fit within the fixed height
     // Feed 1350: header + cards + gaps(16×(n-1)) + footer(60-130) must be ≤ 1350
     const cardW = W - 80
-    const baseCardH    = count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240
+    // Respiro vertical entre el header y la primera tarjeta (antes todo
+    // quedaba pegado). Le restamos ese padding al cardH de cada partido.
+    const headerToCardsPadding = count === 1 ? 30 : count === 2 ? 20 : count === 3 ? 14 : 10
+    const rawCardH     = count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240
+    const baseCardH    = rawCardH - Math.ceil(headerToCardsPadding / count)
     const logoSize     = count === 1 ? 150 : count === 2 ? 120 : count === 3 ?  90 :  75
     const nameFontSize = count === 1 ?  28 : count === 2 ?  24 : count === 3 ?  20 :  17
     const vsFontSize   = count === 1 ?  58 : count === 2 ?  48 : count === 3 ?  40 :  34
@@ -689,6 +700,9 @@ export async function GET(req: NextRequest) {
             alignItems: "center", gap: gapBetweenCards,
             flex: 1, justifyContent: "center",
             width: "100%", paddingBottom: 20,
+            // Breathing room entre el header y la primera tarjeta (ya
+            // descontado del cardH vía baseCardH).
+            paddingTop: headerToCardsPadding,
           }}>
             {matchDataList.map((match, i) => {
               const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
