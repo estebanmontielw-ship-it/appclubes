@@ -6,6 +6,7 @@ import {
   resolveU22MCompetitionIdPublic,
   resolveU22FCompetitionIdPublic,
 } from "@/lib/programacion-lnb"
+import { LNBF } from "@/lib/themes/lnbf"
 import { geniusFetch, getLeadersFromMatches } from "@/lib/genius-sports"
 import { normalizeStandings } from "@/lib/normalize-standings"
 
@@ -437,6 +438,9 @@ export async function GET(req: NextRequest) {
     masc2: "linear-gradient(160deg, #0a2e6e 0%, #0c3a8a 50%, #061a4a 100%)",
     fem1:  "linear-gradient(160deg, #2d0a4e 0%, #3d1260 50%, #1a0630 100%)",
     fem2:  "linear-gradient(160deg, #4a0a1a 0%, #5c1020 50%, #2a0610 100%)",
+    // Tema premium para LNBF — morado profundo + gold accent. Ver
+    // lib/themes/lnbf.ts para tokens completos.
+    "lnbf-premium": LNBF.bgHero,
   }
   const themeBg = bgImageUrl ? "#000" : (THEME_BG[theme] ?? THEME_BG.masc1)
 
