@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server"
+import { NextRequest } from "next/server"
 import prisma from "@/lib/prisma"
 import { parseFocalPoint } from "@/lib/image"
 import sharp from "sharp"
@@ -20,7 +20,7 @@ export async function GET(
   })
 
   if (!noticia?.imagenUrl) {
-    return new NextResponse("No cover image", { status: 404 })
+    return new Response("No cover image", { status: 404 })
   }
 
   const parsed = parseFocalPoint(noticia.imagenUrl)
@@ -29,7 +29,7 @@ export async function GET(
   try {
     const res = await fetch(srcUrl, { cache: "force-cache" })
     if (!res.ok) {
-      return new NextResponse(`Source image ${res.status}`, { status: 502 })
+      return new Response(`Source image ${res.status}`, { status: 502 })
     }
     const input = Buffer.from(await res.arrayBuffer())
 
@@ -71,11 +71,9 @@ export async function GET(
       .jpeg({ quality: 85, mozjpeg: true })
       .toBuffer()
 
-    // Buffer isn't assignable to BodyInit in NextResponse's stricter types —
-    // wrap in a plain Uint8Array view over the same memory.
-    const body = new Uint8Array(output.buffer, output.byteOffset, output.byteLength)
-
-    return new NextResponse(body, {
+    // Use a Blob so BodyInit typing accepts it cleanly across Next/Node/TS
+    // versions (Buffer and Uint8Array produce type friction).
+    return new Response(new Blob([output as unknown as BlobPart], { type: "image/jpeg" }), {
       status: 200,
       headers: {
         "content-type": "image/jpeg",
@@ -86,6 +84,6 @@ export async function GET(
       },
     })
   } catch (e) {
-    return new NextResponse(`Error: ${String(e)}`, { status: 500 })
+    return new Response(`Error: ${String(e)}`, { status: 500 })
   }
 }
