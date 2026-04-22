@@ -413,22 +413,31 @@ export async function GET(req: NextRequest) {
       const footerH = sponsorLogos.length > 0 ? Math.round(130 * vMult) : Math.round(60 * vMult)
       // Calculamos dinámicamente el alto de cada fila para que la tabla
       // llene todo el espacio disponible del canvas. Antes era fijo en 60px
-      // y quedaba un hueco gigante en Historia 9:16.
+      // y quedaba un hueco gigante en Historia 9:16. Topamos con un máx
+      // razonable (130px) para que con pocas filas no se estire sin sentido
+      // ni los textos queden gigantes.
       const rowsCount = allRows.length
       const rowGap = Math.round(6 * vMult)
       const colHeaderH = Math.round(30 * vMult)
       const blockPaddingV = Math.round(30 * vMult)
       const availableForRows = H - headerH - footerH - colHeaderH - blockPaddingV
-      const rowH = Math.max(
-        60,
-        Math.floor((availableForRows - rowGap * (rowsCount - 1)) / rowsCount)
+      const rowH = Math.min(
+        130,
+        Math.max(60, Math.floor((availableForRows - rowGap * (rowsCount - 1)) / rowsCount))
       )
-      // Fuentes/logos proporcionales al rowH
-      const rankFontSize   = Math.round(rowH * 0.36)
-      const teamFontSize   = Math.round(rowH * 0.32)
-      const rowLogoSize    = Math.round(rowH * 0.65)
-      const statFontSize   = Math.round(rowH * 0.30)
-      const statSecondary  = Math.round(rowH * 0.26)
+      // Fuentes/logos proporcionales al rowH, con tope para que no se vean
+      // desproporcionadas cuando la fila es muy alta.
+      const rankFontSize   = Math.min(28, Math.round(rowH * 0.36))
+      const teamFontSize   = Math.min(26, Math.round(rowH * 0.32))
+      // En Stories el logo tiene que ser bien grande (porque es el único
+      // identificador del equipo — ocultamos el nombre para dar espacio a
+      // los stats); en Feed mostramos ambos.
+      const isStory = format === "historia"
+      const rowLogoSize = isStory
+        ? Math.min(90, Math.round(rowH * 0.80))
+        : Math.min(55, Math.round(rowH * 0.65))
+      const statFontSize   = Math.min(22, Math.round(rowH * 0.30))
+      const statSecondary  = Math.min(18, Math.round(rowH * 0.26))
       const colHeaderFont  = Math.round(14 * vMult)
       const tituloFinal = titulo || "TABLA DE POSICIONES"
 
@@ -453,7 +462,9 @@ export async function GET(req: NextRequest) {
               <div style={{ display: "flex", alignItems: "center", width: "100%", paddingLeft: 20, paddingRight: 20, marginBottom: rowGap, height: colHeaderH }}>
                 <div style={{ display: "flex", width: Math.round(44 * vMult) }}><span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>#</span></div>
                 <div style={{ display: "flex", width: Math.round(48 * vMult) }} />
-                <div style={{ display: "flex", flex: 1, marginLeft: 10 }}><span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>EQUIPO</span></div>
+                <div style={{ display: "flex", flex: 1, marginLeft: 10 }}>
+                  {!isStory && <span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>EQUIPO</span>}
+                </div>
                 {(["PJ","G","P","Pts","%","PF","PC","Dif"] as const).map((h) => (
                   <div key={h} style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}>
                     <span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>{h}</span>
@@ -479,8 +490,10 @@ export async function GET(req: NextRequest) {
                       <div style={{ display: "flex", alignItems: "center", width: rowLogoSize, height: rowLogoSize }}>
                         {row.teamLogo ? <img src={row.teamLogo} width={rowLogoSize} height={rowLogoSize} style={{ objectFit: "contain" }} alt={row.teamName} /> : <div style={{ width: rowLogoSize, height: rowLogoSize, borderRadius: rowLogoSize / 2, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "white", fontSize: Math.round(rowLogoSize * 0.4), fontWeight: 900 }}>{row.teamName.charAt(0)}</span></div>}
                       </div>
-                      <div style={{ display: "flex", flex: 1, marginLeft: 10 }}>
-                        <span style={{ color: tc.team, fontSize: teamFontSize, fontWeight: isTop4 ? 900 : 700 }}>{row.teamName}</span>
+                      <div style={{ display: "flex", flex: 1, marginLeft: 10, overflow: "hidden" }}>
+                        {!isStory && (
+                          <span style={{ color: tc.team, fontSize: teamFontSize, fontWeight: isTop4 ? 900 : 700, whiteSpace: "nowrap", overflow: "hidden" }}>{row.teamName}</span>
+                        )}
                       </div>
                       <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statFontSize }}>{row.gamesPlayed}</span></div>
                       <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.team, fontSize: statFontSize, fontWeight: isTop4 ? 900 : 600 }}>{row.wins}</span></div>
