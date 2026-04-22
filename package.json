@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "node scripts/bump-sw-version.js && node scripts/generate-wallet-icons.js && prisma generate && next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 9999",
     "test": "vitest run",
     "test:watch": "vitest",
     "cap:sync": "npx cap sync",

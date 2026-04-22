@@ -1,0 +1,12 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+public/
+scripts/
+coverage/
+ios/
+android/
+*.min.js
+prisma/generated/
