@@ -521,7 +521,7 @@ export async function GET(req: NextRequest) {
             )}
           </div>
         ),
-        { width: W, height: H }
+        { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
       )
     }
 
@@ -555,7 +555,7 @@ export async function GET(req: NextRequest) {
             ) : <div style={{ position: "absolute", bottom: 28, right: 48, display: "flex" }}><span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, letterSpacing: 2 }}>CPB · cpb.com.py</span></div>}
           </div>
         ),
-        { width: W, height: H }
+        { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
       )
     }
 
@@ -622,7 +622,7 @@ export async function GET(req: NextRequest) {
             ) : null}
           </div>
         ),
-        { width: W, height: H }
+        { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
       )
     }
 
@@ -851,7 +851,7 @@ export async function GET(req: NextRequest) {
           )}
         </div>
       ),
-      { width: W, height: H }
+      { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
     )
   } catch (e: any) {
     return new Response(e.message ?? "Error generando flyer", { status: 500 })
