@@ -71,7 +71,11 @@ export async function GET(
       .jpeg({ quality: 85, mozjpeg: true })
       .toBuffer()
 
-    return new NextResponse(output, {
+    // Buffer isn't assignable to BodyInit in NextResponse's stricter types —
+    // wrap in a plain Uint8Array view over the same memory.
+    const body = new Uint8Array(output.buffer, output.byteOffset, output.byteLength)
+
+    return new NextResponse(body, {
       status: 200,
       headers: {
         "content-type": "image/jpeg",
