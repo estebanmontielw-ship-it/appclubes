@@ -307,8 +307,125 @@ function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBo
   )
 }
 
-// Carga las fonts desde public/fonts/ como ArrayBuffer y las memoriza
-// en el módulo (una sola lectura por instancia del serverless function).
+// Tarjeta de partido para el tema LNBF Premium — diseño editorial
+// con badge "JUEGO N", VS en gold, franja de estadio + fecha y barra
+// destacada de horario violeta.
+function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize, vsFontSize, nameFontSize }: {
+  match: MatchData
+  matchNumber: number
+  isResultado: boolean
+  cardW: number
+  cardH: number
+  logoSize: number
+  vsFontSize: number
+  nameFontSize: number
+}) {
+  const hs = parseInt(match.homeScore ?? "")
+  const as_ = parseInt(match.awayScore ?? "")
+  const tied = isNaN(hs) || isNaN(as_) || hs === as_
+  const homeWins = !tied && hs > as_
+  const badge = `JUEGO ${String(matchNumber).padStart(2, "0")}`
+  const metaFont = Math.max(13, Math.round(cardH * 0.045))
+  const horarioH = Math.max(44, Math.round(cardH * 0.14))
+  const horarioFont = Math.max(22, Math.round(cardH * 0.10))
+
+  return (
+    <div style={{
+      width: cardW, height: cardH,
+      background: "rgba(22,10,46,0.45)",
+      borderRadius: 20,
+      border: `1.5px solid ${LNBF.color.violet400}33`,
+      display: "flex", flexDirection: "column",
+      overflow: "hidden",
+      position: "relative",
+    }}>
+      {/* JUEGO 0X badge */}
+      <div style={{
+        position: "absolute", top: 14, left: 18,
+        display: "flex", alignItems: "center",
+        fontFamily: "Inter", fontSize: Math.max(11, Math.round(cardH * 0.035)),
+        fontWeight: 700, letterSpacing: 2,
+        color: LNBF.color.violet300,
+      }}>
+        {badge}
+      </div>
+
+      {/* Fila principal: Home · VS · Away */}
+      <div style={{ display: "flex", flex: 1, alignItems: "center", width: "100%", paddingTop: Math.round(cardH * 0.12) }}>
+        {/* Home */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 10 }}>
+          <Logo url={match.homeLogo} name={match.homeName} size={logoSize} />
+          <span style={{ color: "white", fontFamily: "Inter", fontSize: nameFontSize, fontWeight: isResultado && !tied && homeWins ? 900 : 700, letterSpacing: 0.5, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
+            {match.homeName.toUpperCase()}
+          </span>
+        </div>
+        {/* VS / score */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 120 }}>
+          {isResultado && match.homeScore != null ? (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: vsFontSize * 1.3, fontWeight: 900, lineHeight: 1, display: "flex" }}>{match.homeScore}</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", fontSize: Math.round(vsFontSize * 0.6), fontWeight: 700, display: "flex" }}>-</span>
+              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: vsFontSize * 1.3, fontWeight: 900, lineHeight: 1, display: "flex" }}>{match.awayScore}</span>
+            </div>
+          ) : (
+            <span style={{ color: LNBF.color.gold500, fontFamily: "Archivo Black", fontSize: vsFontSize, fontWeight: 900, letterSpacing: -1, display: "flex", lineHeight: 1 }}>
+              VS
+            </span>
+          )}
+          {/* Accent line under VS */}
+          <div style={{ width: 38, height: 3, background: LNBF.color.gold500, marginTop: 8, borderRadius: 2, display: "flex" }} />
+        </div>
+        {/* Away */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 10 }}>
+          <Logo url={match.awayLogo} name={match.awayName} size={logoSize} />
+          <span style={{ color: "white", fontFamily: "Inter", fontSize: nameFontSize, fontWeight: isResultado && !tied && !homeWins ? 900 : 700, letterSpacing: 0.5, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
+            {match.awayName.toUpperCase()}
+          </span>
+        </div>
+      </div>
+
+      {/* Meta: estadio (izq) · fecha (der) */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        padding: "8px 22px",
+        borderTop: "1px solid rgba(201,160,255,0.12)",
+        width: "100%",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {match.venue ? (
+            <>
+              <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, letterSpacing: 2, display: "flex" }}>ESTADIO</span>
+              <span style={{ color: "rgba(255,255,255,0.75)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 500, display: "flex" }}>{match.venue}</span>
+            </>
+          ) : <span style={{ display: "flex" }} />}
+        </div>
+        {match.date ? (
+          <span style={{ color: "rgba(255,255,255,0.85)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, letterSpacing: 1, display: "flex" }}>
+            {match.date.toUpperCase()}
+          </span>
+        ) : null}
+      </div>
+
+      {/* Barra HORARIO (o RESULTADO) */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        height: horarioH,
+        padding: "0 22px",
+        background: `linear-gradient(90deg, ${LNBF.color.violet700} 0%, ${LNBF.color.violet800} 100%)`,
+        width: "100%",
+      }}>
+        <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: Math.max(12, Math.round(horarioFont * 0.5)), fontWeight: 700, letterSpacing: 3, display: "flex" }}>
+          {isResultado ? "RESULTADO" : "HORARIO"}
+        </span>
+        <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: horarioFont, fontWeight: 900, letterSpacing: -0.5, display: "flex" }}>
+          {isResultado && match.homeScore != null
+            ? `${match.homeScore} - ${match.awayScore}`
+            : `${match.time || "—"} HS`}
+        </span>
+      </div>
+    </div>
+  )
+}
 // Se usan dentro de ImageResponse({ fonts: [...] }) para que satori
 // pueda renderizar con tipografías específicas. Si las fonts no
 // existen el intento falla silenciosamente y satori cae al default
@@ -1029,7 +1146,12 @@ export async function GET(req: NextRequest) {
             {matchDataList.map((match, i) => {
               const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
               const cardBorder = cardStyle === "solid" ? "none" : cardStyle === "minimal" ? "1.5px solid rgba(255,255,255,0.07)" : "1.5px solid rgba(255,255,255,0.14)"
-              return layout === "compact" ? (
+              // Si el tema es lnbf-premium y layout es Estándar, usamos
+              // MatchCardLNBF (diseño editorial con badge + horario bar).
+              // Compact mantiene el diseño actual hasta que se rediseñe.
+              return theme === "lnbf-premium" && layout !== "compact" ? (
+                <MatchCardLNBF key={i} match={match} matchNumber={i + 1} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} vsFontSize={vsFontSize} nameFontSize={nameFontSize} />
+              ) : layout === "compact" ? (
                 <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} tc={tc} cardBg={cardBg} cardBorder={cardBorder} />
               ) : (
                 <MatchCard key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} nameFontSize={nameFontSize} vsFontSize={vsFontSize} cardStyle={cardStyle} tc={tc} />
