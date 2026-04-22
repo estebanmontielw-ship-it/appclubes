@@ -462,7 +462,10 @@ function DisenoInner() {
     if (bgImageUrl) { params.set("bgImageUrl", bgImageUrl); if (bgFit !== "cover") params.set("bgFit", bgFit) }
     if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
     if (playerPhotoUrl && photoFit !== "cover") params.set("photoFit", photoFit)
-    if (playerPhotoUrl && photoPosY !== 0) params.set("photoPosY", String(photoPosY))
+    // photoPosY se manda siempre (incluso sin playerPhotoUrl) porque los
+    // templates Líderes/Jugador también usan foto auto-fetched de Genius
+    // Sports cuando no hay foto custom subida.
+    if (photoPosY !== 0) params.set("photoPosY", String(photoPosY))
     if (titleSize !== 100) params.set("titleSize", String(titleSize))
     if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
     if (titleWeight !== 900) params.set("titleWeight", String(titleWeight))
