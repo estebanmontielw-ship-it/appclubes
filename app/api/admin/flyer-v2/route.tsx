@@ -514,6 +514,14 @@ export async function GET(req: NextRequest) {
   // arriba y ~280px abajo para evitar que el username/música tape el
   // título o que las reactions/Activity tape los sponsors.
   const safeZones = searchParams.get("safeZones") === "true"
+  // Patrón del fondo para tema lnbf-premium: "clean" (solo glows),
+  // "dots" (constelación dorada), "nandu" (rombos ñandutí), "court"
+  // (líneas de cancha). Default "dots" porque da más textura sin
+  // distraer. Aplica solo cuando theme === "lnbf-premium".
+  const lnbfPatternRaw = searchParams.get("lnbfPattern") ?? "dots"
+  const lnbfPattern = (["clean", "dots", "nandu", "court"].includes(lnbfPatternRaw)
+    ? lnbfPatternRaw
+    : "dots") as "clean" | "dots" | "nandu" | "court"
   // Filter + opacity que blanquea los sponsors en el tema lnbf-premium
   // para que queden unificados sobre el fondo morado oscuro. Satori
   // soporta brightness + invert individualmente (no todos los filtros).
@@ -615,7 +623,7 @@ export async function GET(req: NextRequest) {
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
             {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             {!bgImageUrl && theme === "lnbf-premium" ? (
-              <LNBFBackground variant="nandu" W={W} H={H} />
+              <LNBFBackground variant={lnbfPattern} W={W} H={H} />
             ) : !bgImageUrl ? (
               <>
                 <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
@@ -751,7 +759,7 @@ export async function GET(req: NextRequest) {
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
             {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             {!bgImageUrl && theme === "lnbf-premium" ? (
-              <LNBFBackground variant="clean" W={W} H={H} />
+              <LNBFBackground variant={lnbfPattern} W={W} H={H} />
             ) : !bgImageUrl ? (
               <>
                 <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
@@ -1082,7 +1090,7 @@ export async function GET(req: NextRequest) {
               originales. Cuando hay bgImageUrl/textureUrl, ambos se ocultan
               porque el fondo custom ya aporta la decoración. */}
           {!bgImageUrl && theme === "lnbf-premium" ? (
-            <LNBFBackground variant="clean" W={W} H={H} />
+            <LNBFBackground variant={lnbfPattern} W={W} H={H} />
           ) : !bgImageUrl ? (
             <>
               <div style={{

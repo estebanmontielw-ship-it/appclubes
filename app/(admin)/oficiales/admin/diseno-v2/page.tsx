@@ -114,6 +114,8 @@ function DisenoInner() {
   // Lanzamiento (arranque de temporada) — fecha + hora opcionales
   const [lzFecha, setLzFecha] = useState("")
   const [lzHora, setLzHora] = useState("")
+  // LNBF Premium — selector de patrón de fondo
+  const [lnbfPattern, setLnbfPattern] = useState<"clean" | "dots" | "nandu" | "court">("dots")
   const [jugadorTeamLogo, setJugadorTeamLogo] = useState<string | null>(null)
   const [uploadingJugadorLogo, setUploadingJugadorLogo] = useState(false)
   const jugadorLogoRef = useRef<HTMLInputElement>(null)
@@ -494,6 +496,9 @@ function DisenoInner() {
       if (lzFecha.trim()) params.set("lzFecha", lzFecha.trim())
       if (lzHora.trim()) params.set("lzHora", lzHora.trim())
     }
+    if (theme === "lnbf-premium" && lnbfPattern !== "dots") {
+      params.set("lnbfPattern", lnbfPattern)
+    }
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -522,7 +527,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -775,6 +780,31 @@ function DisenoInner() {
                 </button>
               ))}
             </div>
+            {/* Selector de patrón — solo visible en LNBF Premium */}
+            {theme === "lnbf-premium" && (
+              <div className="mt-2 p-2.5 rounded-xl border border-primary/20 bg-primary/5">
+                <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-2 block">Patrón de fondo</Label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {([
+                    { key: "clean", label: "Liso",      desc: "Solo glows" },
+                    { key: "dots",  label: "Puntos",    desc: "Constelación" },
+                    { key: "nandu", label: "Ñandutí",   desc: "Rombos" },
+                    { key: "court", label: "Cancha",    desc: "Líneas" },
+                  ] as const).map((p) => (
+                    <button
+                      key={p.key}
+                      onClick={() => setLnbfPattern(p.key)}
+                      className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold transition-colors ${
+                        lnbfPattern === p.key ? "border-primary bg-white text-primary" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                      }`}
+                      title={p.desc}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {/* Subir fondo propio */}
             <input
               ref={bgInputRef}
