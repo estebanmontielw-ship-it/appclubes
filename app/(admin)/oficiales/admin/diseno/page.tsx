@@ -125,7 +125,9 @@ function DisenoInner() {
   // Encuadre de imágenes (cover = llenar, contain = ver todo)
   const [bgFit, setBgFit] = useState<"cover" | "contain">("cover")
   const [photoFit, setPhotoFit] = useState<"cover" | "contain">("cover")
+  const [photoPosX, setPhotoPosX] = useState(50)
   const [photoPosY, setPhotoPosY] = useState(0)
+  const [photoScale, setPhotoScale] = useState(100)
   // Errores de upload inline (por campo)
   const [uploadErrors, setUploadErrors] = useState<Record<string, string | null>>({})
 
@@ -462,10 +464,12 @@ function DisenoInner() {
     if (bgImageUrl) { params.set("bgImageUrl", bgImageUrl); if (bgFit !== "cover") params.set("bgFit", bgFit) }
     if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
     if (playerPhotoUrl && photoFit !== "cover") params.set("photoFit", photoFit)
-    // photoPosY se manda siempre (incluso sin playerPhotoUrl) porque los
-    // templates Líderes/Jugador también usan foto auto-fetched de Genius
-    // Sports cuando no hay foto custom subida.
+    // photoPosX/Y/Scale se mandan siempre (incluso sin playerPhotoUrl)
+    // porque los templates Líderes/Jugador también usan foto auto-fetched
+    // de Genius Sports cuando no hay foto custom subida.
+    if (photoPosX !== 50) params.set("photoPosX", String(photoPosX))
     if (photoPosY !== 0) params.set("photoPosY", String(photoPosY))
+    if (photoScale !== 100) params.set("photoScale", String(photoScale))
     if (titleSize !== 100) params.set("titleSize", String(titleSize))
     if (subtitleSize !== 100) params.set("subtitleSize", String(subtitleSize))
     if (titleWeight !== 900) params.set("titleWeight", String(titleWeight))
@@ -507,7 +511,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosY, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -1061,13 +1065,25 @@ function DisenoInner() {
                       ))}
                     </div>
                     <div className="flex items-center gap-2 pt-1">
-                      <span className="text-[10px] text-muted-foreground whitespace-nowrap">Posición Y</span>
-                      <input
-                        type="range" min={0} max={100} value={photoPosY}
+                      <span className="text-[10px] text-muted-foreground w-14 shrink-0">Posición X</span>
+                      <input type="range" min={0} max={100} value={photoPosX}
+                        onChange={(e) => setPhotoPosX(Number(e.target.value))}
+                        className="flex-1 accent-primary" />
+                      <span className="text-[10px] font-medium w-8 text-right">{photoPosX}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground w-14 shrink-0">Posición Y</span>
+                      <input type="range" min={0} max={100} value={photoPosY}
                         onChange={(e) => setPhotoPosY(Number(e.target.value))}
-                        className="flex-1 accent-primary"
-                      />
+                        className="flex-1 accent-primary" />
                       <span className="text-[10px] font-medium w-8 text-right">{photoPosY}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-muted-foreground w-14 shrink-0">Zoom</span>
+                      <input type="range" min={50} max={300} value={photoScale}
+                        onChange={(e) => setPhotoScale(Number(e.target.value))}
+                        className="flex-1 accent-primary" />
+                      <span className="text-[10px] font-medium w-8 text-right">{photoScale}%</span>
                     </div>
                   </div>
                 ) : (
@@ -1137,13 +1153,25 @@ function DisenoInner() {
                         ))}
                       </div>
                       <div className="flex items-center gap-2 pt-1">
-                        <span className="text-[10px] text-muted-foreground whitespace-nowrap">Posición Y</span>
-                        <input
-                          type="range" min={0} max={100} value={photoPosY}
+                        <span className="text-[10px] text-muted-foreground w-14 shrink-0">Posición X</span>
+                        <input type="range" min={0} max={100} value={photoPosX}
+                          onChange={(e) => setPhotoPosX(Number(e.target.value))}
+                          className="flex-1 accent-primary" />
+                        <span className="text-[10px] font-medium w-8 text-right">{photoPosX}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground w-14 shrink-0">Posición Y</span>
+                        <input type="range" min={0} max={100} value={photoPosY}
                           onChange={(e) => setPhotoPosY(Number(e.target.value))}
-                          className="flex-1 accent-primary"
-                        />
+                          className="flex-1 accent-primary" />
                         <span className="text-[10px] font-medium w-8 text-right">{photoPosY}%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-muted-foreground w-14 shrink-0">Zoom</span>
+                        <input type="range" min={50} max={300} value={photoScale}
+                          onChange={(e) => setPhotoScale(Number(e.target.value))}
+                          className="flex-1 accent-primary" />
+                        <span className="text-[10px] font-medium w-8 text-right">{photoScale}%</span>
                       </div>
                     </div>
                   ) : (

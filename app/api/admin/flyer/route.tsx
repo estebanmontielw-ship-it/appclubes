@@ -354,6 +354,12 @@ export async function GET(req: NextRequest) {
   // Encuadre de imágenes (cover = llena y recorta, contain = ve todo con márgenes)
   const bgFit = (searchParams.get("bgFit") ?? "cover") as "cover" | "contain"
   const photoFit = (searchParams.get("photoFit") ?? "cover") as "cover" | "contain"
+  // Control de foto del jugador: posición X/Y del crop + zoom.
+  // Defaults: X=50 (centro horizontal), Y=0 (arriba — la cara suele
+  // estar en la parte superior), zoom=100 (sin zoom).
+  const photoPosX  = Math.max(0, Math.min(100, parseInt(searchParams.get("photoPosX") ?? "50", 10)))
+  const photoPosY  = Math.max(0, Math.min(100, parseInt(searchParams.get("photoPosY") ?? "0", 10)))
+  const photoScale = Math.max(50, Math.min(300, parseInt(searchParams.get("photoScale") ?? "100", 10))) / 100
 
   // Text color palette
   const tc = {
@@ -545,7 +551,17 @@ export async function GET(req: NextRequest) {
       return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: "#0b1e3d" }}>
-            {playerPhotoUrl ? <img src={playerPhotoUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: photoFit, objectPosition: "top center", display: "flex" }} alt={jugadorNombre} /> : <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: themeBg, display: "flex" }} />}
+            {playerPhotoUrl ? (() => {
+              const imgW = Math.round(W * photoScale)
+              const imgH = Math.round(H * photoScale)
+              const offsetX = Math.round((imgW - W) * (photoPosX / 100))
+              const offsetY = Math.round((imgH - H) * (photoPosY / 100))
+              return (
+                <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, overflow: "hidden", display: "flex" }}>
+                  <img src={playerPhotoUrl} width={imgW} height={imgH} style={{ position: "absolute", top: -offsetY, left: -offsetX, width: imgW, height: imgH, objectFit: photoFit, objectPosition: `${photoPosX}% ${photoPosY}%`, display: "flex" }} alt={jugadorNombre} />
+                </div>
+              )
+            })() : <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: themeBg, display: "flex" }} />}
             {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 300, background: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 100%)", display: "flex" }} />
             <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: Math.round(H * 0.42), background: "linear-gradient(180deg, transparent 0%, rgba(10,20,50,0.92) 30%, rgba(10,20,50,0.98) 100%)", display: "flex" }} />
@@ -587,13 +603,21 @@ export async function GET(req: NextRequest) {
       const vMult = format === "historia" ? 1.4 : 1.0
       const tituloFinal = titulo || `Líder en ${statLabel.toLowerCase()}`
       const photoSrc = playerPhotoUrl || leader.photoUrl || ""
-      // Posición vertical de la foto: 0 = top, 100 = bottom. Permite al
-      // usuario ajustar si la cara del jugador queda fuera del frame.
-      const photoPosY = Math.max(0, Math.min(100, parseInt(searchParams.get("photoPosY") ?? "0", 10)))
       return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: "#0b1e3d" }}>
-            {photoSrc ? <img src={photoSrc} width={Math.round(W * 0.55)} height={H} style={{ position: "absolute", top: 0, left: 0, width: Math.round(W * 0.55), height: H, objectFit: photoFit, objectPosition: `center ${photoPosY}%`, display: "flex" }} alt={leader.playerName} /> : null}
+            {photoSrc ? (() => {
+              const frameW = Math.round(W * 0.55)
+              const imgW = Math.round(frameW * photoScale)
+              const imgH = Math.round(H * photoScale)
+              const offsetX = Math.round((imgW - frameW) * (photoPosX / 100))
+              const offsetY = Math.round((imgH - H) * (photoPosY / 100))
+              return (
+                <div style={{ position: "absolute", top: 0, left: 0, width: frameW, height: H, overflow: "hidden", display: "flex" }}>
+                  <img src={photoSrc} width={imgW} height={imgH} style={{ position: "absolute", top: -offsetY, left: -offsetX, width: imgW, height: imgH, objectFit: photoFit, objectPosition: `${photoPosX}% ${photoPosY}%`, display: "flex" }} alt={leader.playerName} />
+                </div>
+              )
+            })() : null}
             {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: "linear-gradient(90deg, transparent 0%, rgba(11,30,61,0.3) 30%, rgba(11,30,61,0.88) 52%, rgba(11,30,61,0.97) 65%, #0b1e3d 80%)", display: "flex" }} />
             <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 160, background: "linear-gradient(180deg, rgba(11,30,61,0.6) 0%, transparent 100%)", display: "flex" }} />
