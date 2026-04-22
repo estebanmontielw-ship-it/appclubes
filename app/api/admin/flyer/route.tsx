@@ -627,32 +627,39 @@ export async function GET(req: NextRequest) {
     // Always respect the selected format — Feed is always 1350, Historia always 1920
     const H = format === "historia" ? 1920 : 1350
 
+    // Multiplier vertical: Historia tiene 570px extra de alto que antes
+    // quedaban en blanco. Todo lo que depende de la altura (tarjetas,
+    // logos, fuentes, header, paddings) escala por este factor para que
+    // el flyer aproveche bien el espacio.
+    const vMult = format === "historia" ? 1.4 : 1.0
+
     // Card dimensions that fit within the fixed height
     // Feed 1350: header + cards + gaps(16×(n-1)) + footer(60-130) must be ≤ 1350
     const cardW = W - 80
     // Respiro vertical entre el header y la primera tarjeta (antes todo
     // quedaba pegado). Le restamos ese padding al cardH de cada partido.
-    const headerToCardsPadding = count === 1 ? 30 : count === 2 ? 20 : count === 3 ? 14 : 10
-    const rawCardH     = count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240
+    const headerToCardsPadding = Math.round((count === 1 ? 30 : count === 2 ? 20 : count === 3 ? 14 : 10) * vMult)
+    const rawCardH     = Math.round((count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240) * vMult)
     const baseCardH    = rawCardH - Math.ceil(headerToCardsPadding / count)
-    const logoSize     = count === 1 ? 150 : count === 2 ? 120 : count === 3 ?  90 :  75
-    const nameFontSize = count === 1 ?  28 : count === 2 ?  24 : count === 3 ?  20 :  17
-    const vsFontSize   = count === 1 ?  58 : count === 2 ?  48 : count === 3 ?  40 :  34
+    const logoSize     = Math.round((count === 1 ? 150 : count === 2 ? 120 : count === 3 ?  90 :  75) * vMult)
+    const nameFontSize = Math.round((count === 1 ?  28 : count === 2 ?  24 : count === 3 ?  20 :  17) * vMult)
+    const vsFontSize   = Math.round((count === 1 ?  58 : count === 2 ?  48 : count === 3 ?  40 :  34) * vMult)
 
     // When the user scales title/subtitle/logo beyond 100%, the header box
     // would overflow into the first match card. Grow headerH by the extra
     // pixels each scaled element needs, and steal that growth from each
     // card so the total still fits in the fixed format height.
-    const baseHeaderH = count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210
-    const titleBaseFontSize = count === 1 ? 72 : 60
-    const logoBaseSize = count === 1 ? 110 : 90
+    const baseHeaderH       = Math.round((count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210) * vMult)
+    const titleBaseFontSize = Math.round((count === 1 ? 72 : 60) * vMult)
+    const subtitleBaseFont  = Math.round(22 * vMult)
+    const logoBaseSize      = Math.round((count === 1 ? 110 : 90) * vMult)
     const extraTitle = titulo ? Math.max(0, Math.round(titleBaseFontSize * (titleSize - 1))) : 0
-    const extraSubtitle = subtitulo ? Math.max(0, Math.round(22 * (subtitleSize - 1))) : 0
+    const extraSubtitle = subtitulo ? Math.max(0, Math.round(subtitleBaseFont * (subtitleSize - 1))) : 0
     const extraLogo = logoUrl ? Math.max(0, Math.round(logoBaseSize * (logoScale - 1))) : 0
     const extraHeader = extraTitle + extraSubtitle + extraLogo
     const headerH = baseHeaderH + extraHeader
     const cardH = Math.max(160, baseCardH - Math.ceil(extraHeader / count))
-    const gapBetweenCards = count === 1 ? 0 : count <= 3 ? 20 : 16
+    const gapBetweenCards = Math.round((count === 1 ? 0 : count <= 3 ? 20 : 16) * vMult)
 
     return new ImageResponse(
       (
@@ -721,8 +728,8 @@ export async function GET(req: NextRequest) {
             {logoUrl ? (
               <img
                 src={logoUrl}
-                width={Math.round((count === 1 ? 110 : 90) * logoScale)}
-                height={Math.round((count === 1 ? 110 : 90) * logoScale)}
+                width={Math.round(logoBaseSize * logoScale)}
+                height={Math.round(logoBaseSize * logoScale)}
                 style={{ objectFit: "contain", marginBottom: 14 }}
                 alt="Logo"
               />
@@ -731,7 +738,7 @@ export async function GET(req: NextRequest) {
             {/* Subtítulo del usuario (si lo puso) */}
             {subtitulo ? (
               <span style={{
-                color: tc.subtitle, fontSize: Math.round(22 * subtitleSize), fontWeight: 600,
+                color: tc.subtitle, fontSize: Math.round(subtitleBaseFont * subtitleSize), fontWeight: 600,
                 letterSpacing: 4, marginBottom: 10, textAlign: "center",
               }}>
                 {subtitulo.toUpperCase()}
@@ -741,13 +748,13 @@ export async function GET(req: NextRequest) {
             {/* Título principal */}
             {titulo ? (
               <span style={{
-                color: tc.title, fontSize: Math.round((count === 1 ? 72 : 60) * titleSize), fontWeight: titleWeight,
+                color: tc.title, fontSize: Math.round(titleBaseFontSize * titleSize), fontWeight: titleWeight,
                 letterSpacing: -1, textAlign: "center", lineHeight: 1,
               }}>
                 {titulo.toUpperCase()}
               </span>
             ) : (
-              <span style={{ color: tc.title, fontSize: Math.round(48 * titleSize), fontWeight: titleWeight, letterSpacing: 2 }}>
+              <span style={{ color: tc.title, fontSize: Math.round(48 * vMult * titleSize), fontWeight: titleWeight, letterSpacing: 2 }}>
                 {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
               </span>
             )}
@@ -778,14 +785,14 @@ export async function GET(req: NextRequest) {
           {sponsorLogos.length > 0 ? (
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "center",
-              width: "100%", height: 130,
+              width: "100%", height: Math.round(130 * vMult),
               background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
-              gap: 56, padding: "0 60px",
+              gap: Math.round(56 * vMult), padding: "0 60px",
             }}>
               {sponsorLogos.map((s, i) => {
-                const baseH = 70
+                const baseH = Math.round(70 * vMult)
                 const h = Math.round(baseH * s.scale)
-                const maxW = Math.round(220 * s.scale)
+                const maxW = Math.round(220 * vMult * s.scale)
                 return (
                   <img
                     key={i}
