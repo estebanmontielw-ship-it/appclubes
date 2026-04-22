@@ -30,11 +30,12 @@ const LIGAS: { key: Liga; label: string; sub: string; api: string }[] = [
 ]
 
 const TEMPLATES = [
-  { key: "pre",       label: "Anuncio",   desc: "Antes del partido" },
-  { key: "resultado", label: "Resultado", desc: "Con marcador"      },
-  { key: "tabla",     label: "Tabla",     desc: "Posiciones"        },
-  { key: "lideres",   label: "Líderes",   desc: "Top estadísticas"  },
-  { key: "jugador",   label: "Jugador",   desc: "Premio del partido" },
+  { key: "pre",         label: "Anuncio",     desc: "Antes del partido" },
+  { key: "resultado",   label: "Resultado",   desc: "Con marcador"      },
+  { key: "tabla",       label: "Tabla",       desc: "Posiciones"        },
+  { key: "lideres",     label: "Líderes",     desc: "Top estadísticas"  },
+  { key: "jugador",     label: "Jugador",     desc: "Premio del partido" },
+  { key: "lanzamiento", label: "Lanzamiento", desc: "Arranque de temporada" },
 ]
 
 const FORMATS = [
@@ -110,6 +111,9 @@ function DisenoInner() {
   const [jugadorClub, setJugadorClub] = useState("")
   const [jugadorPremio, setJugadorPremio] = useState("BROU")
   const [jugadorFecha, setJugadorFecha] = useState("")
+  // Lanzamiento (arranque de temporada) — fecha + hora opcionales
+  const [lzFecha, setLzFecha] = useState("")
+  const [lzHora, setLzHora] = useState("")
   const [jugadorTeamLogo, setJugadorTeamLogo] = useState<string | null>(null)
   const [uploadingJugadorLogo, setUploadingJugadorLogo] = useState(false)
   const jugadorLogoRef = useRef<HTMLInputElement>(null)
@@ -454,7 +458,7 @@ function DisenoInner() {
   })()
 
   function buildFlyerUrl() {
-    const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador"
+    const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador" || template === "lanzamiento"
     if (!isAutoTemplate && selected.size === 0) return null
     const ids = isAutoTemplate ? template : Array.from(selected).join(",")
     const params = new URLSearchParams({ matchIds: ids, template, liga: ligaParam, format })
@@ -486,6 +490,10 @@ function DisenoInner() {
     if (jugadorPremio.trim() && jugadorPremio !== "BROU") params.set("jugadorPremio", jugadorPremio.trim())
     if (jugadorFecha.trim()) params.set("jugadorFecha", jugadorFecha.trim())
     if (jugadorTeamLogo) params.set("jugadorTeamLogo", jugadorTeamLogo)
+    if (template === "lanzamiento") {
+      if (lzFecha.trim()) params.set("lzFecha", lzFecha.trim())
+      if (lzHora.trim()) params.set("lzHora", lzHora.trim())
+    }
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -514,7 +522,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -1276,6 +1284,18 @@ function DisenoInner() {
                 className="h-9"
               />
             </div>
+            {template === "lanzamiento" && (
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Fecha</Label>
+                  <Input value={lzFecha} onChange={(e) => setLzFecha(e.target.value)} placeholder="24 de abril" className="h-9" />
+                </div>
+                <div>
+                  <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5 block">Hora</Label>
+                  <Input value={lzHora} onChange={(e) => setLzHora(e.target.value)} placeholder="20:30" className="h-9" />
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Texto y tarjetas */}

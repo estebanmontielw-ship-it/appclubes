@@ -378,9 +378,10 @@ export async function GET(req: NextRequest) {
   const titleWeight = parseInt(searchParams.get("titleWeight") ?? "900")
 
   // New template params
-  const isTabla    = template === "tabla"
-  const isLideres  = template === "lideres"
-  const isJugador  = template === "jugador"
+  const isTabla       = template === "tabla"
+  const isLideres     = template === "lideres"
+  const isJugador     = template === "jugador"
+  const isLanzamiento = template === "lanzamiento"
   const statType   = (searchParams.get("statType") ?? "scoring") as "scoring" | "assists" | "rebounds"
   const playerPhotoUrl = searchParams.get("playerPhoto") ?? ""
   const jugadorNombre  = searchParams.get("jugadorNombre") ?? ""
@@ -429,7 +430,7 @@ export async function GET(req: NextRequest) {
   ].filter((s) => Boolean(s.url))
 
   const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
-  if (matchIds.length === 0 && !isTabla && !isLideres && !isJugador) return new Response("matchIds requerido", { status: 400 })
+  if (matchIds.length === 0 && !isTabla && !isLideres && !isJugador && !isLanzamiento) return new Response("matchIds requerido", { status: 400 })
 
   const isResultado = template === "resultado"
 
@@ -454,6 +455,116 @@ export async function GET(req: NextRequest) {
     }
     const resolve = resolvers[liga] ?? resolveLnbCompetitionIdPublic
     const { id: compId } = await resolve()
+
+    // ── LANZAMIENTO DE TEMPORADA ──
+    // Flyer estático de arranque: título hero ("APERTURA 2026"), fecha +
+    // hora opcionales, grilla de logos de todos los equipos y sponsors.
+    // Los datos de equipos se obtienen del endpoint de standings (aunque
+    // la liga recién empiece, la config de equipos ya existe).
+    if (isLanzamiento) {
+      const standingsRaw = await geniusFetch(`/competitions/${compId}/standings`, "short")
+      const teams = normalizeStandings(standingsRaw)
+      if (teams.length === 0) return new Response("No hay equipos para el lanzamiento", { status: 404 })
+
+      const lzFecha = searchParams.get("lzFecha") ?? ""
+      const lzHora = searchParams.get("lzHora") ?? ""
+      const tituloFinal = titulo || "APERTURA 2026"
+      const H = format === "historia" ? 1920 : 1350
+      const vMult = format === "historia" ? (safeZones ? 1.0 : 1.4) : 1.0
+
+      const footerH = sponsorLogos.length > 0 ? Math.round(130 * vMult) : Math.round(60 * vMult)
+      // Grilla de logos: 4 por fila. Calcula tamaño para que quepan con
+      // gaps razonables dentro del ancho disponible.
+      const perRow = teams.length <= 4 ? teams.length : teams.length <= 9 ? 3 : 4
+      const gap = Math.round(24 * vMult)
+      const horizontalPadding = 80
+      const logoTeamSize = Math.min(
+        Math.round(200 * vMult),
+        Math.floor((W - horizontalPadding * 2 - gap * (perRow - 1)) / perRow)
+      )
+
+      return new ImageResponse(
+        (
+          <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: LNBF.font.body, position: "relative", overflow: "hidden", paddingTop: safeTopFor(format), paddingBottom: safeBottomFor(format) }}>
+            {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
+            {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
+            {!bgImageUrl && theme === "lnbf-premium" ? (
+              <LNBFBackground variant="nandu" W={W} H={H} />
+            ) : !bgImageUrl ? (
+              <>
+                <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
+                <div style={{ position: "absolute", bottom: -200, right: -200, width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)", display: "flex" }} />
+              </>
+            ) : null}
+
+            {/* Contenido central */}
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, width: "100%", paddingTop: Math.round(40 * vMult), paddingLeft: horizontalPadding, paddingRight: horizontalPadding }}>
+              {/* Logo liga */}
+              {logoUrl ? (
+                <img src={logoUrl} width={Math.round(120 * vMult * logoScale)} height={Math.round(120 * vMult * logoScale)} style={{ objectFit: "contain", marginBottom: Math.round(24 * vMult), display: "flex" }} alt="" />
+              ) : null}
+
+              {/* Hero title */}
+              <span style={{ color: "white", fontSize: Math.round(120 * vMult * titleSize), fontWeight: 900, fontFamily: "Archivo Black", letterSpacing: -4, lineHeight: 0.95, textAlign: "center", marginBottom: Math.round(10 * vMult) }}>
+                {tituloFinal.toUpperCase()}
+              </span>
+
+              {/* Fecha · Hora */}
+              {(lzFecha || lzHora) && (
+                <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: Math.round(8 * vMult), marginBottom: Math.round(44 * vMult) }}>
+                  {lzFecha ? <span style={{ color: LNBF.color.gold500, fontFamily: "Bebas Neue", fontSize: Math.round(52 * vMult), letterSpacing: 4, display: "flex" }}>{lzFecha.toUpperCase()}</span> : null}
+                  {lzFecha && lzHora ? <span style={{ color: "rgba(255,255,255,0.4)", display: "flex", fontSize: 32 }}>·</span> : null}
+                  {lzHora ? <span style={{ color: LNBF.color.gold500, fontFamily: "Bebas Neue", fontSize: Math.round(52 * vMult), letterSpacing: 4, display: "flex" }}>{lzHora} HS</span> : null}
+                </div>
+              )}
+
+              {/* Eyebrow */}
+              <span style={{ color: "rgba(255,255,255,0.55)", fontSize: Math.round(18 * vMult), fontWeight: 700, letterSpacing: 4, marginBottom: Math.round(24 * vMult), textAlign: "center", display: "flex" }}>
+                EQUIPOS PARTICIPANTES
+              </span>
+
+              {/* Grilla de logos */}
+              <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", alignItems: "center", gap, maxWidth: W - horizontalPadding * 2 }}>
+                {teams.map((t: any, i: number) => {
+                  const normalizedUrl = t.teamLogo
+                    ? `${LOGO_NORM_BASE}/api/logo-norm?url=${encodeURIComponent(t.teamLogo)}&size=${Math.round(logoTeamSize * 0.78)}`
+                    : ""
+                  return (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      width: logoTeamSize, height: logoTeamSize,
+                      background: "rgba(255,255,255,0.04)",
+                      borderRadius: 18,
+                      border: `1.5px solid ${theme === "lnbf-premium" ? "rgba(201,160,255,0.22)" : "rgba(255,255,255,0.10)"}`,
+                    }}>
+                      {normalizedUrl ? (
+                        <img src={normalizedUrl} width={Math.round(logoTeamSize * 0.78)} height={Math.round(logoTeamSize * 0.78)} style={{ objectFit: "contain", display: "flex" }} alt={t.teamName} />
+                      ) : (
+                        <span style={{ color: "white", fontSize: Math.round(logoTeamSize * 0.32), fontWeight: 900, fontFamily: "Archivo Black", display: "flex" }}>
+                          {t.teamSigla?.slice(0, 2) ?? "?"}
+                        </span>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Sponsors footer */}
+            {sponsorLogos.length > 0 ? (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+                {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto" }} alt={`Sponsor ${i + 1}`} /> })}
+              </div>
+            ) : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: footerH, width: "100%" }}>
+                <span style={{ color: "rgba(255,255,255,0.25)", fontSize: Math.round(18 * vMult), fontWeight: 500, letterSpacing: 2, display: "flex" }}>cpb.com.py</span>
+              </div>
+            )}
+          </div>
+        ),
+        { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
+      )
+    }
 
     // ── TABLA DE POSICIONES ──
     if (isTabla) {
