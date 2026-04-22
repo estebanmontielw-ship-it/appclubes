@@ -204,7 +204,8 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
   )
 }
 
-// Opción 2: logos apilados izquierda, score grande derecha
+// Opción 2: Compacto — home/away en 2 filas con nombre, tiempo/score a la
+// derecha, strip inferior con fecha + venue.
 function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBorder }: {
   match: MatchData; isResultado: boolean; cardW: number; cardH: number
   tc: Record<string, string>; cardBg: string; cardBorder: string
@@ -213,35 +214,93 @@ function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBo
   const as_ = parseInt(match.awayScore ?? "")
   const tied = isNaN(hs) || isNaN(as_) || hs === as_
   const homeWins = !tied && hs > as_
-  const logoSz = Math.round(cardH * 0.32)
+  const logoSz = Math.round(cardH * 0.30)
+  const teamFontSize = Math.max(18, Math.min(34, Math.round(cardH * 0.12)))
+  const timeFontSize = Math.round(cardH * 0.36)
+  const scoreFontSize = Math.round(cardH * 0.36)
+  const metaFontSize = Math.max(12, Math.round(cardH * 0.085))
+  const hasMeta = !!(match.date || match.venue)
 
   return (
-    <div style={{ width: cardW, height: cardH, background: cardBg, borderRadius: 20, border: cardBorder, display: "flex", alignItems: "center", overflow: "hidden" }}>
-      {/* Left: stacked logos */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: Math.round(cardW * 0.28), height: "100%", borderRight: "1px solid rgba(255,255,255,0.08)", gap: 6, padding: "8px 0" }}>
-        <Logo url={match.homeLogo} name={match.homeName} size={logoSz} />
-        <div style={{ width: "60%", height: 1, background: "rgba(255,255,255,0.12)", display: "flex" }} />
-        <Logo url={match.awayLogo} name={match.awayName} size={logoSz} />
-      </div>
-      {/* Right: score or time */}
-      <div style={{ display: "flex", flex: 1, flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "0 16px" }}>
-        {isResultado && match.homeScore != null ? (
-          <>
-            <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-              <span style={{ color: tied ? "white" : homeWins ? tc.score : tc.scoreDim, fontSize: Math.round(cardH * 0.38), fontWeight: 900, lineHeight: 1 }}>{match.homeScore}</span>
-              <span style={{ color: "rgba(255,255,255,0.25)", fontSize: Math.round(cardH * 0.2), fontWeight: 700 }}>–</span>
-              <span style={{ color: tied ? "white" : !homeWins ? tc.score : tc.scoreDim, fontSize: Math.round(cardH * 0.38), fontWeight: 900, lineHeight: 1 }}>{match.awayScore}</span>
+    <div style={{ width: cardW, height: cardH, background: cardBg, borderRadius: 20, border: cardBorder, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* Main row: teams (left) + time/score (right) */}
+      <div style={{ display: "flex", flex: 1, alignItems: "center", width: "100%" }}>
+        {/* Teams column — home row + away row */}
+        <div style={{ display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", gap: 8, padding: "10px 20px", minWidth: 0 }}>
+          {/* Home */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
+            <Logo url={match.homeLogo} name={match.homeName} size={logoSz} />
+            <span style={{
+              color: tc.team,
+              fontSize: teamFontSize,
+              fontWeight: isResultado ? (!tied && homeWins ? 900 : 600) : 700,
+              letterSpacing: 0,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+            }}>
+              {match.homeName}
+            </span>
+          </div>
+          {/* Away */}
+          <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
+            <Logo url={match.awayLogo} name={match.awayName} size={logoSz} />
+            <span style={{
+              color: tc.team,
+              fontSize: teamFontSize,
+              fontWeight: isResultado ? (!tied && !homeWins ? 900 : 600) : 700,
+              letterSpacing: 0,
+              overflow: "hidden",
+              whiteSpace: "nowrap",
+            }}>
+              {match.awayName}
+            </span>
+          </div>
+        </div>
+        {/* Divider + Time/Score */}
+        <div style={{
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          paddingLeft: 18, paddingRight: 24,
+          borderLeft: "1px solid rgba(255,255,255,0.10)",
+          minWidth: Math.round(cardW * 0.30),
+          alignSelf: "stretch",
+        }}>
+          {isResultado && match.homeScore != null ? (
+            <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+              <span style={{ color: tc.score, fontSize: scoreFontSize, fontWeight: tied ? 700 : (homeWins ? 900 : 500), lineHeight: 1 }}>{match.homeScore}</span>
+              <span style={{ color: "rgba(255,255,255,0.3)", fontSize: Math.round(scoreFontSize * 0.55), fontWeight: 700 }}>–</span>
+              <span style={{ color: tc.score, fontSize: scoreFontSize, fontWeight: tied ? 700 : (!homeWins ? 900 : 500), lineHeight: 1 }}>{match.awayScore}</span>
             </div>
-            <span style={{ color: "rgba(255,255,255,0.35)", fontSize: 13, fontWeight: 600, letterSpacing: 1, marginTop: 6 }}>RESULTADO FINAL</span>
-          </>
-        ) : (
-          <>
-            <span style={{ color: "white", fontSize: Math.round(cardH * 0.32), fontWeight: 900, lineHeight: 1 }}>{match.time || "–"}</span>
-            <span style={{ color: "rgba(255,255,255,0.5)", fontSize: 13, fontWeight: 600, marginTop: 4 }}>{match.date}</span>
-            {match.venue ? <span style={{ color: "rgba(255,255,255,0.3)", fontSize: 11, marginTop: 2 }}>{match.venue}</span> : null}
-          </>
-        )}
+          ) : (
+            <span style={{ color: "white", fontSize: timeFontSize, fontWeight: 900, lineHeight: 1, letterSpacing: -1 }}>
+              {match.time || "–"}
+            </span>
+          )}
+        </div>
       </div>
+      {/* Bottom meta strip: fecha · venue */}
+      {hasMeta && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          gap: 10, padding: "7px 16px",
+          borderTop: "1px solid rgba(255,255,255,0.08)",
+          background: "rgba(0,0,0,0.25)",
+          width: "100%",
+        }}>
+          {match.date ? (
+            <span style={{ color: "rgba(255,255,255,0.75)", fontSize: metaFontSize, fontWeight: 600, display: "flex" }}>
+              {match.date}
+            </span>
+          ) : null}
+          {match.date && match.venue ? (
+            <span style={{ color: "rgba(255,255,255,0.35)", fontSize: metaFontSize, display: "flex" }}>·</span>
+          ) : null}
+          {match.venue ? (
+            <span style={{ color: "rgba(255,255,255,0.55)", fontSize: metaFontSize, fontWeight: 500, display: "flex", overflow: "hidden", whiteSpace: "nowrap" }}>
+              {match.venue}
+            </span>
+          ) : null}
+        </div>
+      )}
     </div>
   )
 }
