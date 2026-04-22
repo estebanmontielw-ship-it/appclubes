@@ -7,6 +7,7 @@ import {
   resolveU22FCompetitionIdPublic,
 } from "@/lib/programacion-lnb"
 import { LNBF } from "@/lib/themes/lnbf"
+import { LNBFBackground } from "@/lib/flyer/lnbf-backgrounds"
 import { geniusFetch, getLeadersFromMatches } from "@/lib/genius-sports"
 import { normalizeStandings } from "@/lib/normalize-standings"
 
@@ -512,8 +513,14 @@ export async function GET(req: NextRequest) {
           <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: "sans-serif", position: "relative", overflow: "hidden", paddingTop: safeTopFor(format), paddingBottom: safeBottomFor(format) }}>
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
             {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
-            <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
-            <div style={{ position: "absolute", bottom: -200, right: -200, width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)", display: "flex" }} />
+            {!bgImageUrl && theme === "lnbf-premium" ? (
+              <LNBFBackground variant="clean" W={W} H={H} />
+            ) : !bgImageUrl ? (
+              <>
+                <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
+                <div style={{ position: "absolute", bottom: -200, right: -200, width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)", display: "flex" }} />
+              </>
+            ) : null}
 
             {/* HEADER */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "flex-start", height: headerH, width: "100%", gap: 0, paddingTop: Math.round(36 * vMult) }}>
@@ -833,19 +840,28 @@ export async function GET(req: NextRequest) {
             />
           ) : null}
 
-          {/* Background glow effects */}
-          <div style={{
-            position: "absolute", top: -200, left: -200,
-            width: 700, height: 700, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)",
-            display: "flex",
-          }} />
-          <div style={{
-            position: "absolute", bottom: -200, right: -200,
-            width: 600, height: 600, borderRadius: "50%",
-            background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)",
-            display: "flex",
-          }} />
+          {/* Background glow effects. Si el tema es lnbf-premium usamos
+              LNBFBackground (con pattern opcional). Si no, los 2 glows azules
+              originales. Cuando hay bgImageUrl/textureUrl, ambos se ocultan
+              porque el fondo custom ya aporta la decoración. */}
+          {!bgImageUrl && theme === "lnbf-premium" ? (
+            <LNBFBackground variant="clean" W={W} H={H} />
+          ) : !bgImageUrl ? (
+            <>
+              <div style={{
+                position: "absolute", top: -200, left: -200,
+                width: 700, height: 700, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)",
+                display: "flex",
+              }} />
+              <div style={{
+                position: "absolute", bottom: -200, right: -200,
+                width: 600, height: 600, borderRadius: "50%",
+                background: "radial-gradient(circle, rgba(15,60,120,0.3) 0%, transparent 70%)",
+                display: "flex",
+              }} />
+            </>
+          ) : null}
 
           {/* ── HEADER ── */}
           <div style={{
