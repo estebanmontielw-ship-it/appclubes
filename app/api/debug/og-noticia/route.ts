@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       : `${baseUrl}${rawImage.startsWith("/") ? "" : "/"}${rawImage}`
     : null
 
-  // Try fetching og:image to see if it's reachable and what content-type it returns
+  // HEAD fetch on the image — does it respond 200? what size/type?
   let imageReachable: { status: number; contentType: string | null; size: string | null } | null = null
   if (ogImage) {
     try {
@@ -52,22 +52,44 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Fetch the actual deployed news page and extract ALL og:/twitter: meta
+  // tags so we can see what the server is really putting in the <head>.
+  const pageUrl = `${baseUrl}/noticias/${slug}`
+  let metaTags: string[] = []
+  let fetchError: string | null = null
+  try {
+    const pageRes = await fetch(pageUrl, {
+      headers: {
+        // WhatsApp/Facebook-like user agent
+        "user-agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+      },
+      cache: "no-store",
+    })
+    const html = await pageRes.text()
+    // Grab <meta ...> lines containing og: or twitter:
+    const matches = html.match(/<meta[^>]*(?:property|name)=["'](?:og:|twitter:)[^"']*["'][^>]*>/gi) ?? []
+    metaTags = matches.map((m) => m.trim())
+  } catch (e) {
+    fetchError = String(e)
+  }
+
   return NextResponse.json({
     slug,
     baseUrl,
+    pageUrl,
     noticia: {
       titulo: noticia.titulo,
       publicada: noticia.publicada,
       autorNombre: noticia.autorNombre,
       rawImagenUrl: noticia.imagenUrl,
     },
-    og: {
-      "og:title": noticia.titulo,
-      "og:url": `${baseUrl}/noticias/${slug}`,
+    ogComputed: {
       "og:image": ogImage,
       "og:image:width": ogImage ? 1200 : null,
       "og:image:height": ogImage ? 630 : null,
     },
     imageReachable,
+    metaTagsInPage: metaTags,
+    fetchError,
   })
 }
