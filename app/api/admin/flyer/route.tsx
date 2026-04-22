@@ -569,15 +569,17 @@ export async function GET(req: NextRequest) {
     const nameFontSize = count === 1 ?  28 : count === 2 ?  24 : count === 3 ?  20 :  17
     const vsFontSize   = count === 1 ?  58 : count === 2 ?  48 : count === 3 ?  40 :  34
 
-    // When the user scales the title/subtitle beyond 100%, the header box
+    // When the user scales title/subtitle/logo beyond 100%, the header box
     // would overflow into the first match card. Grow headerH by the extra
-    // pixels the scaled text needs, and steal that growth from each card
-    // so the total still fits in the fixed format height.
+    // pixels each scaled element needs, and steal that growth from each
+    // card so the total still fits in the fixed format height.
     const baseHeaderH = count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210
     const titleBaseFontSize = count === 1 ? 72 : 60
-    const extraTitle = Math.max(0, Math.round(titleBaseFontSize * (titleSize - 1)))
+    const logoBaseSize = count === 1 ? 110 : 90
+    const extraTitle = titulo ? Math.max(0, Math.round(titleBaseFontSize * (titleSize - 1))) : 0
     const extraSubtitle = subtitulo ? Math.max(0, Math.round(22 * (subtitleSize - 1))) : 0
-    const extraHeader = extraTitle + extraSubtitle
+    const extraLogo = logoUrl ? Math.max(0, Math.round(logoBaseSize * (logoScale - 1))) : 0
+    const extraHeader = extraTitle + extraSubtitle + extraLogo
     const headerH = baseHeaderH + extraHeader
     const cardH = Math.max(160, baseCardH - Math.ceil(extraHeader / count))
     const gapBetweenCards = count === 1 ? 0 : count <= 3 ? 20 : 16
