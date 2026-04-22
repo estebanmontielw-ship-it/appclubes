@@ -755,6 +755,7 @@ function DisenoInner() {
                 { key: "masc2", label: "Azul royal",    sub: "Masculino · alternativo", from: "#0a2e6e", to: "#061a4a" },
                 { key: "fem1",  label: "Violeta",       sub: "Femenino · clásico",   from: "#2d0a4e", to: "#1a0630" },
                 { key: "fem2",  label: "Bordo/rojo",    sub: "Femenino · alternativo", from: "#4a0a1a", to: "#2a0610" },
+                { key: "lnbf-premium", label: "LNBF Premium", sub: "Morado + gold · ñandutí", from: "#3C1370", to: "#0E0418" },
               ] as const).map((t) => (
                 <button
                   key={t.key}
