@@ -514,6 +514,15 @@ export async function GET(req: NextRequest) {
   // arriba y ~280px abajo para evitar que el username/música tape el
   // título o que las reactions/Activity tape los sponsors.
   const safeZones = searchParams.get("safeZones") === "true"
+  // Filter + opacity que blanquea los sponsors en el tema lnbf-premium
+  // para que queden unificados sobre el fondo morado oscuro. Satori
+  // soporta brightness + invert individualmente (no todos los filtros).
+  const sponsorFilter = theme === "lnbf-premium" ? "brightness(0) invert(1)" : undefined
+  const sponsorOpacity = theme === "lnbf-premium" ? 0.85 : 1
+  // Fondo de la barra de sponsors: en lnbf-premium forzamos un violeta
+  // oscuro translúcido; en los demás temas respetamos la elección del
+  // usuario (white/dark).
+  const lnbfSponsorBarBg = "rgba(14,4,24,0.75)"
   const isStorySafe = (fmt: string) => fmt === "historia" && safeZones
   const safeTopFor = (fmt: string) => isStorySafe(fmt) ? 240 : 0
   const safeBottomFor = (fmt: string) => isStorySafe(fmt) ? 280 : 0
@@ -669,8 +678,8 @@ export async function GET(req: NextRequest) {
 
             {/* Sponsors footer */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
-                {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto" }} alt={`Sponsor ${i + 1}`} /> })}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+                {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: footerH, width: "100%" }}>
@@ -813,8 +822,8 @@ export async function GET(req: NextRequest) {
 
             {/* FOOTER */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
-                {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto" }} alt={`Sponsor ${i + 1}`} /> })}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+                {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: footerH, width: "100%" }}>
@@ -861,8 +870,8 @@ export async function GET(req: NextRequest) {
               {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 20, fontWeight: 600, letterSpacing: 2 }}>{jugadorClub.toUpperCase()}</span> : null}
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
-                {sponsorLogos.map((s, i) => { const h = Math.round(48 * s.scale); return <img key={i} src={s.url} width={Math.round(150 * s.scale)} height={h} style={{ objectFit: "contain" }} alt={`Sponsor ${i + 1}`} /> })}
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+                {sponsorLogos.map((s, i) => { const h = Math.round(48 * s.scale); return <img key={i} src={s.url} width={Math.round(150 * s.scale)} height={h} style={{ objectFit: "contain", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : <div style={{ position: "absolute", bottom: 28 + safeBottomFor(format), right: 48, display: "flex" }}><span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, letterSpacing: 2 }}>CPB · cpb.com.py</span></div>}
           </div>
@@ -940,8 +949,8 @@ export async function GET(req: NextRequest) {
               </div>
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 80, background: sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
-                {sponsorLogos.map((s, i) => { const h = Math.round(44 * s.scale); return <img key={i} src={s.url} width={Math.round(140 * s.scale)} height={h} style={{ objectFit: "contain" }} alt={`Sponsor ${i + 1}`} /> })}
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 80, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+                {sponsorLogos.map((s, i) => { const h = Math.round(44 * s.scale); return <img key={i} src={s.url} width={Math.round(140 * s.scale)} height={h} style={{ objectFit: "contain", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : null}
           </div>
@@ -1250,7 +1259,7 @@ export async function GET(req: NextRequest) {
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: "100%", height: Math.round(130 * vMult),
-              background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
+              background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
               gap: Math.round(56 * vMult), padding: "0 60px",
             }}>
               {sponsorLogos.map((s, i) => {
@@ -1263,7 +1272,7 @@ export async function GET(req: NextRequest) {
                     src={s.url}
                     width={maxW}
                     height={h}
-                    style={{ objectFit: "contain", flex: "0 0 auto" }}
+                    style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }}
                     alt={`Sponsor ${i + 1}`}
                   />
                 )
