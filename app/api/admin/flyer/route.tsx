@@ -408,7 +408,28 @@ export async function GET(req: NextRequest) {
       if (allRows.length === 0) return new Response("No hay datos de tabla disponibles", { status: 404 })
 
       const H = format === "historia" ? 1920 : 1350
-      const headerH = 240
+      const vMult = format === "historia" ? 1.4 : 1.0
+      const headerH = Math.round(240 * vMult)
+      const footerH = sponsorLogos.length > 0 ? Math.round(130 * vMult) : Math.round(60 * vMult)
+      // Calculamos dinámicamente el alto de cada fila para que la tabla
+      // llene todo el espacio disponible del canvas. Antes era fijo en 60px
+      // y quedaba un hueco gigante en Historia 9:16.
+      const rowsCount = allRows.length
+      const rowGap = Math.round(6 * vMult)
+      const colHeaderH = Math.round(30 * vMult)
+      const blockPaddingV = Math.round(30 * vMult)
+      const availableForRows = H - headerH - footerH - colHeaderH - blockPaddingV
+      const rowH = Math.max(
+        60,
+        Math.floor((availableForRows - rowGap * (rowsCount - 1)) / rowsCount)
+      )
+      // Fuentes/logos proporcionales al rowH
+      const rankFontSize   = Math.round(rowH * 0.36)
+      const teamFontSize   = Math.round(rowH * 0.32)
+      const rowLogoSize    = Math.round(rowH * 0.65)
+      const statFontSize   = Math.round(rowH * 0.30)
+      const statSecondary  = Math.round(rowH * 0.26)
+      const colHeaderFont  = Math.round(14 * vMult)
       const tituloFinal = titulo || "TABLA DE POSICIONES"
 
       return new ImageResponse(
@@ -421,26 +442,26 @@ export async function GET(req: NextRequest) {
 
             {/* HEADER */}
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: headerH, width: "100%", gap: 0 }}>
-              {logoUrl ? <img src={logoUrl} width={Math.round(90 * logoScale)} height={Math.round(90 * logoScale)} style={{ objectFit: "contain", marginBottom: 14 }} alt="Logo" /> : null}
-              {subtitulo ? <span style={{ color: tc.subtitle, fontSize: Math.round(22 * subtitleSize), fontWeight: 600, letterSpacing: 4, marginBottom: 10, textAlign: "center" }}>{subtitulo.toUpperCase()}</span> : null}
-              <span style={{ color: tc.title, fontSize: Math.round(60 * titleSize), fontWeight: titleWeight, letterSpacing: -1, textAlign: "center", lineHeight: 1 }}>{tituloFinal.toUpperCase()}</span>
+              {logoUrl ? <img src={logoUrl} width={Math.round(90 * vMult * logoScale)} height={Math.round(90 * vMult * logoScale)} style={{ objectFit: "contain", marginBottom: Math.round(14 * vMult) }} alt="Logo" /> : null}
+              {subtitulo ? <span style={{ color: tc.subtitle, fontSize: Math.round(22 * vMult * subtitleSize), fontWeight: 600, letterSpacing: 4, marginBottom: Math.round(10 * vMult), textAlign: "center" }}>{subtitulo.toUpperCase()}</span> : null}
+              <span style={{ color: tc.title, fontSize: Math.round(60 * vMult * titleSize), fontWeight: titleWeight, letterSpacing: -1, textAlign: "center", lineHeight: 1 }}>{tituloFinal.toUpperCase()}</span>
             </div>
 
             {/* STANDINGS TABLE */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, justifyContent: "center", width: "100%", paddingBottom: 16, paddingLeft: 36, paddingRight: 36 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, justifyContent: "center", width: "100%", paddingBottom: Math.round(16 * vMult), paddingLeft: Math.round(36 * vMult), paddingRight: Math.round(36 * vMult) }}>
               {/* Column headers */}
-              <div style={{ display: "flex", alignItems: "center", width: "100%", paddingLeft: 20, paddingRight: 20, marginBottom: 6 }}>
-                <div style={{ display: "flex", width: 44 }}><span style={{ color: tc.subtitle, fontSize: 14, fontWeight: 700 }}>#</span></div>
-                <div style={{ display: "flex", width: 48 }} />
-                <div style={{ display: "flex", flex: 1, marginLeft: 10 }}><span style={{ color: tc.subtitle, fontSize: 14, fontWeight: 700 }}>EQUIPO</span></div>
+              <div style={{ display: "flex", alignItems: "center", width: "100%", paddingLeft: 20, paddingRight: 20, marginBottom: rowGap, height: colHeaderH }}>
+                <div style={{ display: "flex", width: Math.round(44 * vMult) }}><span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>#</span></div>
+                <div style={{ display: "flex", width: Math.round(48 * vMult) }} />
+                <div style={{ display: "flex", flex: 1, marginLeft: 10 }}><span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>EQUIPO</span></div>
                 {(["PJ","G","P","Pts","%","PF","PC","Dif"] as const).map((h) => (
-                  <div key={h} style={{ display: "flex", width: 58, justifyContent: "center" }}>
-                    <span style={{ color: tc.subtitle, fontSize: 14, fontWeight: 700 }}>{h}</span>
+                  <div key={h} style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}>
+                    <span style={{ color: tc.subtitle, fontSize: colHeaderFont, fontWeight: 700 }}>{h}</span>
                   </div>
                 ))}
               </div>
               {/* Rows */}
-              <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: 6 }}>
+              <div style={{ display: "flex", flexDirection: "column", width: "100%", gap: rowGap }}>
                 {allRows.map((row) => {
                   const isTop4 = row.rank <= 4
                   const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
@@ -451,24 +472,24 @@ export async function GET(req: NextRequest) {
                   const pc = row.pointsAgainst ?? "—"
                   const dif = row.pointDiff != null ? (row.pointDiff > 0 ? `+${row.pointDiff}` : String(row.pointDiff)) : "—"
                   return (
-                    <div key={row.rank} style={{ display: "flex", alignItems: "center", width: "100%", height: 60, background: rowBg, borderRadius: 10, paddingLeft: 20, paddingRight: 20 }}>
-                      <div style={{ display: "flex", width: 44 }}>
-                        <span style={{ color: tc.subtitle, fontSize: 20, fontWeight: isTop4 ? 900 : 600 }}>{row.rank}</span>
+                    <div key={row.rank} style={{ display: "flex", alignItems: "center", width: "100%", height: rowH, background: rowBg, borderRadius: Math.round(10 * vMult), paddingLeft: 20, paddingRight: 20 }}>
+                      <div style={{ display: "flex", width: Math.round(44 * vMult) }}>
+                        <span style={{ color: tc.subtitle, fontSize: rankFontSize, fontWeight: isTop4 ? 900 : 600 }}>{row.rank}</span>
                       </div>
-                      <div style={{ display: "flex", alignItems: "center", width: 40, height: 40 }}>
-                        {row.teamLogo ? <img src={row.teamLogo} width={40} height={40} style={{ objectFit: "contain" }} alt={row.teamName} /> : <div style={{ width: 40, height: 40, borderRadius: 20, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "white", fontSize: 16, fontWeight: 900 }}>{row.teamName.charAt(0)}</span></div>}
+                      <div style={{ display: "flex", alignItems: "center", width: rowLogoSize, height: rowLogoSize }}>
+                        {row.teamLogo ? <img src={row.teamLogo} width={rowLogoSize} height={rowLogoSize} style={{ objectFit: "contain" }} alt={row.teamName} /> : <div style={{ width: rowLogoSize, height: rowLogoSize, borderRadius: rowLogoSize / 2, background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center" }}><span style={{ color: "white", fontSize: Math.round(rowLogoSize * 0.4), fontWeight: 900 }}>{row.teamName.charAt(0)}</span></div>}
                       </div>
                       <div style={{ display: "flex", flex: 1, marginLeft: 10 }}>
-                        <span style={{ color: tc.team, fontSize: 18, fontWeight: isTop4 ? 900 : 700 }}>{row.teamName}</span>
+                        <span style={{ color: tc.team, fontSize: teamFontSize, fontWeight: isTop4 ? 900 : 700 }}>{row.teamName}</span>
                       </div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: 17 }}>{row.gamesPlayed}</span></div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: tc.team, fontSize: 17, fontWeight: isTop4 ? 900 : 600 }}>{row.wins}</span></div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: 17 }}>{row.losses}</span></div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: tc.team, fontSize: 17, fontWeight: isTop4 ? 900 : 600 }}>{pts}</span></div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: 15 }}>{pct}</span></div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: 15 }}>{pf}</span></div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: 15 }}>{pc}</span></div>
-                      <div style={{ display: "flex", width: 58, justifyContent: "center" }}><span style={{ color: (row.pointDiff ?? 0) > 0 ? "#22c55e" : (row.pointDiff ?? 0) < 0 ? "#ef4444" : tc.subtitle, fontSize: 15, fontWeight: 600 }}>{dif}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statFontSize }}>{row.gamesPlayed}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.team, fontSize: statFontSize, fontWeight: isTop4 ? 900 : 600 }}>{row.wins}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statFontSize }}>{row.losses}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.team, fontSize: statFontSize, fontWeight: isTop4 ? 900 : 600 }}>{pts}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statSecondary }}>{pct}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statSecondary }}>{pf}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: tc.subtitle, fontSize: statSecondary }}>{pc}</span></div>
+                      <div style={{ display: "flex", width: Math.round(58 * vMult), justifyContent: "center" }}><span style={{ color: (row.pointDiff ?? 0) > 0 ? "#22c55e" : (row.pointDiff ?? 0) < 0 ? "#ef4444" : tc.subtitle, fontSize: statSecondary, fontWeight: 600 }}>{dif}</span></div>
                     </div>
                   )
                 })}
@@ -477,12 +498,12 @@ export async function GET(req: NextRequest) {
 
             {/* FOOTER */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: 130, background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: 56, padding: "0 60px" }}>
-                {sponsorLogos.map((s, i) => { const h = Math.round(70 * s.scale); return <img key={i} src={s.url} width={Math.round(220 * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto" }} alt={`Sponsor ${i + 1}`} /> })}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+                {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto" }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: 60, width: "100%" }}>
-                <span style={{ color: tc.default, fontSize: 18, fontWeight: 500, letterSpacing: 2 }}>cpb.com.py</span>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: footerH, width: "100%" }}>
+                <span style={{ color: tc.default, fontSize: Math.round(18 * vMult), fontWeight: 500, letterSpacing: 2 }}>cpb.com.py</span>
               </div>
             )}
           </div>
