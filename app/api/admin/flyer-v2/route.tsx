@@ -1092,46 +1092,132 @@ export async function GET(req: NextRequest) {
           ) : null}
 
           {/* ── HEADER ── */}
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", height: headerH, width: "100%",
-            gap: 0,
-          }}>
-            {/* Logo — solo si el usuario subió uno */}
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                width={Math.round(logoBaseSize * logoScale)}
-                height={Math.round(logoBaseSize * logoScale)}
-                style={{ objectFit: "contain", marginBottom: 14 }}
-                alt="Logo"
-              />
-            ) : null}
-
-            {/* Subtítulo del usuario (si lo puso) */}
-            {subtitulo ? (
-              <span style={{
-                color: tc.subtitle, fontSize: Math.round(subtitleBaseFont * subtitleSize), fontWeight: 600,
-                letterSpacing: 4, marginBottom: 10, textAlign: "center",
+          {theme === "lnbf-premium" ? (() => {
+            // Header LNBF Premium: logo chico top-left + badge FECHA top-right,
+            // eyebrow debajo, título GIGANTE left-aligned en 2 líneas
+            const heroBase = Math.round((count === 1 ? 130 : count === 2 ? 120 : count <= 4 ? 110 : 95) * vMult)
+            const heroSize = Math.round(heroBase * titleSize)
+            const tituloDefault = isResultado ? "RESULTADOS\nDE LA FECHA" : "PRÓXIMOS\nPARTIDOS"
+            const tituloRaw = titulo || tituloDefault
+            // Si el usuario puso un título con espacios, partir en el primer
+            // espacio; si ya tiene "\n" lo respetamos. Si es una sola palabra,
+            // va en una sola línea.
+            const tituloLines = (() => {
+              if (tituloRaw.includes("\n")) return tituloRaw.split("\n")
+              const words = tituloRaw.split(" ")
+              if (words.length === 1) return [tituloRaw]
+              const mid = Math.ceil(words.length / 2)
+              return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")]
+            })()
+            // Si el subtítulo viene del cliente con "FECHA X", lo usamos
+            // como badge arriba derecha. En caso contrario, el subtítulo
+            // completo pasa a ser el eyebrow y no hay badge.
+            const subIsFecha = /^FECHA\b/i.test(subtitulo ?? "")
+            const fechaBadge = subIsFecha ? subtitulo : ""
+            const eyebrow = subIsFecha ? (isResultado ? "RESULTADOS DE LA FECHA" : "ESTA SEMANA EN LA LIGA")
+                          : (subtitulo || (isResultado ? "RESULTADOS DE LA FECHA" : "ESTA SEMANA EN LA LIGA"))
+            const padX = 48
+            return (
+              <div style={{
+                display: "flex", flexDirection: "column", width: "100%",
+                height: headerH, paddingTop: 28, paddingLeft: padX, paddingRight: padX,
               }}>
-                {subtitulo.toUpperCase()}
-              </span>
-            ) : null}
+                {/* Fila superior: logo left + badge right */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: 18 }}>
+                  {logoUrl ? (
+                    <img
+                      src={logoUrl}
+                      width={Math.round(logoBaseSize * logoScale * 0.65)}
+                      height={Math.round(logoBaseSize * logoScale * 0.65)}
+                      style={{ objectFit: "contain", display: "flex" }}
+                      alt="Logo"
+                    />
+                  ) : <span style={{ display: "flex" }} />}
+                  {fechaBadge ? (
+                    <div style={{
+                      display: "flex", alignItems: "center",
+                      padding: "8px 18px",
+                      background: "rgba(201,160,255,0.12)",
+                      border: `1px solid ${LNBF.color.violet400}55`,
+                      borderRadius: 999,
+                    }}>
+                      <span style={{
+                        color: LNBF.color.violet300,
+                        fontFamily: "Inter", fontSize: Math.round(14 * vMult),
+                        fontWeight: 700, letterSpacing: 3, display: "flex",
+                      }}>
+                        • {fechaBadge.toUpperCase()}
+                      </span>
+                    </div>
+                  ) : <span style={{ display: "flex" }} />}
+                </div>
 
-            {/* Título principal */}
-            {titulo ? (
-              <span style={{
-                color: tc.title, fontSize: Math.round(titleBaseFontSize * titleSize), fontWeight: titleWeight,
-                letterSpacing: -1, textAlign: "center", lineHeight: 1,
-              }}>
-                {titulo.toUpperCase()}
-              </span>
-            ) : (
-              <span style={{ color: tc.title, fontSize: Math.round(48 * vMult * titleSize), fontWeight: titleWeight, letterSpacing: 2 }}>
-                {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
-              </span>
-            )}
-          </div>
+                {/* Eyebrow */}
+                <span style={{
+                  color: LNBF.color.violet300,
+                  fontFamily: "Inter", fontSize: Math.round(16 * vMult),
+                  fontWeight: 700, letterSpacing: 5, marginBottom: 10,
+                  display: "flex",
+                }}>
+                  {eyebrow.toUpperCase()}
+                </span>
+
+                {/* Título GIGANTE left-aligned en 2 líneas */}
+                <div style={{ display: "flex", flexDirection: "column" }}>
+                  {tituloLines.map((ln, i) => (
+                    <span key={i} style={{
+                      color: "white", fontFamily: "Archivo Black",
+                      fontSize: heroSize, fontWeight: 900,
+                      letterSpacing: -4, lineHeight: 0.92, display: "flex",
+                    }}>
+                      {ln.toUpperCase()}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )
+          })() : (
+            <div style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              justifyContent: "center", height: headerH, width: "100%",
+              gap: 0,
+            }}>
+              {/* Logo — solo si el usuario subió uno */}
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  width={Math.round(logoBaseSize * logoScale)}
+                  height={Math.round(logoBaseSize * logoScale)}
+                  style={{ objectFit: "contain", marginBottom: 14 }}
+                  alt="Logo"
+                />
+              ) : null}
+
+              {/* Subtítulo del usuario (si lo puso) */}
+              {subtitulo ? (
+                <span style={{
+                  color: tc.subtitle, fontSize: Math.round(subtitleBaseFont * subtitleSize), fontWeight: 600,
+                  letterSpacing: 4, marginBottom: 10, textAlign: "center",
+                }}>
+                  {subtitulo.toUpperCase()}
+                </span>
+              ) : null}
+
+              {/* Título principal */}
+              {titulo ? (
+                <span style={{
+                  color: tc.title, fontSize: Math.round(titleBaseFontSize * titleSize), fontWeight: titleWeight,
+                  letterSpacing: -1, textAlign: "center", lineHeight: 1,
+                }}>
+                  {titulo.toUpperCase()}
+                </span>
+              ) : (
+                <span style={{ color: tc.title, fontSize: Math.round(48 * vMult * titleSize), fontWeight: titleWeight, letterSpacing: 2 }}>
+                  {isResultado ? "RESULTADOS" : "PRÓXIMOS PARTIDOS"}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* ── MATCH CARDS ── */}
           <div style={{
