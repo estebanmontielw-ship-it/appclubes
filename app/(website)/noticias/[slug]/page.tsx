@@ -47,12 +47,6 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   return {
     title: noticia.titulo,
     description: noticia.extracto,
-    ...(ogImage && {
-      other: {
-        "og:image": ogImage,
-        "og:image:secure_url": ogImage,
-      },
-    }),
     openGraph: {
       type: "article",
       title: noticia.titulo,
@@ -62,9 +56,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       locale: "es_PY",
       publishedTime: noticia.publicadaEn?.toISOString(),
       modifiedTime: noticia.updatedAt?.toISOString(),
-      ...(ogImage && {
-        images: [{ url: ogImage, width: 1200, height: 630, alt: noticia.titulo }],
-      }),
+      // No declaramos width/height: si no matchean las dimensiones
+      // reales de la imagen, WhatsApp rechaza el preview y cae al favicon.
+      // Dejamos que el scraper las detecte solo.
+      ...(ogImage && { images: [{ url: ogImage, alt: noticia.titulo }] }),
     },
     twitter: {
       card: "summary_large_image",
