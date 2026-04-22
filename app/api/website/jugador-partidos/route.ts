@@ -5,79 +5,11 @@ import { handleApiError } from "@/lib/api-errors"
 
 export const dynamic = "force-dynamic"
 
-function buildGameEntry(log: any, personId: number): any | null {
-  // matchlog entries include player stats inline and match metadata
-  const competitors: any[] = log.competitors ?? []
-  const stats = log.personStatistics ?? log.statistics ?? log
-
-  // Find which team the player was on and the opponent
-  // The matchlog entry may have a teamId on it directly
-  const playerTeamId = log.teamId ?? stats.teamId ?? null
-  let myComp: any = null
-  let oppComp: any = null
-
-  if (playerTeamId) {
-    myComp = competitors.find((c: any) => String(c.teamId ?? c.competitorId) === String(playerTeamId))
-    oppComp = competitors.find((c: any) => String(c.teamId ?? c.competitorId) !== String(playerTeamId))
-  } else {
-    // Fallback: use isHomeCompetitor if team unknown
-    myComp = competitors[0] ?? null
-    oppComp = competitors[1] ?? null
-  }
-
-  const isHome = Number(myComp?.isHomeCompetitor) === 1
-  const myScore = parseInt(myComp?.scoreString ?? "") || null
-  const oppScore = parseInt(oppComp?.scoreString ?? "") || null
-  const result =
-    myScore != null && oppScore != null
-      ? myScore > oppScore ? "W" : myScore < oppScore ? "L" : "E"
-      : null
-
-  const twoM = stats.sTwoPointersMade ?? 0
-  const twoA = stats.sTwoPointersAttempted ?? 0
-  const threeM = stats.sThreePointersMade ?? 0
-  const threeA = stats.sThreePointersAttempted ?? 0
-  const ftM = stats.sFreeThrowsMade ?? 0
-  const ftA = stats.sFreeThrowsAttempted ?? 0
-  const lcM = twoM + threeM
-  const lcA = twoA + threeA
-
-  return {
-    matchId: log.matchId,
-    date: (log.matchTime ?? "").split(" ")[0] ?? null,
-    isHome,
-    oppName: oppComp?.competitorName ?? oppComp?.teamName ?? "?",
-    oppSigla: oppComp?.teamCode ?? null,
-    myScore,
-    oppScore,
-    result,
-    pos: stats.positionName ?? stats.position ?? null,
-    min: stats.sMinutes ?? null,
-    pts: stats.sPoints ?? 0,
-    lcM, lcA,
-    lcPct: lcA > 0 ? Math.round((lcM / lcA) * 1000) / 10 : null,
-    twoM, twoA,
-    twoPct: twoA > 0 ? Math.round((twoM / twoA) * 1000) / 10 : null,
-    threeM, threeA,
-    threePct: threeA > 0 ? Math.round((threeM / threeA) * 1000) / 10 : null,
-    ftM, ftA,
-    ftPct: ftA > 0 ? Math.round((ftM / ftA) * 1000) / 10 : null,
-    rebOff: stats.sReboundsOffensive ?? 0,
-    rebDef: stats.sReboundsDefensive ?? 0,
-    reb: stats.sReboundsTotal ?? 0,
-    ast: stats.sAssists ?? 0,
-    eff: stats.sEfficiency ?? null,
-    stl: stats.sSteals ?? 0,
-    blk: stats.sBlocks ?? 0,
-    to: stats.sTurnovers ?? 0,
-    fp: stats.sFoulsPersonal ?? 0,
-    fr: stats.sFoulsOn ?? 0,
-    plusMinus: stats.sPlusMinus ?? null,
-  }
-}
-
-/** Fallback: old N+1 approach when matchlog endpoint is unavailable */
-async function getGameLogFallback(personId: number, competitionId: string | number): Promise<any[]> {
+// Build the game log by calling /matches/{matchId}/teams/{tid}/players for each team
+// of each completed match. This is the only approach that correctly handles players
+// who changed teams mid-season — the /persons/{personId}/matchlog endpoint filters
+// by current team assignment and silently omits games with previous teams.
+async function getGameLog(personId: number, competitionId: string | number): Promise<any[]> {
   const matchesRaw = await geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "medium")
   const allMatches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
   const completed = allMatches.filter((m: any) => m.matchStatus === "COMPLETE")
@@ -180,34 +112,7 @@ export async function GET(request: Request) {
     const { id: competitionId } = await resolveLnbCompetitionIdPublic()
     if (!competitionId) return NextResponse.json({ error: "Sin competencia activa" }, { status: 404 })
 
-    // Try the efficient matchlog endpoint first
-    let gameLog: any[] = []
-    let usedMatchlog = false
-
-    try {
-      const matchLogRaw = await geniusFetch(
-        `/persons/${personId}/matchlog?competitionId=${competitionId}&limit=100`,
-        "medium"
-      )
-      const logs: any[] = matchLogRaw?.response?.data ?? matchLogRaw?.data ?? []
-
-      if (logs.length > 0) {
-        usedMatchlog = true
-        const entries = logs
-          .filter((log: any) => log.matchStatus === "COMPLETE" || log.matchStatus == null)
-          .map((log: any) => buildGameEntry(log, personId))
-          .filter(Boolean)
-        gameLog = entries
-      }
-    } catch {
-      // matchlog endpoint unavailable, fall through to legacy approach
-    }
-
-    // Fallback to N+1 approach if matchlog returned nothing or errored
-    if (!usedMatchlog) {
-      gameLog = await getGameLogFallback(personId, competitionId)
-    }
-
+    const gameLog = await getGameLog(personId, competitionId)
     gameLog.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
 
     return NextResponse.json({ games: gameLog }, {
