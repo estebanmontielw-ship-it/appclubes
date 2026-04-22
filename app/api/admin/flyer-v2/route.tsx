@@ -522,6 +522,9 @@ export async function GET(req: NextRequest) {
   const lnbfPattern = (["clean", "dots", "nandu", "court"].includes(lnbfPatternRaw)
     ? lnbfPatternRaw
     : "dots") as "clean" | "dots" | "nandu" | "court"
+  // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
+  // vacío no se renderiza el pill.
+  const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
   // Filter + opacity que blanquea los sponsors en el tema lnbf-premium
   // para que queden unificados sobre el fondo morado oscuro. Satori
   // soporta brightness + invert individualmente (no todos los filtros).
@@ -1126,13 +1129,11 @@ export async function GET(req: NextRequest) {
               const mid = Math.ceil(words.length / 2)
               return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")]
             })()
-            // Si el subtítulo viene del cliente con "FECHA X", lo usamos
-            // como badge arriba derecha. En caso contrario, el subtítulo
-            // completo pasa a ser el eyebrow y no hay badge.
-            const subIsFecha = /^FECHA\b/i.test(subtitulo ?? "")
-            const fechaBadge = subIsFecha ? subtitulo : ""
-            const eyebrow = subIsFecha ? (isResultado ? "RESULTADOS DE LA FECHA" : "ESTA SEMANA EN LA LIGA")
-                          : (subtitulo || (isResultado ? "RESULTADOS DE LA FECHA" : "ESTA SEMANA EN LA LIGA"))
+            // Badge arriba derecha viene de su propio param dedicado
+            // (lnbfBadge). Eyebrow = subtítulo si el user puso uno, o
+            // el default por tipo.
+            const fechaBadge = lnbfBadge
+            const eyebrow = subtitulo || (isResultado ? "RESULTADOS DE LA FECHA" : "ESTA SEMANA EN LA LIGA")
             const padX = 48
             return (
               <div style={{
