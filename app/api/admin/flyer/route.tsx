@@ -409,7 +409,16 @@ export async function GET(req: NextRequest) {
 
       const H = format === "historia" ? 1920 : 1350
       const vMult = format === "historia" ? 1.4 : 1.0
-      const headerH = Math.round(240 * vMult)
+      // Header dinámico: crece si el user escaló título, subtítulo o logo
+      // para que nunca se encime con los headers de columna de la tabla.
+      const baseHeaderH = Math.round(240 * vMult)
+      const titleBaseFS = Math.round(60 * vMult)
+      const subtitleBaseFS = Math.round(22 * vMult)
+      const logoBaseH = Math.round(90 * vMult)
+      const extraTitleH    = titulo ? Math.max(0, Math.round(titleBaseFS * (titleSize - 1))) : 0
+      const extraSubtitleH = subtitulo ? Math.max(0, Math.round(subtitleBaseFS * (subtitleSize - 1))) : 0
+      const extraLogoH     = logoUrl ? Math.max(0, Math.round(logoBaseH * (logoScale - 1))) : 0
+      const headerH = baseHeaderH + extraTitleH + extraSubtitleH + extraLogoH
       const footerH = sponsorLogos.length > 0 ? Math.round(130 * vMult) : Math.round(60 * vMult)
       // Calculamos dinámicamente el alto de cada fila para que la tabla
       // llene todo el espacio disponible del canvas. Antes era fijo en 60px
@@ -438,8 +447,8 @@ export async function GET(req: NextRequest) {
       // los stats); en Feed mostramos ambos.
       const isStory = format === "historia"
       const rowLogoSize = isStory
-        ? Math.min(90, Math.round(rowH * 0.80))
-        : Math.min(55, Math.round(rowH * 0.65))
+        ? Math.min(110, Math.round(rowH * 0.85))
+        : Math.min(60, Math.round(rowH * 0.70))
       const statFontSize   = Math.min(22, Math.round(rowH * 0.30))
       const statSecondary  = Math.min(18, Math.round(rowH * 0.26))
       const colHeaderFont  = Math.round(14 * vMult)
