@@ -305,8 +305,44 @@ function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBo
   )
 }
 
+// Carga las fonts desde public/fonts/ como ArrayBuffer y las memoriza
+// en el módulo (una sola lectura por instancia del serverless function).
+// Se usan dentro de ImageResponse({ fonts: [...] }) para que satori
+// pueda renderizar con tipografías específicas. Si las fonts no
+// existen el intento falla silenciosamente y satori cae al default
+// sans-serif — así el V2 nunca se rompe por falta de archivo.
+let cachedFonts: { name: string; data: ArrayBuffer; weight: 400 | 700 | 900; style?: "normal" }[] | null = null
+
+async function loadFonts() {
+  if (cachedFonts) return cachedFonts
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://cpb.com.py"
+  const fetchFont = async (path: string): Promise<ArrayBuffer | null> => {
+    try {
+      const res = await fetch(`${baseUrl}${path}`, { cache: "force-cache" })
+      if (!res.ok) return null
+      return await res.arrayBuffer()
+    } catch { return null }
+  }
+  const [archivoBlack, bebasNeue, interRegular, interBold, interBlack] = await Promise.all([
+    fetchFont("/fonts/ArchivoBlack-Regular.ttf"),
+    fetchFont("/fonts/BebasNeue-Regular.ttf"),
+    fetchFont("/fonts/Inter-Regular.ttf"),
+    fetchFont("/fonts/Inter-Bold.ttf"),
+    fetchFont("/fonts/Inter-Black.ttf"),
+  ])
+  const fonts: { name: string; data: ArrayBuffer; weight: 400 | 700 | 900; style?: "normal" }[] = []
+  if (archivoBlack)  fonts.push({ name: "Archivo Black", data: archivoBlack, weight: 900, style: "normal" })
+  if (bebasNeue)     fonts.push({ name: "Bebas Neue",    data: bebasNeue,    weight: 700, style: "normal" })
+  if (interRegular)  fonts.push({ name: "Inter",         data: interRegular, weight: 400, style: "normal" })
+  if (interBold)     fonts.push({ name: "Inter",         data: interBold,    weight: 700, style: "normal" })
+  if (interBlack)    fonts.push({ name: "Inter",         data: interBlack,   weight: 900, style: "normal" })
+  cachedFonts = fonts
+  return fonts
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
+  const fonts = await loadFonts()
   const matchIdsParam = searchParams.get("matchIds") ?? searchParams.get("matchId") ?? ""
   const template = searchParams.get("template") ?? "pre"
   const titulo = searchParams.get("titulo") ?? ""
@@ -548,7 +584,7 @@ export async function GET(req: NextRequest) {
             )}
           </div>
         ),
-        { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
+        { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
       )
     }
 
@@ -592,7 +628,7 @@ export async function GET(req: NextRequest) {
             ) : <div style={{ position: "absolute", bottom: 28 + safeBottomFor(format), right: 48, display: "flex" }}><span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, letterSpacing: 2 }}>CPB · cpb.com.py</span></div>}
           </div>
         ),
-        { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
+        { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
       )
     }
 
@@ -671,7 +707,7 @@ export async function GET(req: NextRequest) {
             ) : null}
           </div>
         ),
-        { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
+        { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
       )
     }
 
@@ -906,7 +942,7 @@ export async function GET(req: NextRequest) {
           )}
         </div>
       ),
-      { width: W, height: H, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
+      { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
     )
   } catch (e: any) {
     return new Response(e.message ?? "Error generando flyer", { status: 500 })
