@@ -798,8 +798,15 @@ export async function GET(req: NextRequest) {
 
             {/* Sponsors footer */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
-                {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", padding: "0 60px", position: "relative" }}>
+                {/* Hairline divisor arriba cuando no hay barra (sponsors flotan
+                    limpios sobre el canvas, estilo handoff oficial) */}
+                {!showSponsorBar && isPremiumTheme && (
+                  <div style={{ display: "flex", position: "absolute", top: Math.round(footerH * 0.20), left: "15%", right: "15%", height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%)" }} />
+                )}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(56 * vMult), width: "100%", flex: 1 }}>
+                  {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
+                </div>
               </div>
             ) : (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: footerH, width: "100%" }}>
