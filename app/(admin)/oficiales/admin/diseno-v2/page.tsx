@@ -120,6 +120,8 @@ function DisenoInner() {
   const [lnbfBadge, setLnbfBadge] = useState("")
   // Barra HORARIO al pie de cada tarjeta (solo en tema lnbf-premium)
   const [lnbfShowHorarioBar, setLnbfShowHorarioBar] = useState(true)
+  // Mostrar u ocultar la franja de sponsors al pie del flyer
+  const [showSponsorBar, setShowSponsorBar] = useState(true)
   const [jugadorTeamLogo, setJugadorTeamLogo] = useState<string | null>(null)
   const [uploadingJugadorLogo, setUploadingJugadorLogo] = useState(false)
   const jugadorLogoRef = useRef<HTMLInputElement>(null)
@@ -509,6 +511,9 @@ function DisenoInner() {
     if (theme === "lnbf-premium" && !lnbfShowHorarioBar) {
       params.set("lnbfShowHorarioBar", "false")
     }
+    if (!showSponsorBar) {
+      params.set("showSponsorBar", "false")
+    }
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -537,7 +542,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbfBadge, lnbfShowHorarioBar])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -1036,8 +1041,11 @@ function DisenoInner() {
                   <button
                     key={opt}
                     onClick={() => handleSponsorBg(opt)}
+                    disabled={!showSponsorBar}
                     className={`flex-1 py-2 rounded-lg border text-xs font-semibold transition-colors ${
-                      sponsorBg === opt
+                      !showSponsorBar
+                        ? "border-gray-200 text-gray-300 bg-gray-50 cursor-not-allowed"
+                        : sponsorBg === opt
                         ? "border-primary bg-primary/5 text-primary"
                         : "border-gray-200 text-gray-500 hover:border-gray-300"
                     }`}
@@ -1047,6 +1055,27 @@ function DisenoInner() {
                 ))}
               </div>
             )}
+            {/* Toggle: sacar la franja/barra de sponsors entera */}
+            <button
+              onClick={() => setShowSponsorBar(!showSponsorBar)}
+              className={`mt-2 w-full p-2.5 rounded-lg border text-left transition-colors flex items-center gap-2.5 ${
+                showSponsorBar ? "border-primary bg-primary/5" : "border-gray-300 bg-gray-50"
+              }`}
+            >
+              <div className={`h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                showSponsorBar ? "border-primary bg-primary" : "border-gray-300 bg-white"
+              }`}>
+                {showSponsorBar && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+              </div>
+              <div className="flex-1">
+                <span className={`text-[11px] font-bold block ${showSponsorBar ? "text-primary" : "text-gray-600"}`}>
+                  Mostrar franja de sponsors al pie
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  {showSponsorBar ? "Visible — con fondo blanco u oscuro abajo" : "Oculta — sin franja, más espacio para el contenido"}
+                </span>
+              </div>
+            </button>
             {[0, 1, 2, 3, 4].map((i) => uploadErrors[`sponsor${i}`] ? (
               <p key={i} className="mt-1 text-[10px] text-red-600 flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />Sponsor {i + 1}: {uploadErrors[`sponsor${i}`]}

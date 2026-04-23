@@ -541,6 +541,9 @@ export async function GET(req: NextRequest) {
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
   // Mostrar u ocultar la barra HORARIO al pie de cada tarjeta LNBF
   const lnbfShowHorarioBar = searchParams.get("lnbfShowHorarioBar") !== "false"
+  // Mostrar u ocultar la franja de sponsors. Cuando es false, los logos
+  // de sponsors igual se renderizan pero sin fondo — flotan sobre el canvas.
+  const showSponsorBar = searchParams.get("showSponsorBar") !== "false"
   // Filter + opacity que blanquea los sponsors en el tema lnbf-premium
   // para que queden unificados sobre el fondo morado oscuro. Satori
   // soporta brightness + invert individualmente (no todos los filtros).
@@ -705,7 +708,7 @@ export async function GET(req: NextRequest) {
 
             {/* Sponsors footer */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : (
@@ -849,7 +852,7 @@ export async function GET(req: NextRequest) {
 
             {/* FOOTER */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : (
@@ -897,7 +900,7 @@ export async function GET(req: NextRequest) {
               {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 20, fontWeight: 600, letterSpacing: 2 }}>{jugadorClub.toUpperCase()}</span> : null}
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(48 * s.scale); return <img key={i} src={s.url} width={Math.round(150 * s.scale)} height={h} style={{ objectFit: "contain", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : <div style={{ position: "absolute", bottom: 28 + safeBottomFor(format), right: 48, display: "flex" }}><span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, letterSpacing: 2 }}>CPB · cpb.com.py</span></div>}
@@ -976,7 +979,7 @@ export async function GET(req: NextRequest) {
               </div>
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 80, background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 80, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(44 * s.scale); return <img key={i} src={s.url} width={Math.round(140 * s.scale)} height={h} style={{ objectFit: "contain", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : null}
@@ -1296,7 +1299,7 @@ export async function GET(req: NextRequest) {
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: "100%", height: Math.round(130 * vMult),
-              background: theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
+              background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
               gap: Math.round(56 * vMult), padding: "0 60px",
             }}>
               {sponsorLogos.map((s, i) => {
