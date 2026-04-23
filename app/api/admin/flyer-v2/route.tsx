@@ -394,18 +394,20 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
       </div>
 
       {/* Meta: estadio (izq) · fecha (der). El label usa tamaño/letterSpacing
-          más chico para dar jerarquía al valor (nombre de estadio / fecha). */}
+          más chico para dar jerarquía al valor (nombre de estadio / fecha).
+          marginLeft explícito en el segundo span porque satori a veces no
+          respeta gap en un flex container con múltiples children. */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "10px 22px",
         borderTop: "1px solid rgba(201,160,255,0.14)",
         width: "100%",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{ display: "flex", alignItems: "center" }}>
           {match.venue ? (
             <>
               <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: metaLabelFont, fontWeight: 700, letterSpacing: 2.5, display: "flex" }}>ESTADIO</span>
-              <span style={{ color: "rgba(255,255,255,0.85)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 500, display: "flex" }}>{match.venue}</span>
+              <span style={{ marginLeft: 12, color: "rgba(255,255,255,0.85)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 500, display: "flex" }}>{match.venue}</span>
             </>
           ) : <span style={{ display: "flex" }} />}
         </div>
@@ -1127,18 +1129,14 @@ export async function GET(req: NextRequest) {
 
           {/* ── HEADER ── */}
           {theme === "lnbf-premium" ? (() => {
-            // Header LNBF Premium: logo chico top-left + badge FECHA top-right,
-            // eyebrow debajo, título GIGANTE left-aligned en 2 líneas
-            // Tamaños base del hero title por cantidad de partidos.
-            // Se bajó ~20% (era 130/120/110/95) porque a 100% quedaba
-            // demasiado grande y tapaba buena parte del canvas.
+            // Header LNBF Premium: logo absolute top-left + badge absolute top-right,
+            // eyebrow debajo, título GIGANTE left-aligned en 2 líneas.
+            // Logo en POSICIÓN ABSOLUTA para que no empuje el texto cuando
+            // se escala con el slider — el layout de abajo queda estable.
             const heroBase = Math.round((count === 1 ? 108 : count === 2 ? 95 : count <= 4 ? 82 : 74) * vMult)
             const heroSize = Math.round(heroBase * titleSize)
             const tituloDefault = isResultado ? "RESULTADOS\nDE LA FECHA" : "PRÓXIMOS\nPARTIDOS"
             const tituloRaw = titulo || tituloDefault
-            // Si el usuario puso un título con espacios, partir en el primer
-            // espacio; si ya tiene "\n" lo respetamos. Si es una sola palabra,
-            // va en una sola línea.
             const tituloLines = (() => {
               if (tituloRaw.includes("\n")) return tituloRaw.split("\n")
               const words = tituloRaw.split(" ")
@@ -1146,49 +1144,61 @@ export async function GET(req: NextRequest) {
               const mid = Math.ceil(words.length / 2)
               return [words.slice(0, mid).join(" "), words.slice(mid).join(" ")]
             })()
-            // Badge arriba derecha viene de su propio param dedicado
-            // (lnbfBadge). Eyebrow = subtítulo si el user puso uno, o
-            // el default por tipo.
             const fechaBadge = lnbfBadge
             const eyebrow = subtitulo || (isResultado ? "RESULTADOS DE LA FECHA" : "ESTA SEMANA EN LA LIGA")
             const padX = 48
+            // Base del logo en LNBF: más grande de entrada (lo que antes
+            // era 300% ahora es 100%). Sigue respetando el slider.
+            const lnbfLogoBase = Math.round((count === 1 ? 200 : count === 2 ? 175 : count <= 4 ? 145 : 120) * vMult)
+            const lnbfLogoSize = Math.round(lnbfLogoBase * logoScale)
+            // Padding-top del texto: altura reservada para el logo (aunque
+            // el logo sea absolute, dejamos ese aire para que no se pise).
+            const headerTopPad = 28 + Math.max(60, Math.round(lnbfLogoBase * 0.55))
             return (
               <div style={{
                 display: "flex", flexDirection: "column", width: "100%",
-                height: headerH, paddingTop: 28, paddingLeft: padX, paddingRight: padX,
+                height: headerH, paddingTop: headerTopPad,
+                paddingLeft: padX, paddingRight: padX,
+                position: "relative",
               }}>
-                {/* Fila superior: logo left + badge right */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", marginBottom: 18 }}>
-                  {logoUrl ? (
-                    <img
-                      src={logoUrl}
-                      width={Math.round(logoBaseSize * logoScale * 0.65)}
-                      height={Math.round(logoBaseSize * logoScale * 0.65)}
-                      style={{ objectFit: "contain", display: "flex" }}
-                      alt="Logo"
-                    />
-                  ) : <span style={{ display: "flex" }} />}
-                  {fechaBadge ? (
-                    <div style={{
-                      display: "flex", alignItems: "center", gap: 8,
-                      padding: "9px 20px",
-                      background: "rgba(201,160,255,0.12)",
-                      border: `1px solid ${LNBF.color.violet400}55`,
-                      borderRadius: 999,
-                    }}>
-                      <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: LNBF.color.gold500 }} />
-                      <span style={{
-                        color: LNBF.color.violet300,
-                        fontFamily: "Inter", fontSize: Math.round(15 * vMult),
-                        fontWeight: 800, letterSpacing: 2.5, display: "flex",
-                      }}>
-                        {fechaBadge.toUpperCase()}
-                      </span>
-                    </div>
-                  ) : <span style={{ display: "flex" }} />}
-                </div>
+                {/* Logo absolute — no afecta el flujo del texto */}
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    width={lnbfLogoSize}
+                    height={lnbfLogoSize}
+                    style={{
+                      position: "absolute",
+                      top: 28, left: padX,
+                      objectFit: "contain",
+                      display: "flex",
+                    }}
+                    alt="Logo"
+                  />
+                ) : null}
 
-                {/* Eyebrow — letter-spacing un pelín menor + peso más sutil */}
+                {/* Badge absolute arriba derecha */}
+                {fechaBadge ? (
+                  <div style={{
+                    position: "absolute", top: 28, right: padX,
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "9px 20px",
+                    background: "rgba(201,160,255,0.12)",
+                    border: `1px solid ${LNBF.color.violet400}55`,
+                    borderRadius: 999,
+                  }}>
+                    <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: LNBF.color.gold500 }} />
+                    <span style={{
+                      color: LNBF.color.violet300,
+                      fontFamily: "Inter", fontSize: Math.round(15 * vMult),
+                      fontWeight: 800, letterSpacing: 2.5, display: "flex",
+                    }}>
+                      {fechaBadge.toUpperCase()}
+                    </span>
+                  </div>
+                ) : null}
+
+                {/* Eyebrow */}
                 <span style={{
                   color: LNBF.color.violet300,
                   fontFamily: "Inter", fontSize: Math.round(17 * vMult),
