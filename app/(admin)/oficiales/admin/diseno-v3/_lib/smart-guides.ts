@@ -172,20 +172,34 @@ export function attachSmartGuides(fabric: any, canvas: any): SmartGuidesHandle {
   }
 
   function clearGuides() {
+    const had = activeGuides.length > 0
     activeGuides = []
-    canvas.requestRenderAll()
+    // Forzar limpieza del contextTop donde dibujamos las líneas. Fabric
+    // no siempre lo limpia entre renders si no hay selección activa, por
+    // eso las guías quedaban "pegadas" al soltar el objeto.
+    const ctx = canvas.contextTop
+    if (ctx) ctx.clearRect(0, 0, canvas.getWidth(), canvas.getHeight())
+    if (had) canvas.requestRenderAll()
   }
 
   canvas.on("object:moving", applySnapping)
   canvas.on("object:scaling", applySnapping)
+  canvas.on("object:moved", clearGuides)
+  canvas.on("object:modified", clearGuides)
+  canvas.on("object:scaled", clearGuides)
   canvas.on("mouse:up", clearGuides)
+  canvas.on("selection:cleared", clearGuides)
   canvas.on("after:render", drawGuides)
 
   return {
     dispose() {
       canvas.off("object:moving", applySnapping)
       canvas.off("object:scaling", applySnapping)
+      canvas.off("object:moved", clearGuides)
+      canvas.off("object:modified", clearGuides)
+      canvas.off("object:scaled", clearGuides)
       canvas.off("mouse:up", clearGuides)
+      canvas.off("selection:cleared", clearGuides)
       canvas.off("after:render", drawGuides)
     },
     setEnabled(v: boolean) {
