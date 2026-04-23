@@ -1,0 +1,300 @@
+# Handoff: LNB Masculino 2026 · Kit de flyers de Liga
+
+## Overview
+
+Paquete de diseño para la producción automatizada de flyers y stories de la **Liga Nacional de Básquetbol Masculino 2026 (LNB · Paraguay)**. Es el equivalente masculino del kit LNBF y cubre toda la comunicación semanal de jornada: partidos próximos, resultados, tabla, líderes estadísticos, jugador del partido y variantes Stories para Instagram.
+
+El objetivo del handoff es que un desarrollador pueda recrear estos diseños en una app real (admin + generador) que lea datos de **Genius Sports** y renderice los flyers automáticamente.
+
+---
+
+## About the Design Files
+
+Los archivos de este bundle son **referencias de diseño creadas en HTML/React** — prototipos que muestran la apariencia y el comportamiento deseados, no código de producción para copiar tal cual. La tarea es **recrear estos diseños en el entorno del codebase destino** (React, Next.js, Vue, nativo, etc.) usando sus patrones y librerías existentes — o, si no hay entorno, elegir el stack más apropiado e implementar allí.
+
+Los prototipos están pensados para exportarse como **PNG 1080×1350 (feed)** y **1080×1920 (stories)**. En producción probablemente se rendericen server-side (Puppeteer/Playwright) o mediante una librería tipo `satori` + `resvg`.
+
+---
+
+## Fidelity
+
+**High-fidelity (hifi)**. Mockups con colores finales, tipografías finales, spacing y jerarquía resueltos. Las fotos de jugador son placeholders reales (fondo removido) y los logos de equipo son SVG/PNG oficiales. Reproducir al pixel.
+
+---
+
+## Screens / Views
+
+### 01 · Próximos Partidos (Feed 1080×1350)
+
+- **Nombre**: `FlyerProximos`
+- **Propósito**: Anunciar los partidos de la próxima jornada (hasta 4 encuentros)
+- **Layout**: Fondo navy con halftone y glow; header con logo LNB + etiqueta "FECHA 04 · PRÓXIMOS"; título "PRÓXIMA / JORNADA" en display (~160px); grid vertical de 4 cards de partido; sponsor strip abajo.
+- **Card de partido**: rounded-22, padding 22px, border hairline dorado en top; layout `[escudo · nombre · VS · nombre · escudo]` + strip de venue/fecha/hora abajo.
+
+### 02 · Resultado Final (Feed 1080×1350)
+
+- **Nombre**: `ResultadoFinal`
+- **Propósito**: Anunciar el resultado de un partido con MVP + tabla de cuartos.
+- **Layout**: Hero score (escudos 200px + score 220px), chip "FINAL", tabla de cuartos Q1-Q4-FINAL, tarjeta MVP del partido con foto + stats (PTS/REB/AST), sponsor strip.
+
+### 03 · Resultados de Jornada (Feed 1080×1350)
+
+- **Nombre**: `ResultadosJornada`
+- **Propósito**: Resumen de 4 partidos jugados en una sola imagen.
+- **Layout**: 4 filas compactas `[escudo local | score local — score visitante | escudo visitante]`, con highlight en el ganador (color dorado).
+
+### 04 · Tabla de Posiciones (Feed 1080×1350)
+
+- **Nombre**: `TablaPosiciones`
+- **Columnas**: `# | escudo | equipo | PJ | G | P | PTS | % | PF | PC | DIF`
+- **Zonas por color** (sin texto de leyenda, solo 3 barritas de color abajo):
+  - Pos 1-2: verde `#22C55E` (cabeza de serie)
+  - Pos 3-6: azul soft `#A6BEFF` (zona media)
+  - Pos 7-8: rojo suave `#FF7369` (zona baja)
+- **DIF**: verde si positivo, rojo si negativo (no amarillo).
+
+### 05 · Líderes Estadísticos (Feed 1080×1350) — 3 variantes
+
+- **Nombres**: `LiderPuntos`, `LiderRebotes`, `LiderAsistencias`
+- **Layout inspirado en LNBF oficial**:
+  - Foto del jugador líder **full-height** (640px ancho × 1350 alto), sangrada top→bottom
+  - **Degradado horizontal** que funde la foto con el fondo **azul noche** (NO usar tinte amarillo ni color del equipo — solo azul)
+    ```css
+    background: linear-gradient(90deg,
+      transparent 0%,
+      transparent 28%,
+      rgba(15,30,71,0.35) 50%,
+      rgba(8,16,44,0.75) 75%,
+      rgba(5,11,31,0.98) 100%);
+    ```
+  - Título "Líder en puntos" (lowercase, Anton 110px) alineado a la derecha
+  - Ranking top-10 a la derecha, con fila #1 resaltada en verde `#22C55E` (bg soft + border + texto + valor)
+  - Valor numérico en Archivo Black (18-22px), nombre en Inter 800 (15px)
+  - Sponsor strip blanco abajo
+
+### 06 · Stories Instagram (1080×1920) — 7 variantes
+
+- `StoryProximos` — mismo contenido que feed 01, adaptado vertical
+- `StoryResultado` — hero score reducido (170px), cuartos abajo, sponsors hairline
+- `StoryTabla` — tabla completa con las mismas columnas y zonas de color
+- `StoryLiderPuntos`, `StoryLiderRebotes`, `StoryLiderAsistencias` — foto full en mitad superior, degradado vertical al azul noche, título "Líder en puntos/rebotes/asistencias" sobre la foto, ranking top-8 abajo
+- `StoryJugadorDelPartido` — foto full-bleed, chip "FECHA 04 · MVP", título "JUGADOR / DEL PARTIDO" (150px), card con escudo + nombre + equipo + stats 26/9/5
+
+Todas las stories usan un **sponsor strip hairline** (borde 1px linear-gradient) con logos en blanco (filter invert) — sin caja sólida.
+
+---
+
+## Interactions & Behavior
+
+No hay interacciones en los flyers mismos (son imágenes estáticas). En la **app de producción** se espera:
+
+- **Formulario admin** por tipo de flyer: selector de fecha/fecha-jornada, selector de partido, upload de foto de jugador
+- **Preview en vivo** del flyer mientras se editan los datos
+- **Exportación**: 1 botón → PNG 1080×1350 o 1080×1920 listo para subir a Instagram
+- **Integración Genius Sports**: pre-cargar resultados, scores por cuarto, líderes, nombres y rankings desde el feed oficial de la liga
+- **Versionado**: guardar los flyers generados por jornada (historial)
+- **Batch export**: generar los 7 stories + 5 feeds de una jornada en un zip
+
+---
+
+## State Management
+
+El diseño es sin estado. En la app, el estado mínimo por flyer es:
+
+```ts
+type MatchData = {
+  homeTeam: TeamId;
+  awayTeam: TeamId;
+  homeScore?: number;
+  awayScore?: number;
+  quarters?: [number, number, number, number][]; // [home, away] × 4
+  venue: string;
+  date: string; // "sáb 10 may"
+  time: string; // "20:30"
+};
+
+type PlayerLeader = {
+  playerName: string;
+  teamId: TeamId;
+  value: string; // "24.6"
+  photoUrl?: string;
+};
+
+type MVPData = {
+  playerName: string;
+  teamId: TeamId;
+  photoUrl: string;
+  stats: { pts: number; reb: number; ast: number };
+};
+
+type StandingsRow = {
+  pos: number; teamId: TeamId;
+  pj: number; g: number; p: number; pts: number;
+  pf: number; pc: number;
+};
+```
+
+---
+
+## Design Tokens
+
+### Colores
+
+```css
+/* Navy brand — escala completa */
+--lnb-navy-950: #03081A;   /* casi negro, fondo profundo */
+--lnb-navy-900: #081233;   /* fondo principal */
+--lnb-navy-800: #0E1D4F;   /* superficies elevadas */
+--lnb-navy-700: #132970;
+--lnb-navy-600: #1E3FA8;
+--lnb-navy-500: #2D56D4;   /* royal brillante */
+--lnb-navy-400: #5A83F2;
+--lnb-navy-300: #A6BEFF;
+
+/* Rojo/naranja CTA */
+--lnb-red-500: #E63322;    /* rojo principal */
+--lnb-red-600: #C8261F;
+--lnb-orange-500: #FF6A1A;
+
+/* Acento dorado (selectivo) */
+--lnb-gold: #D4AF37;       /* SOLO para: chip FINAL, badge GANADOR, línea hairline en cards */
+
+/* Neutros */
+--lnb-white: #FFFFFF;
+--lnb-cream: #F2F5FF;
+--lnb-gray-400: #8FA3CF;
+
+/* Semánticos */
+--lnb-success: #22C55E;    /* líder ranking + pos 1-2 + DIF positiva */
+--lnb-danger: #FF7369;     /* pos 7-8 + DIF negativa */
+--lnb-mid: #A6BEFF;        /* pos 3-6 tabla */
+```
+
+**Regla crítica**: el dorado está reservado como acento de "premium/ganador". Nunca usarlo en números de ranking (usar verde), ni en la barra de líder (usar verde), ni como tinte de fotos (usar azul).
+
+### Tipografía
+
+```css
+--font-display: 'Archivo Black';  /* números grandes, scores */
+--font-heading: 'Anton';          /* títulos (Líder en puntos, FINAL, JORNADA) */
+--font-body: 'Inter';             /* texto UI, nombres, stats */
+--font-mono: 'JetBrains Mono';    /* placeholders, labels técnicos */
+```
+
+### Escalas (en lienzo 1080×1350/1920)
+
+| Token | px | Uso |
+|---|---|---|
+| hero | 150-220 | Score final, "FINAL", "TABLA" |
+| h1 | 110-130 | "Líder en puntos" |
+| h2 | 64-90 | Subtítulos |
+| h3 | 40-44 | Nombres de MVP |
+| body | 20-28 | UI, labels |
+| caption | 14-18 | Metadata, venue |
+| micro | 11-13 | Labels tracking-widest |
+
+### Geometría
+
+```css
+--radius-sm: 8px;   /* chips, pills */
+--radius-md: 16px;  /* cards secundarios */
+--radius-lg: 22-28px; /* hero cards */
+--radius-xl: 40px;  /* contenedores mayores */
+
+--hairline: 1px solid rgba(166,190,255,0.18);
+--hairline-gold: 1px linear-gradient(90deg, transparent, rgba(212,175,55,0.5), transparent);
+```
+
+### Gradientes canónicos
+
+```css
+/* Fondo hero de flyer */
+--grad-hero: radial-gradient(ellipse at 30% 0%, #1E3FA8 0%, #0E1D4F 45%, #03081A 100%);
+
+/* Card de match */
+--grad-card: linear-gradient(145deg, rgba(90,131,242,0.16) 0%, rgba(14,29,79,0.6) 100%);
+
+/* Fade foto jugador → fondo azul (LiderCard) */
+--grad-foto-to-navy: linear-gradient(90deg,
+  transparent 0%,
+  transparent 28%,
+  rgba(15,30,71,0.35) 50%,
+  rgba(8,16,44,0.75) 75%,
+  rgba(5,11,31,0.98) 100%);
+```
+
+---
+
+## Assets
+
+Todos los assets están en `/assets`:
+
+- **Logos de equipo** (8): `crest-san-jose.png`, `crest-olimpia-kings.png`, `crest-amambay.png`, `crest-campoalto.png`, `crest-felix-perez.png`, `crest-san-alfonzo.png`, `crest-ciudad-nueva.png`, `crest-colonias.png`
+- **Logo liga**: `logo-lnb.png`
+- **Sponsors**: `kyrios.png`, `molten.png`, `powerade.png` — se muestran en blanco (filter: brightness(0) invert(1))
+- **Fotos jugador** (placeholders con fondo removido): `player-colonias-13.jpeg`, `player-colonias-30.jpeg`, `player-colonias-reb.png`
+- **Foto acción**: `player-action.jpg` (usada en Jugador del Partido)
+
+### Datos de equipos
+
+```ts
+const LNB_TEAMS = [
+  { name: 'DEPORTIVO SAN JOSE',   short: 'SJO',  color: '#A8C9E4', accent: '#0B5FB8' },
+  { name: 'OLIMPIA KINGS',        short: 'OLI',  color: '#0A0A0A', accent: '#FFFFFF' },
+  { name: 'DEPORTIVO AMAMBAY',    short: 'AMA',  color: '#1E4DB8', accent: '#E63322' },
+  { name: 'DEPORTIVO CAMPOALTO',  short: 'CAM',  color: '#E63322', accent: '#FFD400' },
+  { name: 'FELIX PEREZ CARDOZO',  short: 'FPC',  color: '#E63322', accent: '#FFFFFF' },
+  { name: 'SAN ALFONZO',          short: 'SAL',  color: '#1E2A44', accent: '#D4AF37' },
+  { name: 'CIUDAD NUEVA',         short: 'CACN', color: '#E63322', accent: '#FFFFFF' },
+  { name: 'COLONIAS GOLD',        short: 'COL',  color: '#FFB400', accent: '#121212' },
+];
+```
+
+---
+
+## Files
+
+Los archivos HTML/JSX de referencia incluidos en este bundle:
+
+- `LNB Apertura 2026.html` — Design canvas con todos los flyers y stories visibles lado a lado
+- `tokens.css` — Variables de diseño (colores, tipografía, geometría)
+- `lnb-data.jsx` — Datos de equipos y sponsors
+- `lnb-backgrounds.jsx` — Componentes de fondo reutilizables (halftone, radial glow, court lines, speed lines)
+- `flyers-proximos.jsx` — Flyer 01 (próximos partidos feed)
+- `flyers-otros.jsx` — Flyers 02-05 (resultado, jornada, tabla, líderes)
+- `stories.jsx` — Stories 06 (los 7 stories verticales)
+- `placeholders.jsx` — Placeholders para fotos / recursos faltantes
+- `design-canvas.jsx` — Scaffold del canvas (no llevar a producción)
+
+### Orden de importación (importante)
+
+```html
+<link rel="stylesheet" href="tokens.css" />
+<!-- React + ReactDOM + Babel -->
+<script type="text/babel" src="lnb-data.jsx"></script>
+<script type="text/babel" src="lnb-backgrounds.jsx"></script>
+<script type="text/babel" src="placeholders.jsx"></script>
+<script type="text/babel" src="flyers-proximos.jsx"></script>
+<script type="text/babel" src="flyers-otros.jsx"></script>
+<script type="text/babel" src="stories.jsx"></script>
+```
+
+---
+
+## Consideraciones para producción
+
+1. **Fuentes**: cargar Anton, Archivo Black, Inter, JetBrains Mono desde Google Fonts o self-hosted. Tipografías finales — no sustituir.
+
+2. **Logos de equipos**: los del kit son placeholders. Pedir los oficiales a la liga y reemplazar `/assets/crest-*.png` manteniendo el tamaño cuadrado.
+
+3. **Fotos de jugador**: se esperan con **fondo removido (PNG transparente)** o al menos sobre un fondo liso para que el degradado al azul noche funcione. Si vienen con fondo de cancha, aplicar removal automático (remove.bg, Photoroom API) antes de componer.
+
+4. **Render server-side**: preferir Puppeteer (fidelidad 100%) sobre satori (puede tener issues con filter, gradient complejos, halftone SVG).
+
+5. **Responsive**: los lienzos son fijos 1080×1350 y 1080×1920. El preview en UI admin debe `transform: scale(N)` para fit-to-container.
+
+6. **Dark mode**: todo el kit es dark por default. No hay versión light.
+
+7. **Accesibilidad**: los flyers son imágenes — exportar también alt text descriptivo para publicación en redes.
+
+8. **Integración Genius Sports**: mapear sus IDs de equipo/jugador a `LNB_TEAMS` locales. Los líderes y resultados pueden pull-refresh cada 30s durante partidos en vivo.
