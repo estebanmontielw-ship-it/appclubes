@@ -445,29 +445,54 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
         </div>
       </div>
 
-      {/* Meta: estadio (izq) · fecha (der). El label usa tamaño/letterSpacing
-          más chico para dar jerarquía al valor (nombre de estadio / fecha).
-          marginLeft explícito en el segundo span porque satori a veces no
-          respeta gap en un flex container con múltiples children. */}
+      {/* Meta info — 3 columnas con iconos + dividers verticales, estilo
+          del handoff oficial LNB (ProxV1 refined). Cada columna tiene un
+          icono SVG inline (dorado) + label chiquito + valor grande. Las
+          dividers son <div> con width 1px y height fijo. */}
       <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 22px",
-        borderTop: `1px solid ${palette.separator}`,
-        width: "100%",
+        display: "flex", alignItems: "center",
+        margin: "10px 18px 0",
+        padding: "12px 14px",
+        background: "rgba(3,8,26,0.55)",
+        borderRadius: 12,
+        border: `1px solid ${palette.separator}`,
+        width: "auto",
       }}>
-        <div style={{ display: "flex", alignItems: "center" }}>
-          {match.venue ? (
-            <>
-              <span style={{ color: palette.accentSoft, fontFamily: "Inter", fontSize: metaLabelFont, fontWeight: 700, letterSpacing: 2.5, display: "flex" }}>ESTADIO</span>
-              <span style={{ marginLeft: 12, color: "rgba(255,255,255,0.85)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 500, display: "flex" }}>{match.venue}</span>
-            </>
-          ) : <span style={{ display: "flex" }} />}
+        {/* ESTADIO */}
+        <div style={{ display: "flex", alignItems: "center", flex: 1.7, minWidth: 0, paddingLeft: 6 }}>
+          <svg width={metaFont + 4} height={metaFont + 4} viewBox="0 0 24 24" style={{ display: "flex", flexShrink: 0 }}>
+            <path d="M12 22s7-7.5 7-13a7 7 0 1 0-14 0c0 5.5 7 13 7 13z" stroke={palette.gold} strokeWidth="1.8" fill="none" strokeLinejoin="round"/>
+            <circle cx="12" cy="9" r="2.2" stroke={palette.gold} strokeWidth="1.8" fill="none"/>
+          </svg>
+          <div style={{ display: "flex", flexDirection: "column", marginLeft: 10, minWidth: 0 }}>
+            <span style={{ color: palette.accentSoft, fontFamily: "Inter", fontSize: metaLabelFont * 0.85, fontWeight: 800, letterSpacing: 2.5, lineHeight: 1, display: "flex" }}>ESTADIO</span>
+            <span style={{ marginTop: 3, color: "white", fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, lineHeight: 1.15, display: "flex" }}>{match.venue || "—"}</span>
+          </div>
         </div>
-        {match.date ? (
-          <span style={{ color: "rgba(255,255,255,0.9)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, letterSpacing: 1.5, display: "flex" }}>
-            {match.date.toUpperCase()}
-          </span>
-        ) : null}
+        <div style={{ display: "flex", width: 1, height: 32, background: palette.separator }} />
+        {/* FECHA */}
+        <div style={{ display: "flex", alignItems: "center", flex: 1, paddingLeft: 14 }}>
+          <svg width={metaFont + 4} height={metaFont + 4} viewBox="0 0 24 24" style={{ display: "flex", flexShrink: 0 }}>
+            <rect x="3.5" y="5.5" width="17" height="15" rx="2" stroke={palette.gold} strokeWidth="1.8" fill="none"/>
+            <path d="M3.5 10h17M8 3v4M16 3v4" stroke={palette.gold} strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          <div style={{ display: "flex", flexDirection: "column", marginLeft: 10 }}>
+            <span style={{ color: palette.accentSoft, fontFamily: "Inter", fontSize: metaLabelFont * 0.85, fontWeight: 800, letterSpacing: 2.5, lineHeight: 1, display: "flex" }}>FECHA</span>
+            <span style={{ marginTop: 3, color: "white", fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, lineHeight: 1.15, letterSpacing: 0.5, display: "flex" }}>{(match.date || "—").toUpperCase()}</span>
+          </div>
+        </div>
+        <div style={{ display: "flex", width: 1, height: 32, background: palette.separator }} />
+        {/* HORA */}
+        <div style={{ display: "flex", alignItems: "center", paddingLeft: 14, paddingRight: 6 }}>
+          <svg width={metaFont + 4} height={metaFont + 4} viewBox="0 0 24 24" style={{ display: "flex", flexShrink: 0 }}>
+            <circle cx="12" cy="12" r="8.5" stroke={palette.gold} strokeWidth="1.8" fill="none"/>
+            <path d="M12 7.5V12l3 2" stroke={palette.gold} strokeWidth="1.8" strokeLinecap="round" fill="none"/>
+          </svg>
+          <div style={{ display: "flex", flexDirection: "column", marginLeft: 10 }}>
+            <span style={{ color: palette.accentSoft, fontFamily: "Inter", fontSize: metaLabelFont * 0.85, fontWeight: 800, letterSpacing: 2.5, lineHeight: 1, display: "flex" }}>HORA</span>
+            <span style={{ marginTop: 2, color: "white", fontFamily: "Archivo Black", fontSize: Math.round(metaFont * 1.25), lineHeight: 1, letterSpacing: -0.5, display: "flex" }}>{match.time || "—"}<span style={{ marginLeft: 4, fontFamily: "Inter", fontSize: Math.round(metaFont * 0.7), color: palette.gold, letterSpacing: 1, display: "flex" }}>HS</span></span>
+          </div>
+        </div>
       </div>
 
       {/* Barra HORARIO (o RESULTADO) — opcional */}
