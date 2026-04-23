@@ -378,7 +378,9 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
   const horarioH = Math.max(44, Math.round(cardH * 0.14))
   const horarioFont = Math.max(24, Math.round(cardH * 0.105))
   // Jerarquía de nombres: un pelín más grande que el default
-  const teamFs = Math.round(nameFontSize * 1.05)
+  const teamFs = Math.round(nameFontSize * 1.08)
+  // VS más prominente cuando hay espacio (usa Archivo Black para extra peso)
+  const vsFs = Math.round(vsFontSize * 1.05)
 
   return (
     <div style={{
@@ -425,7 +427,7 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
         {/* Home */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 16 }}>
           <Logo url={match.homeLogo} name={match.homeName} size={logoSize} />
-          <span style={{ color: "white", fontFamily: "Inter", fontSize: teamFs, fontWeight: isResultado && !tied && homeWins ? 900 : 700, letterSpacing: 1.2, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
+          <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: teamFs, fontWeight: 900, letterSpacing: -0.5, textAlign: "center", maxWidth: cardW * 0.35, display: "flex", lineHeight: 1.05 }}>
             {match.homeName.toUpperCase()}
           </span>
         </div>
@@ -433,12 +435,12 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 120 }}>
           {isResultado && match.homeScore != null ? (
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: vsFontSize * 1.3, fontWeight: 900, lineHeight: 1, display: "flex" }}>{match.homeScore}</span>
-              <span style={{ color: "rgba(255,255,255,0.4)", fontSize: Math.round(vsFontSize * 0.6), fontWeight: 700, display: "flex" }}>-</span>
-              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: vsFontSize * 1.3, fontWeight: 900, lineHeight: 1, display: "flex" }}>{match.awayScore}</span>
+              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: vsFs * 1.3, fontWeight: 900, lineHeight: 1, letterSpacing: -2, display: "flex" }}>{match.homeScore}</span>
+              <span style={{ color: "rgba(255,255,255,0.4)", fontSize: Math.round(vsFs * 0.55), fontWeight: 700, display: "flex" }}>-</span>
+              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: vsFs * 1.3, fontWeight: 900, lineHeight: 1, letterSpacing: -2, display: "flex" }}>{match.awayScore}</span>
             </div>
           ) : (
-            <span style={{ color: palette.gold, fontFamily: "Archivo Black", fontSize: vsFontSize, fontWeight: 900, letterSpacing: -1, display: "flex", lineHeight: 1 }}>
+            <span style={{ color: palette.gold, fontFamily: "Archivo Black", fontSize: vsFs, fontWeight: 900, letterSpacing: 2, display: "flex", lineHeight: 1 }}>
               VS
             </span>
           )}
@@ -448,7 +450,7 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
         {/* Away */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 16 }}>
           <Logo url={match.awayLogo} name={match.awayName} size={logoSize} />
-          <span style={{ color: "white", fontFamily: "Inter", fontSize: teamFs, fontWeight: isResultado && !tied && !homeWins ? 900 : 700, letterSpacing: 1.2, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
+          <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: teamFs, fontWeight: 900, letterSpacing: -0.5, textAlign: "center", maxWidth: cardW * 0.35, display: "flex", lineHeight: 1.05 }}>
             {match.awayName.toUpperCase()}
           </span>
         </div>
