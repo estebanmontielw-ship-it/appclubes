@@ -396,6 +396,15 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
         background: `linear-gradient(90deg, transparent, ${palette.gold}88, transparent)`,
         display: "flex",
       }} />
+      {/* Textura sutil interna — radial gold en la esquina top-left para
+          dar profundidad "poster oficial". Satori soporta radial-gradient
+          circle (ellipse a veces falla). */}
+      <div style={{
+        position: "absolute", top: 0, left: 0,
+        width: Math.round(cardW * 0.35), height: Math.round(cardH * 0.6),
+        background: `radial-gradient(circle at 20% 20%, ${palette.gold}1F 0%, transparent 55%)`,
+        display: "flex", pointerEvents: "none",
+      }} />
       {/* JUEGO 0X badge con punto sutil */}
       <div style={{
         position: "absolute", top: 14, left: 20,
