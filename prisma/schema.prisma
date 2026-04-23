@@ -938,3 +938,24 @@ model DisenoConfig {
   @@map("diseno_configs")
 }
 
+// ─── DISEÑO V3 — documentos (estilo Canva) ───────────────
+// Cada fila es un diseño guardado. El canvas se serializa como JSON
+// (fabric.js toJSON) y un thumbnail PNG (data URL o URL de bucket) se
+// guarda para listarlos. Así el usuario puede reabrir y seguir editando.
+model DisenoV3Document {
+  id           String   @id @default(uuid())
+  ownerId      String
+  nombre       String
+  liga         String   @default("lnb")
+  template     String   @default("blank")
+  format       String   @default("feed")
+  canvasJson   Json
+  thumbnailUrl String?  @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([ownerId, updatedAt])
+  @@index([liga])
+  @@map("diseno_v3_documents")
+}
+

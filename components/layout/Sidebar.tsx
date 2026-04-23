@@ -146,6 +146,11 @@ function getNavSections(
             ],
           },
           {
+            label: "Diseño V3 · Editor",
+            icon: Palette,
+            href: "/oficiales/admin/diseno-v3",
+          },
+          {
             label: "Logos de equipos",
             icon: Palette,
             subItems: [
