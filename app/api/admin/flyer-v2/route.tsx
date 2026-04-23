@@ -313,11 +313,15 @@ function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBo
 // con badge "JUEGO N", VS en gold, franja de estadio + fecha y barra
 // destacada de horario violeta.
 type PremiumPalette = {
-  cardBg: string
+  // Card base: gradient diagonal editorial. Tres stops — start / mid / end
+  // para dar profundidad, tal como los flyers oficiales LNB/LNBF.
+  cardBgStart: string
+  cardBgMid: string
+  cardBgEnd: string
   borderColor: string   // rgb/hex para el borde principal
   borderAlpha: string   // hex alpha suffix para el borde (ej. "33")
   separator: string     // borde interno top del meta strip
-  gold: string          // color de VS + línea accent + dot del badge
+  gold: string          // color de VS + línea accent + dot del badge + hairline
   accentSoft: string    // badge label, eyebrow, ESTADIO label, HORARIO label
   bar1: string          // gradient start de la barra HORARIO
   bar2: string          // gradient end de la barra HORARIO
@@ -325,7 +329,9 @@ type PremiumPalette = {
 
 // Paleta LNBF default (morado + gold)
 const PALETTE_LNBF: PremiumPalette = {
-  cardBg: "rgba(22,10,46,0.45)",
+  cardBgStart: "rgba(60,19,112,0.50)",
+  cardBgMid:   "rgba(43,14,77,0.68)",
+  cardBgEnd:   "rgba(14,4,24,0.78)",
   borderColor: LNBF.color.violet400,
   borderAlpha: "33",
   separator: "rgba(201,160,255,0.14)",
@@ -337,7 +343,9 @@ const PALETTE_LNBF: PremiumPalette = {
 
 // Paleta LNB (navy + gold)
 const PALETTE_LNB: PremiumPalette = {
-  cardBg: "rgba(14,29,79,0.55)",
+  cardBgStart: "rgba(30,60,140,0.48)",
+  cardBgMid:   "rgba(14,29,79,0.70)",
+  cardBgEnd:   "rgba(8,18,51,0.78)",
   borderColor: LNB.color.blue400,
   borderAlpha: "33",
   separator: "rgba(166,190,255,0.18)",
@@ -375,13 +383,19 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
   return (
     <div style={{
       width: cardW, height: cardH,
-      background: palette.cardBg,
+      background: `linear-gradient(155deg, ${palette.cardBgStart} 0%, ${palette.cardBgMid} 65%, ${palette.cardBgEnd} 100%)`,
       borderRadius: 20,
       border: `1.5px solid ${palette.borderColor}${palette.borderAlpha}`,
       display: "flex", flexDirection: "column",
       overflow: "hidden",
       position: "relative",
     }}>
+      {/* Gold hairline arriba — elemento de diseño editorial LNB/LNBF */}
+      <div style={{
+        position: "absolute", top: 0, left: 24, right: 24, height: 2,
+        background: `linear-gradient(90deg, transparent, ${palette.gold}88, transparent)`,
+        display: "flex",
+      }} />
       {/* JUEGO 0X badge con punto sutil */}
       <div style={{
         position: "absolute", top: 14, left: 20,
