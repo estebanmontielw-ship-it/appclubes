@@ -14,7 +14,9 @@ import { patternDataUrl, type PatternKey } from "./patterns"
 export type TemplateKey =
   | "blank"
   | "pre"
+  | "proximos-multi"
   | "resultado"
+  | "resultados-multi"
   | "tabla"
   | "lideres"
   | "jugador"
@@ -31,13 +33,15 @@ export interface TemplateMeta {
 }
 
 export const TEMPLATES: TemplateMeta[] = [
-  { key: "blank",       label: "En blanco",    desc: "Empezar desde cero" },
-  { key: "pre",         label: "Anuncio",      desc: "Antes del partido",     needsMatch: true },
-  { key: "resultado",   label: "Resultado",    desc: "Con marcador final",    needsMatch: true },
-  { key: "tabla",       label: "Tabla",        desc: "Posiciones",            needsStandings: true },
-  { key: "lideres",     label: "Líderes",      desc: "Top estadísticas",      needsLeaders: true },
-  { key: "jugador",     label: "Jugador",      desc: "Premio del partido",    needsPlayer: true },
-  { key: "lanzamiento", label: "Lanzamiento",  desc: "Arranque de temporada" },
+  { key: "blank",           label: "En blanco",       desc: "Empezar desde cero" },
+  { key: "pre",             label: "Anuncio",         desc: "1 partido (previa)",        needsMatch: true },
+  { key: "proximos-multi",  label: "Próximos",        desc: "Varios partidos (jornada)", needsMatch: true },
+  { key: "resultado",       label: "Resultado",       desc: "1 partido con marcador",    needsMatch: true },
+  { key: "resultados-multi",label: "Resultados",      desc: "Varios marcadores",         needsMatch: true },
+  { key: "tabla",           label: "Tabla",           desc: "Posiciones",                needsStandings: true },
+  { key: "lideres",         label: "Líderes",         desc: "Top estadísticas",          needsLeaders: true },
+  { key: "jugador",         label: "Jugador",         desc: "Premio del partido",        needsPlayer: true },
+  { key: "lanzamiento",     label: "Lanzamiento",     desc: "Arranque de temporada" },
 ]
 
 export interface TemplateCtx {
@@ -789,15 +793,209 @@ async function tplLanzamiento(ctx: TemplateCtx): Promise<any[]> {
   return out
 }
 
+// Card de partido reutilizable (para multi). Devuelve objetos fabric + un
+// "slot" donde se deben cargar los logos (el caller los inserta después).
+function makeMatchCard(
+  fabric: any, theme: V3Theme, format: CanvasFormat,
+  x: number, y: number, w: number, h: number,
+  idx: number, match: any,
+): any[] {
+  const objs: any[] = []
+  // fondo card
+  objs.push(new fabric.Rect({
+    left: x, top: y, width: w, height: h,
+    originX: "left", originY: "top",
+    fill: hexToRgba(theme.bg, 0.55),
+    stroke: hexToRgba(theme.accent, 0.35),
+    strokeWidth: 1.5, rx: 18, ry: 18,
+    role: `card-bg-${idx}`,
+  }))
+  // etiqueta JUEGO NN
+  objs.push(makeText(fabric, `• JUEGO ${String(idx + 1).padStart(2, "0")}`, {
+    fontFamily: theme.fontHeading,
+    fontSize: h * 0.08,
+    fill: theme.accent,
+    charSpacing: 250, fontWeight: "bold",
+    left: x + w * 0.04, top: y + h * 0.07,
+    role: `card-label-${idx}`,
+  }))
+  // VS central
+  objs.push(makeText(fabric, "VS", {
+    fontFamily: theme.fontDisplay,
+    fontSize: h * 0.24,
+    fill: theme.accent, fontWeight: "900",
+    left: x + w / 2, top: y + h * 0.36,
+    originX: "center", originY: "center",
+    role: `card-vs-${idx}`,
+  }))
+  // underline dorado bajo VS
+  objs.push(new fabric.Rect({
+    left: x + w / 2 - w * 0.025, top: y + h * 0.52,
+    width: w * 0.05, height: 2,
+    originX: "left", originY: "top",
+    fill: theme.accent,
+    role: `card-vs-line-${idx}`,
+  }))
+  // nombres
+  objs.push(makeText(fabric, (match.homeName || "—").toUpperCase(), {
+    fontFamily: theme.fontDisplay,
+    fontSize: h * 0.14,
+    fill: theme.fg, fontWeight: "900",
+    left: x + w * 0.22, top: y + h * 0.58,
+    originX: "center", textAlign: "center",
+    role: `card-home-${idx}`,
+  }))
+  objs.push(makeText(fabric, (match.awayName || "—").toUpperCase(), {
+    fontFamily: theme.fontDisplay,
+    fontSize: h * 0.14,
+    fill: theme.fg, fontWeight: "900",
+    left: x + w * 0.78, top: y + h * 0.58,
+    originX: "center", textAlign: "center",
+    role: `card-away-${idx}`,
+  }))
+  // info pill al pie (estadio · fecha · hora)
+  const pillY = y + h * 0.8
+  const pillH = h * 0.15
+  objs.push(new fabric.Rect({
+    left: x + w * 0.03, top: pillY, width: w * 0.94, height: pillH,
+    originX: "left", originY: "top",
+    fill: hexToRgba(theme.bg, 0.75),
+    stroke: hexToRgba(theme.accent, 0.25),
+    strokeWidth: 1, rx: 10, ry: 10,
+    role: `card-pill-${idx}`,
+  }))
+  // fechas + venue en texto — con íconos inline en texto (📍 📅 🕐 unicode)
+  const pillText = `📍 ${match.venue || "—"}   📅 ${match.dateLabel?.split(" · ")[0] || match.dateLabel || "—"}   🕐 ${match.dateLabel?.split(" · ")[1] || ""}`
+  objs.push(makeText(fabric, pillText, {
+    fontFamily: theme.fontBody,
+    fontSize: pillH * 0.5,
+    fill: theme.fg, fontWeight: "bold",
+    charSpacing: 40,
+    left: x + w / 2, top: pillY + pillH / 2,
+    originX: "center", originY: "center",
+    role: `card-pill-text-${idx}`,
+  }))
+
+  // Si es resultado, score grande sobre el VS
+  if (match.homeScore != null || match.awayScore != null) {
+    objs.push(makeText(fabric, `${match.homeScore ?? 0} - ${match.awayScore ?? 0}`, {
+      fontFamily: theme.fontDisplay,
+      fontSize: h * 0.3,
+      fill: theme.fg, fontWeight: "900",
+      left: x + w / 2, top: y + h * 0.36,
+      originX: "center", originY: "center",
+      role: `card-score-${idx}`,
+    }))
+  }
+
+  return objs
+}
+
+// Próximos partidos (1-4 partidos en 1 diseño, estilo V2 Stories)
+async function tplProximosMulti(ctx: TemplateCtx): Promise<any[]> {
+  const { fabric, theme, format, data } = ctx
+  const cx = format.width / 2
+  const matches: any[] = Array.isArray(data?.matches) ? data.matches.slice(0, 4) : [data]
+  const out: any[] = await makeBackgroundStack(ctx)
+  out.push(...makeBadge(fabric, theme, format))
+
+  // Eyebrow "FECHA X" + Título
+  const eyebrowY = format.height * 0.1
+  out.push(makeText(fabric, data?.fechaLabel || "JORNADA", {
+    fontFamily: theme.fontHeading,
+    fontSize: format.width * 0.028,
+    fill: theme.accent, charSpacing: 300, fontWeight: "bold",
+    left: format.width * 0.08, top: eyebrowY,
+    role: "eyebrow",
+  }))
+  out.push(makeText(fabric, "PRÓXIMOS", {
+    fontFamily: theme.fontDisplay,
+    fontSize: format.width * 0.11,
+    fill: theme.fg, fontWeight: "900",
+    left: format.width * 0.08, top: eyebrowY + format.height * 0.027,
+    role: "title-1",
+    shadow: hexToRgba(theme.bg, 0.6) + " 0 4px 20px",
+  }))
+  out.push(makeText(fabric, "PARTIDOS", {
+    fontFamily: theme.fontDisplay,
+    fontSize: format.width * 0.11,
+    fill: theme.fg, fontWeight: "900",
+    left: format.width * 0.08, top: eyebrowY + format.height * 0.095,
+    role: "title-2",
+  }))
+
+  // Grid de cards
+  const listTop = format.height * 0.26
+  const listBottom = format.height * (ctx.showSponsorStrip === false ? 0.95 : 0.88)
+  const gap = format.height * 0.015
+  const cardH = (listBottom - listTop - gap * (matches.length - 1)) / Math.max(matches.length, 1)
+  const cardW = format.width * 0.88
+  const cardX = (format.width - cardW) / 2
+
+  matches.forEach((m: any, i: number) => {
+    const y = listTop + i * (cardH + gap)
+    out.push(...makeMatchCard(fabric, theme, format, cardX, y, cardW, cardH, i, m))
+  })
+
+  if (ctx.showSponsorStrip !== false) {
+    out.push(...makeSponsorStrip(fabric, theme, format, ctx.sponsorBg || "dark"))
+  }
+  return out
+}
+
+// Resultados múltiples (mismas cards pero con score)
+async function tplResultadosMulti(ctx: TemplateCtx): Promise<any[]> {
+  const { fabric, theme, format, data } = ctx
+  const matches: any[] = Array.isArray(data?.matches) ? data.matches.slice(0, 4) : [data]
+  const out: any[] = await makeBackgroundStack(ctx)
+  out.push(...makeBadge(fabric, theme, format))
+
+  const eyebrowY = format.height * 0.1
+  out.push(makeText(fabric, data?.fechaLabel || "JORNADA", {
+    fontFamily: theme.fontHeading,
+    fontSize: format.width * 0.028,
+    fill: theme.accent, charSpacing: 300, fontWeight: "bold",
+    left: format.width * 0.08, top: eyebrowY,
+    role: "eyebrow",
+  }))
+  out.push(makeText(fabric, "RESULTADOS", {
+    fontFamily: theme.fontDisplay,
+    fontSize: format.width * 0.11,
+    fill: theme.fg, fontWeight: "900",
+    left: format.width * 0.08, top: eyebrowY + format.height * 0.027,
+    role: "title-1",
+    shadow: hexToRgba(theme.bg, 0.6) + " 0 4px 20px",
+  }))
+
+  const listTop = format.height * 0.22
+  const listBottom = format.height * (ctx.showSponsorStrip === false ? 0.95 : 0.88)
+  const gap = format.height * 0.015
+  const cardH = (listBottom - listTop - gap * (matches.length - 1)) / Math.max(matches.length, 1)
+  const cardW = format.width * 0.88
+  const cardX = (format.width - cardW) / 2
+
+  matches.forEach((m: any, i: number) => {
+    const y = listTop + i * (cardH + gap)
+    out.push(...makeMatchCard(fabric, theme, format, cardX, y, cardW, cardH, i, m))
+  })
+
+  if (ctx.showSponsorStrip !== false) {
+    out.push(...makeSponsorStrip(fabric, theme, format, ctx.sponsorBg || "dark"))
+  }
+  return out
+}
+
 export async function buildTemplate(key: TemplateKey, ctx: TemplateCtx): Promise<any[]> {
   switch (key) {
-    case "pre":         return await tplPre(ctx)
-    case "resultado":   return await tplResultado(ctx)
-    case "tabla":       return await tplTabla(ctx)
-    case "lideres":     return await tplLideres(ctx)
-    case "jugador":     return await tplJugador(ctx)
-    case "lanzamiento": return await tplLanzamiento(ctx)
+    case "pre":               return await tplPre(ctx)
+    case "proximos-multi":    return await tplProximosMulti(ctx)
+    case "resultado":         return await tplResultado(ctx)
+    case "resultados-multi":  return await tplResultadosMulti(ctx)
+    case "tabla":             return await tplTabla(ctx)
+    case "lideres":           return await tplLideres(ctx)
+    case "jugador":           return await tplJugador(ctx)
+    case "lanzamiento":       return await tplLanzamiento(ctx)
     case "blank":
-    default:            return await tplBlank(ctx)
+    default:                  return await tplBlank(ctx)
   }
 }

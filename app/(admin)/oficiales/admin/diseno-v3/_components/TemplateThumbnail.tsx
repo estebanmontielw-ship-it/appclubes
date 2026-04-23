@@ -221,15 +221,52 @@ export default function TemplateThumbnail({ templateKey, theme }: Props) {
     )
   }
 
+  function MultiMatchLayout({ withScore }: { withScore: boolean }) {
+    return (
+      <>
+        <Common />
+        {/* eyebrow alineado izq */}
+        <div style={{ position: "absolute", top: "10%", left: "8%", width: "28%", height: "1.8%", background: hexToRgba(accent, 0.7), borderRadius: 1 }} />
+        {/* títulos 2 líneas alineado izq */}
+        <div style={{ position: "absolute", top: "14%", left: "8%", width: "55%", height: "7%", background: fg, borderRadius: 2 }} />
+        <div style={{ position: "absolute", top: "22%", left: "8%", width: "50%", height: "7%", background: fg, borderRadius: 2 }} />
+        {/* 3 cards con logos + vs + nombres + info pill */}
+        {[0, 1, 2].map((i) => (
+          <div key={i} style={{
+            position: "absolute",
+            top: `${32 + i * 22}%`, left: "6%", right: "6%",
+            height: "20%", borderRadius: 6,
+            border: `1px solid ${hexToRgba(accent, 0.35)}`,
+            background: hexToRgba(theme.bg, 0.55),
+          }}>
+            {/* logos */}
+            <div style={{ position: "absolute", top: "25%", left: "12%", width: "22%", height: "50%", borderRadius: "50%", background: hexToRgba(fg, 0.25) }} />
+            <div style={{ position: "absolute", top: "25%", right: "12%", width: "22%", height: "50%", borderRadius: "50%", background: hexToRgba(fg, 0.25) }} />
+            {/* VS o score central */}
+            <div style={{
+              position: "absolute", top: "38%", left: "50%", transform: "translate(-50%, -50%)",
+              color: withScore ? fg : accent, fontSize: 9, fontWeight: 900,
+            }}>{withScore ? "85–72" : "VS"}</div>
+            {/* info pill */}
+            <div style={{ position: "absolute", bottom: "8%", left: "4%", right: "4%", height: "22%", borderRadius: 3, background: hexToRgba(theme.bg, 0.75) }} />
+          </div>
+        ))}
+        <div style={strip}><Slot /><Slot /><Slot /><Slot /><Slot /></div>
+      </>
+    )
+  }
+
   return (
     <div className="relative aspect-[4/5] w-full overflow-hidden rounded" style={wrap}>
-      {templateKey === "pre"         && <PreLayout />}
-      {templateKey === "resultado"   && <ResultadoLayout />}
-      {templateKey === "tabla"       && <TablaLayout />}
-      {templateKey === "lideres"     && <LideresLayout />}
-      {templateKey === "jugador"     && <JugadorLayout />}
-      {templateKey === "lanzamiento" && <LanzamientoLayout />}
-      {templateKey === "blank"       && <BlankLayout />}
+      {templateKey === "pre"              && <PreLayout />}
+      {templateKey === "proximos-multi"   && <MultiMatchLayout withScore={false} />}
+      {templateKey === "resultado"        && <ResultadoLayout />}
+      {templateKey === "resultados-multi" && <MultiMatchLayout withScore={true} />}
+      {templateKey === "tabla"            && <TablaLayout />}
+      {templateKey === "lideres"          && <LideresLayout />}
+      {templateKey === "jugador"          && <JugadorLayout />}
+      {templateKey === "lanzamiento"      && <LanzamientoLayout />}
+      {templateKey === "blank"            && <BlankLayout />}
     </div>
   )
 }

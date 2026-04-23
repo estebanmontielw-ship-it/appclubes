@@ -24,6 +24,7 @@ interface Props {
   onInsertImage: (url: string) => void
   onSelectTheme: (theme: V3Theme) => void
   onApplyMatch: (data: MatchData, withScore: boolean) => void
+  onApplyMatches: (datas: MatchData[], withScore: boolean) => void
   onApplyStandings: (rows: any[]) => void
   onApplyLeaders: (rows: any[]) => void
   sponsorsConfig: SponsorsConfig
@@ -150,6 +151,7 @@ export default function LeftRail(props: Props) {
           <MatchesPanel
             liga={props.liga}
             onApplyMatch={props.onApplyMatch}
+            onApplyMatches={props.onApplyMatches}
             onApplyStandings={props.onApplyStandings}
             onApplyLeaders={props.onApplyLeaders}
           />

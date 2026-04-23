@@ -74,6 +74,30 @@ export default function DisenoV3App() {
     setTheme((t) => (t.liga === liga || t.key === "clean-light" ? t : defTheme))
   }, [liga])
 
+  // Pre-llenar sponsors desde la config guardada en V2 (misma tabla diseno_configs).
+  // Si el usuario ya tenía sus 5 sponsors + barra configurados en Diseño V2 para
+  // esta liga, aparecen automáticamente en el SponsorsPanel del V3.
+  useEffect(() => {
+    let cancel = false
+    fetch(`/api/admin/diseno-config?liga=${liga}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancel || !data?.config) return
+        const c = data.config
+        const sp = Array.isArray(c.sponsors) ? c.sponsors : []
+        const sc = Array.isArray(c.sponsorScales) ? c.sponsorScales : []
+        setSponsorsConfig({
+          sponsors: [...sp, ...Array(5)].slice(0, 5).map((v: any) => (typeof v === "string" && v ? v : null)),
+          // scales en V2 viven como multiplier (1.0 = 100%); en V3 como porcentaje.
+          scales: [...sc, ...Array(5)].slice(0, 5).map((v: any) => (typeof v === "number" ? Math.round(v * 100) : 100)),
+          bg: (c.sponsorBg === "white" ? "white" : "dark") as "white" | "dark",
+          show: true,
+        })
+      })
+      .catch(() => { /* silent */ })
+    return () => { cancel = true }
+  }, [liga])
+
   // --- Refresh layers list ---
   const refreshLayers = useCallback(() => {
     const c = canvasRef.current
@@ -344,6 +368,47 @@ export default function DisenoV3App() {
     await addTeamLogos(data)
     toast({ title: "Partido importado", description: "Todo queda editable." })
   }, [insertTemplate, addTeamLogos, toast])
+
+  // Multi-partido: insertar template "proximos-multi" o "resultados-multi"
+  // con un array de partidos y cargar todos los logos sobre las cards.
+  const handleApplyMatches = useCallback(async (datas: MatchData[], withScore: boolean) => {
+    if (!datas.length) return
+    if (datas.length === 1) return handleApplyMatch(datas[0], withScore)
+    const key = withScore ? "resultados-multi" : "proximos-multi"
+    await insertTemplate(key, { matches: datas, fechaLabel: `JORNADA` })
+    // Cargar logos a cada card (role=card-bg-N marca la posición)
+    const c = canvasRef.current
+    if (!c) return
+    const fabric = await loadFabric()
+    datas.forEach((m, i) => {
+      const card = c.getObjects().find((o: any) => o.role === `card-bg-${i}`)
+      if (!card) return
+      const cw = (card.width || 0) * (card.scaleX || 1)
+      const ch = (card.height || 0) * (card.scaleY || 1)
+      const cx0 = card.left || 0
+      const cy0 = card.top || 0
+      const logoSize = ch * 0.55
+      const addLogoAt = (url: string | null | undefined, relX: number) => {
+        if (!url) return
+        fabric.Image.fromURL(url, (img: any) => {
+          const s = logoSize / Math.max(img.width || 1, img.height || 1)
+          img.set({
+            left: cx0 + cw * relX,
+            top: cy0 + ch * 0.38,
+            scaleX: s, scaleY: s,
+            originX: "center", originY: "center",
+            role: `card-logo-${i}`,
+          })
+          img.id = "o" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+          c.add(img)
+          c.requestRenderAll()
+        }, { crossOrigin: "anonymous" })
+      }
+      addLogoAt(m.homeLogo, 0.22)
+      addLogoAt(m.awayLogo, 0.78)
+    })
+    toast({ title: `${datas.length} partidos importados`, description: "Todo queda editable." })
+  }, [insertTemplate, handleApplyMatch, toast])
 
   const handleApplyStandings = useCallback(async (rows: any[]) => {
     const standings = rows.map((s: any, i: number) => ({
@@ -767,6 +832,7 @@ export default function DisenoV3App() {
           onInsertImage={insertImage}
           onSelectTheme={applyTheme}
           onApplyMatch={handleApplyMatch}
+          onApplyMatches={handleApplyMatches}
           onApplyStandings={handleApplyStandings}
           onApplyLeaders={handleApplyLeaders}
           sponsorsConfig={sponsorsConfig}

@@ -10,6 +10,7 @@ import type { MatchData } from "./GeniusImportPanel"
 interface Props {
   liga: LigaKey
   onApplyMatch: (data: MatchData, withScore: boolean) => void
+  onApplyMatches: (data: MatchData[], withScore: boolean) => void
   onApplyStandings: (rows: any[]) => void
   onApplyLeaders: (rows: any[]) => void
 }
@@ -31,7 +32,18 @@ function ligaLabel(l: LigaKey) {
   return ({ lnb: "LNB APERTURA 2026", lnbf: "LNBF APERTURA 2026", u22m: "U22 MASC 2026", u22f: "U22 FEM 2026" } as Record<LigaKey, string>)[l]
 }
 
-export default function MatchesPanel({ liga, onApplyMatch, onApplyStandings, onApplyLeaders }: Props) {
+// Pasa un logo de Genius por nuestro normalizador (/api/logo-norm) que:
+//   - trimea los bordes transparentes
+//   - resizea al tamaño pedido
+//   - devuelve PNG con alpha
+//   - responde con CORS abierto + cache agresivo (1d browser, 7d CDN)
+// Sin esto fabric.Image.fromURL falla con tainted canvas o los logos no se ven.
+function normalizeLogoUrl(url: string | null | undefined, size = 300): string | null {
+  if (!url) return null
+  return `/api/logo-norm?url=${encodeURIComponent(url)}&size=${size}`
+}
+
+export default function MatchesPanel({ liga, onApplyMatch, onApplyMatches, onApplyStandings, onApplyLeaders }: Props) {
   const [tab, setTab] = useState<FilterTab>("proximos")
   const [search, setSearch] = useState("")
   const [matches, setMatches] = useState<any[]>([])
@@ -111,6 +123,26 @@ export default function MatchesPanel({ liga, onApplyMatch, onApplyStandings, onA
     })
   }
 
+  function matchToData(m: any): MatchData {
+    const home = (m.competitors || []).find((c: any) => c.isHomeCompetitor === 1) || m.competitors?.[0]
+    const away = (m.competitors || []).find((c: any) => c.isHomeCompetitor === 0) || m.competitors?.[1]
+    const venue = typeof m.venueName === "string"
+      ? m.venueName
+      : (m.venue?.venueName || m.venue?.locationName || "")
+    return {
+      matchId: m.matchId,
+      homeName: home?.competitorName || "",
+      awayName: away?.competitorName || "",
+      homeLogo: normalizeLogoUrl(home?.images?.logo?.L1?.url || home?.images?.logo?.S1?.url || home?.images?.logo?.T1?.url),
+      awayLogo: normalizeLogoUrl(away?.images?.logo?.L1?.url || away?.images?.logo?.S1?.url || away?.images?.logo?.T1?.url),
+      homeScore: tab === "jugados" ? (home?.scoreString ? parseInt(home.scoreString, 10) : null) : null,
+      awayScore: tab === "jugados" ? (away?.scoreString ? parseInt(away.scoreString, 10) : null) : null,
+      dateLabel: formatDate(m.matchTime || "").toUpperCase(),
+      venue: String(venue || "").toUpperCase(),
+      ligaLabel: ligaLabel(liga),
+    }
+  }
+
   function pickMatch(m: any) {
     const home = (m.competitors || []).find((c: any) => c.isHomeCompetitor === 1) || m.competitors?.[0]
     const away = (m.competitors || []).find((c: any) => c.isHomeCompetitor === 0) || m.competitors?.[1]
@@ -121,8 +153,8 @@ export default function MatchesPanel({ liga, onApplyMatch, onApplyStandings, onA
       matchId: m.matchId,
       homeName: home?.competitorName || "",
       awayName: away?.competitorName || "",
-      homeLogo: home?.images?.logo?.S1?.url || home?.images?.logo?.T1?.url || null,
-      awayLogo: away?.images?.logo?.S1?.url || away?.images?.logo?.T1?.url || null,
+      homeLogo: normalizeLogoUrl(home?.images?.logo?.L1?.url || home?.images?.logo?.S1?.url || home?.images?.logo?.T1?.url),
+      awayLogo: normalizeLogoUrl(away?.images?.logo?.L1?.url || away?.images?.logo?.S1?.url || away?.images?.logo?.T1?.url),
       homeScore: tab === "jugados" ? (home?.scoreString ? parseInt(home.scoreString, 10) : null) : null,
       awayScore: tab === "jugados" ? (away?.scoreString ? parseInt(away.scoreString, 10) : null) : null,
       dateLabel: formatDate(m.matchTime || "").toUpperCase(),
@@ -255,12 +287,20 @@ export default function MatchesPanel({ liga, onApplyMatch, onApplyStandings, onA
           {selected.size > 0 && (
             <button
               onClick={() => {
-                const first = matches.find((m: any) => selected.has(String(m.matchId)))
-                if (first) pickMatch(first)
+                const picked = matches.filter((m: any) => selected.has(String(m.matchId)))
+                if (picked.length === 0) return
+                if (picked.length === 1) {
+                  pickMatch(picked[0])
+                } else {
+                  const datas = picked.slice(0, 6).map(matchToData)
+                  onApplyMatches(datas, tab === "jugados")
+                }
               }}
               className="w-full rounded-md bg-gradient-to-r from-indigo-500 to-violet-600 py-1.5 text-xs font-semibold text-white hover:opacity-90"
             >
-              Aplicar primer seleccionado ({selected.size})
+              {selected.size === 1
+                ? "Aplicar al diseño"
+                : `Aplicar ${selected.size} partidos al diseño`}
             </button>
           )}
         </>
