@@ -627,6 +627,9 @@ export async function GET(req: NextRequest) {
   // Mostrar u ocultar la franja de sponsors. Cuando es false, los logos
   // de sponsors igual se renderizan pero sin fondo — flotan sobre el canvas.
   const showSponsorBar = searchParams.get("showSponsorBar") !== "false"
+  // Layout del header en temas premium: "split" (logo izq + badge der,
+  // default) o "centered" (logo centrado arriba, estilo V1 LNB oficial).
+  const premiumHeaderLayout = (searchParams.get("premiumHeaderLayout") === "centered" ? "centered" : "split") as "split" | "centered"
   // Filter + opacity que blanquea los sponsors en temas premium (lnbf
   // o lnb) para que queden unificados sobre el fondo oscuro. Satori
   // soporta brightness + invert individualmente (no todos los filtros).
@@ -1261,48 +1264,86 @@ export async function GET(req: NextRequest) {
             // Padding-top del texto: altura reservada para el logo (aunque
             // el logo sea absolute, dejamos ese aire para que no se pise).
             const headerTopPad = 28 + Math.max(60, Math.round(lnbfLogoBase * 0.55))
+            const isCenteredHeader = premiumHeaderLayout === "centered"
             return (
               <div style={{
                 display: "flex", flexDirection: "column", width: "100%",
                 height: headerH, paddingTop: headerTopPad,
                 paddingLeft: padX, paddingRight: padX,
                 position: "relative",
+                alignItems: isCenteredHeader ? "center" : "flex-start",
               }}>
-                {/* Logo absolute — no afecta el flujo del texto */}
+                {/* Logo — absolute top-left (split) o centrado arriba (centered) */}
                 {logoUrl ? (
-                  <img
-                    src={logoUrl}
-                    width={lnbfLogoSize}
-                    height={lnbfLogoSize}
-                    style={{
-                      position: "absolute",
-                      top: 28, left: padX,
-                      objectFit: "contain",
-                      display: "flex",
-                    }}
-                    alt="Logo"
-                  />
+                  isCenteredHeader ? (
+                    <img
+                      src={logoUrl}
+                      width={lnbfLogoSize}
+                      height={lnbfLogoSize}
+                      style={{
+                        position: "absolute",
+                        top: 28, left: "50%",
+                        marginLeft: -Math.round(lnbfLogoSize / 2),
+                        objectFit: "contain",
+                        display: "flex",
+                      }}
+                      alt="Logo"
+                    />
+                  ) : (
+                    <img
+                      src={logoUrl}
+                      width={lnbfLogoSize}
+                      height={lnbfLogoSize}
+                      style={{
+                        position: "absolute",
+                        top: 28, left: padX,
+                        objectFit: "contain",
+                        display: "flex",
+                      }}
+                      alt="Logo"
+                    />
+                  )
                 ) : null}
 
-                {/* Badge absolute arriba derecha */}
+                {/* Badge — absolute top-right (split) o centrado arriba sobre el eyebrow (centered) */}
                 {fechaBadge ? (
-                  <div style={{
-                    position: "absolute", top: 28, right: padX,
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "9px 20px",
-                    background: theme === "lnb-premium" ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
-                    border: `1px solid ${hdrPalette.borderColor}55`,
-                    borderRadius: 999,
-                  }}>
-                    <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: hdrPalette.gold }} />
-                    <span style={{
-                      color: hdrPalette.accentSoft,
-                      fontFamily: "Inter", fontSize: Math.round(15 * vMult),
-                      fontWeight: 800, letterSpacing: 2.5, display: "flex",
+                  isCenteredHeader ? (
+                    <div style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "9px 20px",
+                      background: theme === "lnb-premium" ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
+                      border: `1px solid ${hdrPalette.borderColor}55`,
+                      borderRadius: 999,
+                      marginBottom: 14,
                     }}>
-                      {fechaBadge.toUpperCase()}
-                    </span>
-                  </div>
+                      <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: hdrPalette.gold }} />
+                      <span style={{
+                        color: hdrPalette.accentSoft,
+                        fontFamily: "Inter", fontSize: Math.round(15 * vMult),
+                        fontWeight: 800, letterSpacing: 2.5, display: "flex",
+                      }}>
+                        {fechaBadge.toUpperCase()}
+                      </span>
+                    </div>
+                  ) : (
+                    <div style={{
+                      position: "absolute", top: 28, right: padX,
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "9px 20px",
+                      background: theme === "lnb-premium" ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
+                      border: `1px solid ${hdrPalette.borderColor}55`,
+                      borderRadius: 999,
+                    }}>
+                      <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: hdrPalette.gold }} />
+                      <span style={{
+                        color: hdrPalette.accentSoft,
+                        fontFamily: "Inter", fontSize: Math.round(15 * vMult),
+                        fontWeight: 800, letterSpacing: 2.5, display: "flex",
+                      }}>
+                        {fechaBadge.toUpperCase()}
+                      </span>
+                    </div>
+                  )
                 ) : null}
 
                 {/* Eyebrow */}
@@ -1311,17 +1352,19 @@ export async function GET(req: NextRequest) {
                   fontFamily: "Inter", fontSize: Math.round(17 * vMult),
                   fontWeight: 600, letterSpacing: 4, marginBottom: 12,
                   display: "flex",
+                  textAlign: isCenteredHeader ? "center" : "left",
                 }}>
                   {eyebrow.toUpperCase()}
                 </span>
 
-                {/* Título GIGANTE left-aligned en 2 líneas */}
-                <div style={{ display: "flex", flexDirection: "column" }}>
+                {/* Título — left-aligned (split) o centered (centered) */}
+                <div style={{ display: "flex", flexDirection: "column", alignItems: isCenteredHeader ? "center" : "flex-start" }}>
                   {tituloLines.map((ln, i) => (
                     <span key={i} style={{
                       color: "white", fontFamily: "Archivo Black",
                       fontSize: heroSize, fontWeight: 900,
                       letterSpacing: -4, lineHeight: 0.92, display: "flex",
+                      textAlign: isCenteredHeader ? "center" : "left",
                     }}>
                       {ln.toUpperCase()}
                     </span>

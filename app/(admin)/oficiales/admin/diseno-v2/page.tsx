@@ -118,6 +118,9 @@ function DisenoInner() {
   const [lnbfPattern, setLnbfPattern] = useState<"clean" | "dots" | "nandu" | "court">("dots")
   // LNB Premium — selector de patrón de fondo
   const [lnbPattern, setLnbPattern] = useState<"clean" | "scratch" | "dots" | "court" | "halftone" | "speed">("scratch")
+  // Layout del header premium: "split" (logo izq + badge der, default)
+  // o "centered" (logo centrado arriba + badge debajo, estilo V1 LNB oficial)
+  const [premiumHeaderLayout, setPremiumHeaderLayout] = useState<"split" | "centered">("split")
   // Badge "FECHA X" arriba derecha (solo en tema lnbf-premium). Vacío = sin badge.
   const [lnbfBadge, setLnbfBadge] = useState("")
   // Barra HORARIO al pie de cada tarjeta (solo en tema lnbf-premium)
@@ -510,6 +513,9 @@ function DisenoInner() {
     if (theme === "lnb-premium" && lnbPattern !== "scratch") {
       params.set("lnbPattern", lnbPattern)
     }
+    if ((theme === "lnbf-premium" || theme === "lnb-premium") && premiumHeaderLayout !== "split") {
+      params.set("premiumHeaderLayout", premiumHeaderLayout)
+    }
     if (theme === "lnbf-premium" && lnbfBadge.trim()) {
       params.set("lnbfBadge", lnbfBadge.trim())
     }
@@ -547,7 +553,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbPattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbPattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -888,6 +894,26 @@ function DisenoInner() {
                     </span>
                   </div>
                 </button>
+                <div>
+                  <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1.5 block">Layout del header</Label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {([
+                      { key: "split", label: "Logo izq + Badge der", desc: "Default — title left" },
+                      { key: "centered", label: "Logo centrado arriba", desc: "Estilo V1 oficial LNB" },
+                    ] as const).map((p) => (
+                      <button
+                        key={p.key}
+                        onClick={() => setPremiumHeaderLayout(p.key)}
+                        className={`px-2 py-2 rounded-lg border text-[10px] font-semibold transition-colors text-left ${
+                          premiumHeaderLayout === p.key ? "border-primary bg-white text-primary" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                        }`}
+                        title={p.desc}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 </div>
               </div>
             )}
