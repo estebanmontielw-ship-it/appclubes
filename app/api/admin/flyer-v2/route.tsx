@@ -1198,7 +1198,14 @@ export async function GET(req: NextRequest) {
     // Respiro vertical entre el header y la primera tarjeta (antes todo
     // quedaba pegado). Le restamos ese padding al cardH de cada partido.
     const headerToCardsPadding = Math.round((count === 1 ? 30 : count === 2 ? 20 : count === 3 ? 14 : 10) * vMult)
-    const rawCardH     = Math.round((count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240) * vMult)
+    // Card dimensions que dependen del formato + del tema. Los temas
+    // premium (LNB/LNBF) tienen un header mucho más grande porque el
+    // título hero en Archivo Black ocupa 2 líneas grandes, y el logo
+    // con su padding reserva espacio adicional. Para no overflowear,
+    // el cardH base es ~13% menor cuando es premium.
+    const rawCardH     = isPremiumTheme
+      ? Math.round((count === 1 ? 420 : count === 2 ? 350 : count === 3 ? 258 : 208) * vMult)
+      : Math.round((count === 1 ? 480 : count === 2 ? 400 : count === 3 ? 295 : 240) * vMult)
     const baseCardH    = rawCardH - Math.ceil(headerToCardsPadding / count)
     const logoSize     = Math.round((count === 1 ? 150 : count === 2 ? 120 : count === 3 ?  90 :  75) * vMult)
     const nameFontSize = Math.round((count === 1 ?  28 : count === 2 ?  24 : count === 3 ?  20 :  17) * vMult)
@@ -1208,7 +1215,13 @@ export async function GET(req: NextRequest) {
     // would overflow into the first match card. Grow headerH by the extra
     // pixels each scaled element needs, and steal that growth from each
     // card so the total still fits in the fixed format height.
-    const baseHeaderH       = Math.round((count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210) * vMult)
+    // Header base: en temas premium necesita ~130px extra para el
+    // layout hero con logo absolute + eyebrow + título Archivo Black
+    // en 2 líneas. Sin este aumento, el título overflowea y se ve
+    // tapado por la primera card.
+    const baseHeaderH       = isPremiumTheme
+      ? Math.round((count === 1 ? 440 : count === 2 ? 400 : count === 3 ? 370 : 340) * vMult)
+      : Math.round((count === 1 ? 280 : count === 2 ? 260 : count === 3 ? 240 : 210) * vMult)
     const titleBaseFontSize = Math.round((count === 1 ? 72 : 60) * vMult)
     const subtitleBaseFont  = Math.round(22 * vMult)
     const logoBaseSize      = Math.round((count === 1 ? 110 : 90) * vMult)
