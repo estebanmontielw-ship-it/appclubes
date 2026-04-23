@@ -984,7 +984,7 @@ export async function GET(req: NextRequest) {
       const H = format === "historia" ? 1920 : 1350
       return new ImageResponse(
         (
-          <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: "#0b1e3d" }}>
+          <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {playerPhotoUrl ? (() => {
               const imgW = Math.round(W * photoScale)
               const imgH = Math.round(H * photoScale)
@@ -1039,7 +1039,7 @@ export async function GET(req: NextRequest) {
       const photoSrc = playerPhotoUrl || leader.photoUrl || ""
       return new ImageResponse(
         (
-          <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: "#0b1e3d" }}>
+          <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {photoSrc ? (() => {
               const frameW = Math.round(W * 0.55)
               const imgW = Math.round(frameW * photoScale)
