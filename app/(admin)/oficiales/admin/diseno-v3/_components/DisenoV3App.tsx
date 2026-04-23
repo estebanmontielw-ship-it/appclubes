@@ -8,13 +8,15 @@ import CanvasStage, { type CanvasStageHandle } from "./CanvasStage"
 import TopBar from "./TopBar"
 import LeftRail from "./LeftRail"
 import RightInspector from "./RightInspector"
-import GeniusImportPanel, { type ImportPayload } from "./GeniusImportPanel"
+import GeniusImportPanel, { type ImportPayload, type MatchData } from "./GeniusImportPanel"
 import DocumentsModal from "./DocumentsModal"
+import type { SponsorsConfig } from "./SponsorsPanel"
 import { loadFabric } from "../_lib/fabric-bridge"
 import { FORMATS, getFormat, type FormatKey } from "../_lib/formats"
 import { getDefaultTheme, type LigaKey, type V3Theme, THEMES } from "../_lib/themes"
 import { buildTemplate, type TemplateKey } from "../_lib/templates"
 import { exportPNG, exportJPG, exportPDF, exportJSON, generateThumbnail } from "../_lib/export"
+import type { PatternKey } from "../_lib/patterns"
 
 let uid = 0
 const nextId = () => `o${Date.now().toString(36)}-${(++uid).toString(36)}`
@@ -49,6 +51,18 @@ export default function DisenoV3App() {
 
   const [geniusOpen, setGeniusOpen] = useState(false)
   const [docsOpen, setDocsOpen] = useState(false)
+
+  // Sponsors config — persistido y aplicado al insertar templates
+  const [sponsorsConfig, setSponsorsConfig] = useState<SponsorsConfig>({
+    sponsors: [null, null, null, null, null],
+    scales: [100, 100, 100, 100, 100],
+    bg: "dark",
+    show: true,
+  })
+
+  // Patrón de fondo
+  const [patternKey, setPatternKey] = useState<PatternKey>("none")
+  const [patternAlpha, setPatternAlpha] = useState(0.08)
 
   const stageRef = useRef<CanvasStageHandle>(null)
   const canvasRef = useRef<any>(null)
@@ -110,28 +124,85 @@ export default function DisenoV3App() {
     refreshLayers()
   }, [refreshLayers])
 
+  // --- Aplicar sponsors subidos sobre los slots del template ---
+  const applySponsorsToCanvas = useCallback(async () => {
+    const c = canvasRef.current
+    if (!c) return
+    const fabric = await loadFabric()
+    // Buscar los 5 slots
+    for (let i = 0; i < 5; i++) {
+      const url = sponsorsConfig.sponsors[i]
+      if (!url) continue
+      const slot = c.getObjects().find((o: any) => o.role === `sponsor-slot-${i}`)
+      if (!slot) continue
+      await new Promise<void>((resolve) => {
+        fabric.Image.fromURL(url, (img: any) => {
+          const sw = (slot.width || 1) * (slot.scaleX || 1)
+          const sh = (slot.height || 1) * (slot.scaleY || 1)
+          const scaleBase = Math.min(sw / (img.width || 1), sh / (img.height || 1))
+          const sc = scaleBase * (sponsorsConfig.scales[i] / 100)
+          img.set({
+            left: (slot.left || 0) + sw / 2,
+            top: (slot.top || 0) + sh / 2,
+            originX: "center", originY: "center",
+            scaleX: sc, scaleY: sc,
+            role: `sponsor-img-${i}`,
+          })
+          img.id = nextId()
+          c.add(img)
+          resolve()
+        }, { crossOrigin: "anonymous" })
+      })
+    }
+    c.requestRenderAll()
+    refreshLayers()
+  }, [sponsorsConfig, refreshLayers])
+
   // --- Insert template ---
   const insertTemplate = useCallback(
-    async (key: TemplateKey) => {
+    async (key: TemplateKey, data?: any) => {
       const c = canvasRef.current
       if (!c) return
       const fabric = await loadFabric()
-      // Si el template incluye bg, limpiamos el canvas primero
-      if (key !== "blank") {
-        c.clear()
-      }
-      const objs = buildTemplate(key, { fabric, theme, format })
+      c.clear()
+      const objs = await buildTemplate(key, {
+        fabric, theme, format, data,
+        pattern: patternKey,
+        patternAlpha,
+        showSponsorStrip: sponsorsConfig.show,
+        sponsorBg: sponsorsConfig.bg,
+      })
       objs.forEach((o: any) => {
         if (!o.id) o.id = nextId()
         c.add(o)
       })
       c.requestRenderAll()
+      if (sponsorsConfig.show) await applySponsorsToCanvas()
       refreshLayers()
       setDirty(true)
       stageRef.current?.fitToScreen()
     },
-    [theme, format, refreshLayers],
+    [theme, format, refreshLayers, patternKey, patternAlpha, sponsorsConfig, applySponsorsToCanvas],
   )
+
+  // Sponsors config change → re-aplicar franja sin perder el resto
+  const handleSponsorsChange = useCallback(async (cfg: SponsorsConfig) => {
+    setSponsorsConfig(cfg)
+    const c = canvasRef.current
+    if (!c) return
+    // quitar sponsors previos (strip bg, label, slots, imgs)
+    const toRemove = c.getObjects().filter((o: any) =>
+      typeof o.role === "string" && (
+        o.role.startsWith("sponsor-strip") ||
+        o.role.startsWith("sponsor-label") ||
+        o.role.startsWith("sponsor-slot") ||
+        o.role.startsWith("sponsor-img")
+      )
+    )
+    toRemove.forEach((o: any) => c.remove(o))
+    c.requestRenderAll()
+    markDirty()
+  }, [markDirty])
 
   // --- Insert text ---
   const insertText = useCallback(
@@ -245,56 +316,66 @@ export default function DisenoV3App() {
   }, [format, refreshLayers])
 
   // --- Genius import ---
-  const handleGeniusImport = useCallback(
-    async (payload: ImportPayload) => {
-      const c = canvasRef.current
-      if (!c) return
-      const fabric = await loadFabric()
-      c.clear()
-      const data: any = { ...(payload.data || {}), ligaLabel: (payload.data as any).ligaLabel }
-      const objs = buildTemplate(payload.template as TemplateKey, { fabric, theme, format, data })
-      objs.forEach((o: any) => {
-        if (!o.id) o.id = nextId()
-        c.add(o)
-      })
+  // --- Handlers del MatchesPanel persistente ---
+  const addTeamLogos = useCallback(async (data: MatchData) => {
+    const c = canvasRef.current
+    if (!c) return
+    const fabric = await loadFabric()
+    const addLogo = (url: string, x: number, y: number, size: number) => {
+      fabric.Image.fromURL(url, (img: any) => {
+        const scale = size / Math.max(img.width || 1, img.height || 1)
+        img.set({
+          left: x, top: y, scaleX: scale, scaleY: scale,
+          originX: "center", originY: "center",
+          role: "team-logo",
+        })
+        img.id = nextId()
+        c.add(img)
+        c.requestRenderAll()
+        refreshLayers()
+      }, { crossOrigin: "anonymous" })
+    }
+    if (data.homeLogo) addLogo(data.homeLogo, format.width * 0.24, format.height * 0.48, format.width * 0.18)
+    if (data.awayLogo) addLogo(data.awayLogo, format.width * 0.76, format.height * 0.48, format.width * 0.18)
+  }, [format, refreshLayers])
 
-      // Si es pre/resultado e incluye logos, los cargamos arriba
-      if ((payload.template === "pre" || payload.template === "resultado") && (data.homeLogo || data.awayLogo)) {
-        const addLogo = (url: string, x: number, y: number) => {
-          fabric.Image.fromURL(
-            url,
-            (img: any) => {
-              const targetW = format.width * 0.2
-              const scale = targetW / (img.width || 1)
-              img.set({
-                left: x,
-                top: y,
-                scaleX: scale,
-                scaleY: scale,
-                originX: "center",
-                originY: "center",
-              })
-              img.id = nextId()
-              c.add(img)
-              c.requestRenderAll()
-              refreshLayers()
-            },
-            { crossOrigin: "anonymous" },
-          )
-        }
-        if (data.homeLogo) addLogo(data.homeLogo, format.width * 0.28, format.height * 0.38)
-        if (data.awayLogo) addLogo(data.awayLogo, format.width * 0.72, format.height * 0.38)
-      }
+  const handleApplyMatch = useCallback(async (data: MatchData, withScore: boolean) => {
+    await insertTemplate(withScore ? "resultado" : "pre", data)
+    await addTeamLogos(data)
+    toast({ title: "Partido importado", description: "Todo queda editable." })
+  }, [insertTemplate, addTeamLogos, toast])
 
-      c.requestRenderAll()
-      refreshLayers()
-      setDirty(true)
-      setGeniusOpen(false)
-      toast({ title: "Datos importados", description: "Todo queda editable — tocá cualquier elemento." })
-      stageRef.current?.fitToScreen()
-    },
-    [theme, format, refreshLayers, toast],
-  )
+  const handleApplyStandings = useCallback(async (rows: any[]) => {
+    const standings = rows.map((s: any, i: number) => ({
+      pos: s.rank ?? s.position ?? i + 1,
+      name: s.teamName || s.competitorName || s.name || "",
+      w: s.wins ?? s.matchesWon ?? 0,
+      l: s.losses ?? s.matchesLost ?? 0,
+    }))
+    const ligaLabelMap: Record<LigaKey, string> = {
+      lnb: "LNB APERTURA 2026", lnbf: "LNBF APERTURA 2026",
+      u22m: "U22 MASC 2026", u22f: "U22 FEM 2026",
+    }
+    await insertTemplate("tabla", { standings, ligaLabel: ligaLabelMap[liga] })
+    toast({ title: "Tabla importada" })
+  }, [insertTemplate, liga, toast])
+
+  const handleApplyLeaders = useCallback(async (rows: any[]) => {
+    const leaders = rows.slice(0, 5).map((p: any) => ({
+      name: p.playerName || `${p.firstName || ""} ${p.familyName || ""}`.trim() || "—",
+      team: p.teamCode || p.teamName || "",
+      value: p.value ?? p.points ?? p.stat ?? "",
+    }))
+    await insertTemplate("lideres", { leaders })
+    toast({ title: "Líderes importados" })
+  }, [insertTemplate, toast])
+
+  // --- Compatibilidad: modal legacy de Genius ---
+  const handleGeniusImport = useCallback(async (payload: ImportPayload) => {
+    await insertTemplate(payload.template as TemplateKey, payload.data)
+    if ("homeLogo" in (payload.data as any)) await addTeamLogos(payload.data as MatchData)
+    setGeniusOpen(false)
+  }, [insertTemplate, addTeamLogos])
 
   // --- Selection actions ---
   const deleteSelected = useCallback(() => {
@@ -680,12 +761,20 @@ export default function DisenoV3App() {
         <LeftRail
           liga={liga}
           theme={theme}
-          onInsertTemplate={insertTemplate}
+          onInsertTemplate={(k) => insertTemplate(k)}
           onInsertText={insertText}
           onInsertShape={insertShape}
           onInsertImage={insertImage}
           onSelectTheme={applyTheme}
-          onOpenGenius={() => setGeniusOpen(true)}
+          onApplyMatch={handleApplyMatch}
+          onApplyStandings={handleApplyStandings}
+          onApplyLeaders={handleApplyLeaders}
+          sponsorsConfig={sponsorsConfig}
+          onSponsorsChange={handleSponsorsChange}
+          patternKey={patternKey}
+          patternAlpha={patternAlpha}
+          onPatternChange={setPatternKey}
+          onPatternAlphaChange={setPatternAlpha}
           layers={layers}
           selectedId={selected?.id ?? null}
           onSelectLayer={selectLayer}
