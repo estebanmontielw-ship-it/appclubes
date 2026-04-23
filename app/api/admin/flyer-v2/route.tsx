@@ -326,9 +326,13 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
   const tied = isNaN(hs) || isNaN(as_) || hs === as_
   const homeWins = !tied && hs > as_
   const badge = `JUEGO ${String(matchNumber).padStart(2, "0")}`
-  const metaFont = Math.max(13, Math.round(cardH * 0.045))
+  const badgeFont = Math.max(12, Math.round(cardH * 0.038))
+  const metaFont = Math.max(14, Math.round(cardH * 0.048))
+  const metaLabelFont = Math.max(11, Math.round(cardH * 0.038))
   const horarioH = Math.max(44, Math.round(cardH * 0.14))
-  const horarioFont = Math.max(22, Math.round(cardH * 0.10))
+  const horarioFont = Math.max(24, Math.round(cardH * 0.105))
+  // Jerarquía de nombres: un pelín más grande que el default
+  const teamFs = Math.round(nameFontSize * 1.05)
 
   return (
     <div style={{
@@ -340,23 +344,27 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
       overflow: "hidden",
       position: "relative",
     }}>
-      {/* JUEGO 0X badge */}
+      {/* JUEGO 0X badge con punto sutil */}
       <div style={{
-        position: "absolute", top: 14, left: 18,
-        display: "flex", alignItems: "center",
-        fontFamily: "Inter", fontSize: Math.max(11, Math.round(cardH * 0.035)),
-        fontWeight: 700, letterSpacing: 2,
-        color: LNBF.color.violet300,
+        position: "absolute", top: 14, left: 20,
+        display: "flex", alignItems: "center", gap: 8,
       }}>
-        {badge}
+        <div style={{ display: "flex", width: 6, height: 6, borderRadius: 3, background: LNBF.color.gold500 }} />
+        <span style={{
+          fontFamily: "Inter", fontSize: badgeFont,
+          fontWeight: 800, letterSpacing: 2.5,
+          color: LNBF.color.violet300, display: "flex",
+        }}>
+          {badge}
+        </span>
       </div>
 
       {/* Fila principal: Home · VS · Away */}
-      <div style={{ display: "flex", flex: 1, alignItems: "center", width: "100%", paddingTop: Math.round(cardH * 0.12) }}>
+      <div style={{ display: "flex", flex: 1, alignItems: "center", width: "100%", paddingTop: Math.round(cardH * 0.14) }}>
         {/* Home */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 16 }}>
           <Logo url={match.homeLogo} name={match.homeName} size={logoSize} />
-          <span style={{ color: "white", fontFamily: "Inter", fontSize: nameFontSize, fontWeight: isResultado && !tied && homeWins ? 900 : 700, letterSpacing: 0.5, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
+          <span style={{ color: "white", fontFamily: "Inter", fontSize: teamFs, fontWeight: isResultado && !tied && homeWins ? 900 : 700, letterSpacing: 1.2, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
             {match.homeName.toUpperCase()}
           </span>
         </div>
@@ -377,31 +385,32 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
           <div style={{ width: 38, height: 3, background: LNBF.color.gold500, marginTop: 8, borderRadius: 2, display: "flex" }} />
         </div>
         {/* Away */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 16 }}>
           <Logo url={match.awayLogo} name={match.awayName} size={logoSize} />
-          <span style={{ color: "white", fontFamily: "Inter", fontSize: nameFontSize, fontWeight: isResultado && !tied && !homeWins ? 900 : 700, letterSpacing: 0.5, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
+          <span style={{ color: "white", fontFamily: "Inter", fontSize: teamFs, fontWeight: isResultado && !tied && !homeWins ? 900 : 700, letterSpacing: 1.2, textAlign: "center", maxWidth: cardW * 0.35, display: "flex" }}>
             {match.awayName.toUpperCase()}
           </span>
         </div>
       </div>
 
-      {/* Meta: estadio (izq) · fecha (der) */}
+      {/* Meta: estadio (izq) · fecha (der). El label usa tamaño/letterSpacing
+          más chico para dar jerarquía al valor (nombre de estadio / fecha). */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "8px 22px",
-        borderTop: "1px solid rgba(201,160,255,0.12)",
+        padding: "10px 22px",
+        borderTop: "1px solid rgba(201,160,255,0.14)",
         width: "100%",
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           {match.venue ? (
             <>
-              <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, letterSpacing: 2, display: "flex" }}>ESTADIO</span>
-              <span style={{ color: "rgba(255,255,255,0.75)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 500, display: "flex" }}>{match.venue}</span>
+              <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: metaLabelFont, fontWeight: 700, letterSpacing: 2.5, display: "flex" }}>ESTADIO</span>
+              <span style={{ color: "rgba(255,255,255,0.85)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 500, display: "flex" }}>{match.venue}</span>
             </>
           ) : <span style={{ display: "flex" }} />}
         </div>
         {match.date ? (
-          <span style={{ color: "rgba(255,255,255,0.85)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, letterSpacing: 1, display: "flex" }}>
+          <span style={{ color: "rgba(255,255,255,0.9)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 700, letterSpacing: 1.5, display: "flex" }}>
             {match.date.toUpperCase()}
           </span>
         ) : null}
@@ -1158,28 +1167,29 @@ export async function GET(req: NextRequest) {
                   ) : <span style={{ display: "flex" }} />}
                   {fechaBadge ? (
                     <div style={{
-                      display: "flex", alignItems: "center",
-                      padding: "8px 18px",
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "9px 20px",
                       background: "rgba(201,160,255,0.12)",
                       border: `1px solid ${LNBF.color.violet400}55`,
                       borderRadius: 999,
                     }}>
+                      <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: LNBF.color.gold500 }} />
                       <span style={{
                         color: LNBF.color.violet300,
-                        fontFamily: "Inter", fontSize: Math.round(14 * vMult),
-                        fontWeight: 700, letterSpacing: 3, display: "flex",
+                        fontFamily: "Inter", fontSize: Math.round(15 * vMult),
+                        fontWeight: 800, letterSpacing: 2.5, display: "flex",
                       }}>
-                        • {fechaBadge.toUpperCase()}
+                        {fechaBadge.toUpperCase()}
                       </span>
                     </div>
                   ) : <span style={{ display: "flex" }} />}
                 </div>
 
-                {/* Eyebrow */}
+                {/* Eyebrow — letter-spacing un pelín menor + peso más sutil */}
                 <span style={{
                   color: LNBF.color.violet300,
-                  fontFamily: "Inter", fontSize: Math.round(16 * vMult),
-                  fontWeight: 700, letterSpacing: 5, marginBottom: 10,
+                  fontFamily: "Inter", fontSize: Math.round(17 * vMult),
+                  fontWeight: 600, letterSpacing: 4, marginBottom: 12,
                   display: "flex",
                 }}>
                   {eyebrow.toUpperCase()}
