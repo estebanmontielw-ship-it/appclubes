@@ -146,7 +146,7 @@ function getNavSections(
             ],
           },
           {
-            label: "Diseño V3 · Editor",
+            label: "Diseño V3",
             icon: Palette,
             href: "/oficiales/admin/diseno-v3",
           },

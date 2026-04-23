@@ -2,7 +2,7 @@
 
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useToast } from "@/components/ui/use-toast"
 import CanvasStage, { type CanvasStageHandle } from "./CanvasStage"
 import TopBar from "./TopBar"
@@ -31,7 +31,12 @@ interface LayerItem {
 
 export default function DisenoV3App() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
+
+  // Leer query params una sola vez al montar
+  const initialDocId = searchParams.get("doc")
+  const initialNew = searchParams.get("new")  // formato:liga:template
 
   // --- Estado principal ---
   const [docId, setDocId] = useState<string | null>(null)
@@ -131,16 +136,43 @@ export default function DisenoV3App() {
   }, [])
 
   // --- Canvas ready ---
+  // Guardamos flag para auto-cargar el diseño indicado por query params
+  // una sola vez (la primera vez que el canvas está listo).
+  const autoLoadedRef = useRef(false)
   const onCanvasReady = useCallback((c: any) => {
     canvasRef.current = c
     refreshLayers()
-  }, [refreshLayers])
+    if (autoLoadedRef.current) return
+    autoLoadedRef.current = true
+    // Caso 1: ?doc=ID → abrir documento guardado
+    if (initialDocId) {
+      setTimeout(() => openDocRef.current?.(initialDocId), 50)
+      return
+    }
+    // Caso 2: ?new=formato:liga:template → configurar y auto-insertar template
+    if (initialNew) {
+      const [fmt, lg, tpl] = initialNew.split(":")
+      if (fmt) setFormatKey(fmt as FormatKey)
+      if (lg) setLiga(lg as LigaKey)
+      if (tpl && tpl !== "blank") {
+        // Pequeño delay para que liga/theme se estabilicen antes de insertar
+        setTimeout(() => insertTemplateRef.current?.(tpl as TemplateKey), 150)
+      }
+    }
+  }, [refreshLayers, initialDocId, initialNew])
+
+  // Refs para romper el ciclo de dependencias de onCanvasReady
+  const openDocRef = useRef<((id: string) => Promise<void>) | null>(null)
+  const insertTemplateRef = useRef<((k: TemplateKey, data?: any) => Promise<void>) | null>(null)
 
   // Callback estable (evita recrear canvas en cada render)
   const onHistoryChangeStable = useCallback((u: boolean, r: boolean) => {
     setCanUndo(u)
     setCanRedo(r)
   }, [])
+
+  // Mantener refs sincronizadas con las funciones después de su definición
+  // (ver bloque al final del componente).
 
   // Dirty tracking
   const markDirty = useCallback(() => {
@@ -800,6 +832,10 @@ export default function DisenoV3App() {
   // --- Bg color del stage ---
   const stageBg = theme.bg
 
+  // Sincronizar refs (evitan referencias circulares con onCanvasReady)
+  useEffect(() => { openDocRef.current = openDoc }, [openDoc])
+  useEffect(() => { insertTemplateRef.current = insertTemplate }, [insertTemplate])
+
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-neutral-950 text-white">
       <TopBar
@@ -814,11 +850,11 @@ export default function DisenoV3App() {
         onUndo={undo}
         onRedo={redo}
         onSave={() => doSave()}
-        onOpen={() => setDocsOpen(true)}
+        onOpen={() => router.push("/oficiales/admin/diseno-v3")}
         onExport={handleExport}
         saving={saving}
         dirty={dirty}
-        onBack={() => router.push("/oficiales/admin")}
+        onBack={() => router.push("/oficiales/admin/diseno-v3")}
         onGenerateCopy={generateCopy}
       />
 
