@@ -98,6 +98,12 @@ export default function DisenoV3App() {
     refreshLayers()
   }, [refreshLayers])
 
+  // Callback estable (evita recrear canvas en cada render)
+  const onHistoryChangeStable = useCallback((u: boolean, r: boolean) => {
+    setCanUndo(u)
+    setCanRedo(r)
+  }, [])
+
   // Dirty tracking
   const markDirty = useCallback(() => {
     setDirty(true)
@@ -694,7 +700,7 @@ export default function DisenoV3App() {
           bgColor={stageBg}
           onReady={onCanvasReady}
           onSelectionChange={setSelected}
-          onHistoryChange={(u, r) => { setCanUndo(u); setCanRedo(r) }}
+          onHistoryChange={onHistoryChangeStable}
           onDirty={markDirty}
           showSafeZones={showSafeZones}
         />

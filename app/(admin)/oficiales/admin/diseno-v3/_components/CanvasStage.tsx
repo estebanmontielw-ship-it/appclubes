@@ -38,6 +38,17 @@ const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
   const [zoom, setZoomState] = useState(0.5)
   const [ready, setReady] = useState(false)
 
+  // Callbacks en refs para que NO disparen re-creación del canvas (antes causaba
+  // loop infinito porque el parent pasaba callbacks inline que cambiaban cada render).
+  const onReadyRef = useRef(onReady)
+  const onSelectionChangeRef = useRef(onSelectionChange)
+  const onHistoryChangeRef = useRef(onHistoryChange)
+  const onDirtyRef = useRef(onDirty)
+  useEffect(() => { onReadyRef.current = onReady })
+  useEffect(() => { onSelectionChangeRef.current = onSelectionChange })
+  useEffect(() => { onHistoryChangeRef.current = onHistoryChange })
+  useEffect(() => { onDirtyRef.current = onDirty })
+
   // --- compute zoom to fit ---
   const fitToScreen = useCallback(() => {
     const el = containerRef.current
@@ -77,10 +88,10 @@ const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
 
       canvasRef.current = canvas
 
-      // Selection events
-      canvas.on("selection:created", (e: any) => onSelectionChange?.(e.selected?.[0] ?? null))
-      canvas.on("selection:updated", (e: any) => onSelectionChange?.(e.selected?.[0] ?? null))
-      canvas.on("selection:cleared", () => onSelectionChange?.(null))
+      // Selection events — usan refs para no recrear el canvas
+      canvas.on("selection:created", (e: any) => onSelectionChangeRef.current?.(e.selected?.[0] ?? null))
+      canvas.on("selection:updated", (e: any) => onSelectionChangeRef.current?.(e.selected?.[0] ?? null))
+      canvas.on("selection:cleared", () => onSelectionChangeRef.current?.(null))
 
       // Wheel zoom
       canvas.on("mouse:wheel", (opt: any) => {
@@ -139,16 +150,16 @@ const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
       // Smart guides
       guidesRef.current = attachSmartGuides(fabric, canvas)
 
-      // History
+      // History — callbacks vía refs
       historyRef.current = attachHistory(canvas, () => {
-        onHistoryChange?.(!!historyRef.current?.canUndo(), !!historyRef.current?.canRedo())
-        onDirty?.()
+        onHistoryChangeRef.current?.(!!historyRef.current?.canUndo(), !!historyRef.current?.canRedo())
+        onDirtyRef.current?.()
       })
 
       // Initial fit
       fitToScreen()
       setReady(true)
-      onReady?.(canvas)
+      onReadyRef.current?.(canvas)
 
       // Resize observer
       if (containerRef.current) {
@@ -175,13 +186,22 @@ const CanvasStage = forwardRef<CanvasStageHandle, Props>(function CanvasStage(
       }
       canvasRef.current = null
     }
-  }, [format.width, format.height, bgColor, fitToScreen, onDirty, onHistoryChange, onReady, onSelectionChange])
+    // Solo re-crear canvas si cambia el formato. bgColor y callbacks usan refs
+    // para no disparar recreación (eso causaba loop infinito).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [format.width, format.height])
+
+  // bgColor change → solo actualizamos el fondo, no recreamos el canvas
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    canvas.setBackgroundColor(bgColor, () => canvas.requestRenderAll())
+  }, [bgColor])
 
   // Safe zones overlay (solo visual — no es un objeto fabric)
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || !ready) return
-    canvas.clearContext(canvas.getContext())
     canvas.requestRenderAll()
   }, [showSafeZones, ready])
 
