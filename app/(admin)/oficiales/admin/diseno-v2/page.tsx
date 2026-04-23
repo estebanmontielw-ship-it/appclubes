@@ -66,7 +66,9 @@ function DisenoInner() {
   const [subtitulo, setSubtitulo] = useState("")
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoScale, setLogoScale] = useState(100)
-  const [theme, setTheme] = useState("masc1")
+  // Default theme depende del liga: LNB/U22M → lnb-premium, LNBF/U22F → lnbf-premium
+  const defaultPremiumTheme = (ligaParam === "lnbf" || ligaParam === "u22f") ? "lnbf-premium" : "lnb-premium"
+  const [theme, setTheme] = useState(defaultPremiumTheme)
   const [bgImageUrl, setBgImageUrl] = useState<string | null>(null)
   const [uploadingBg, setUploadingBg] = useState(false)
   const bgInputRef = useRef<HTMLInputElement>(null)
@@ -165,7 +167,11 @@ function DisenoInner() {
     setLogoScale(parseInt(localStorage.getItem(lsKey("logoScale")) ?? "100"))
     setTextureUrl(localStorage.getItem(lsKey("texture")) ?? null)
     setTextureOpacity(parseInt(localStorage.getItem(lsKey("textureOpacity")) ?? "12"))
-    setTheme(localStorage.getItem(lsKey("theme")) ?? "masc1")
+    const lsTheme = localStorage.getItem(lsKey("theme")) ?? ""
+    const migLsTheme = (lsTheme === "masc1" || lsTheme === "masc2") ? "lnb-premium"
+                    : (lsTheme === "fem1" || lsTheme === "fem2") ? "lnbf-premium"
+                    : (lsTheme || defaultPremiumTheme)
+    setTheme(migLsTheme)
     setBgImageUrl(localStorage.getItem(lsKey("bgImage")) ?? null)
     setTitleSize(parseInt(localStorage.getItem(lsKey("titleSize")) ?? "100"))
     setSubtitleSize(parseInt(localStorage.getItem(lsKey("subtitleSize")) ?? "100"))
@@ -202,7 +208,16 @@ function DisenoInner() {
         if (c) {
           setLogoUrl(c.logoUrl ?? null)
           setLogoScale(typeof c.logoScale === "number" ? c.logoScale : 100)
-          setTheme(c.theme ?? "masc1")
+          // Migración suave: si la config guardada tiene un tema V1
+          // (masc1/masc2/fem1/fem2), lo mapeamos al premium equivalente
+          // para que el selector V2 quede consistente.
+          const savedTheme = c.theme ?? ""
+          const migratedTheme = (savedTheme === "masc1" || savedTheme === "masc2")
+            ? "lnb-premium"
+            : (savedTheme === "fem1" || savedTheme === "fem2")
+            ? "lnbf-premium"
+            : (savedTheme || (ligaParam === "lnbf" || ligaParam === "u22f" ? "lnbf-premium" : "lnb-premium"))
+          setTheme(migratedTheme)
           setBgImageUrl(c.bgImageUrl ?? null)
           setBgFit((c.bgFit as "cover" | "contain") ?? "cover")
           setTextureUrl(c.textureUrl ?? null)
@@ -784,12 +799,11 @@ function DisenoInner() {
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Color de fondo</Label>
             <div className="grid grid-cols-2 gap-2">
               {([
-                { key: "masc1", label: "Azul marino",   sub: "Masculino · clásico",  from: "#0b1e3d", to: "#091830" },
-                { key: "masc2", label: "Azul royal",    sub: "Masculino · alternativo", from: "#0a2e6e", to: "#061a4a" },
-                { key: "fem1",  label: "Violeta",       sub: "Femenino · clásico",   from: "#2d0a4e", to: "#1a0630" },
-                { key: "fem2",  label: "Bordo/rojo",    sub: "Femenino · alternativo", from: "#4a0a1a", to: "#2a0610" },
+                // Los 4 temas V1 (masc1/masc2/fem1/fem2) quedan disponibles
+                // vía URL param ?theme=masc1 para backward compat, pero el
+                // V2 se centra en los 2 temas premium de Claude Design.
+                { key: "lnb-premium",  label: "LNB Premium",  sub: "Navy + gold · scratchy", from: "#1E3FA8", to: "#03081A" },
                 { key: "lnbf-premium", label: "LNBF Premium", sub: "Morado + gold · ñandutí", from: "#3C1370", to: "#0E0418" },
-                { key: "lnb-premium",  label: "LNB Premium",  sub: "Navy + gold · scratchy",    from: "#1E3FA8", to: "#03081A" },
               ] as const).map((t) => (
                 <button
                   key={t.key}
