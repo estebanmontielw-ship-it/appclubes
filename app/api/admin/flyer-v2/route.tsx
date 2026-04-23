@@ -633,8 +633,10 @@ export async function GET(req: NextRequest) {
   // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
   // vacío no se renderiza el pill.
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
-  // Mostrar u ocultar la barra HORARIO al pie de cada tarjeta LNBF
-  const lnbfShowHorarioBar = searchParams.get("lnbfShowHorarioBar") !== "false"
+  // Mostrar u ocultar la barra HORARIO al pie de cada tarjeta premium.
+  // Default OFF — el info row ya muestra HORA con icono, la barra
+  // se vuelve redundante. Se activa sólo si el usuario lo pide por URL.
+  const lnbfShowHorarioBar = searchParams.get("lnbfShowHorarioBar") === "true"
   // Mostrar u ocultar la franja de sponsors. Cuando es false, los logos
   // de sponsors igual se renderizan pero sin fondo — flotan sobre el canvas.
   const showSponsorBar = searchParams.get("showSponsorBar") !== "false"
@@ -813,10 +815,11 @@ export async function GET(req: NextRequest) {
             {/* Sponsors footer */}
             {sponsorLogos.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", padding: "0 60px", position: "relative" }}>
-                {/* Hairline divisor arriba cuando no hay barra (sponsors flotan
-                    limpios sobre el canvas, estilo handoff oficial) */}
-                {!showSponsorBar && isPremiumTheme && (
-                  <div style={{ display: "flex", position: "absolute", top: Math.round(footerH * 0.20), left: "15%", right: "15%", height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.22) 50%, transparent 100%)" }} />
+                {/* Hairline divisor arriba — siempre visible en temas premium,
+                    da un remate editorial entre las cards y la franja de
+                    sponsors (sin importar si la barra está o no). */}
+                {isPremiumTheme && (
+                  <div style={{ display: "flex", position: "absolute", top: Math.round(footerH * 0.18), left: "12%", right: "12%", height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%)" }} />
                 )}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(56 * vMult), width: "100%", flex: 1 }}>
                   {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}

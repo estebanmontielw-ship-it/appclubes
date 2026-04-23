@@ -123,8 +123,10 @@ function DisenoInner() {
   const [premiumHeaderLayout, setPremiumHeaderLayout] = useState<"split" | "centered">("split")
   // Badge "FECHA X" arriba derecha (solo en tema lnbf-premium). Vacío = sin badge.
   const [lnbfBadge, setLnbfBadge] = useState("")
-  // Barra HORARIO al pie de cada tarjeta (solo en tema lnbf-premium)
-  const [lnbfShowHorarioBar, setLnbfShowHorarioBar] = useState(true)
+  // Barra HORARIO al pie de cada tarjeta (solo en tema lnbf-premium).
+  // Default OFF porque el info row ya muestra la HORA con icono — la
+  // barra se vuelve redundante. Se puede reactivar desde el toggle.
+  const [lnbfShowHorarioBar, setLnbfShowHorarioBar] = useState(false)
   // Mostrar u ocultar la franja de sponsors al pie del flyer
   const [showSponsorBar, setShowSponsorBar] = useState(true)
   const [jugadorTeamLogo, setJugadorTeamLogo] = useState<string | null>(null)
@@ -519,8 +521,8 @@ function DisenoInner() {
     if (theme === "lnbf-premium" && lnbfBadge.trim()) {
       params.set("lnbfBadge", lnbfBadge.trim())
     }
-    if (theme === "lnbf-premium" && !lnbfShowHorarioBar) {
-      params.set("lnbfShowHorarioBar", "false")
+    if ((theme === "lnbf-premium" || theme === "lnb-premium") && lnbfShowHorarioBar) {
+      params.set("lnbfShowHorarioBar", "true")
     }
     if (!showSponsorBar) {
       params.set("showSponsorBar", "false")
