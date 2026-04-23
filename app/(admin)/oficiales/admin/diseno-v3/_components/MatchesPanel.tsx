@@ -131,6 +131,7 @@ export default function MatchesPanel({ liga, onApplyMatch, onApplyMatches, onApp
       : (m.venue?.venueName || m.venue?.locationName || "")
     return {
       matchId: m.matchId,
+      matchNumber: typeof m.matchNumber === "number" ? m.matchNumber : (m.matchNumber ? parseInt(m.matchNumber, 10) : null),
       homeName: home?.competitorName || "",
       awayName: away?.competitorName || "",
       homeLogo: normalizeLogoUrl(home?.images?.logo?.L1?.url || home?.images?.logo?.S1?.url || home?.images?.logo?.T1?.url),
@@ -151,6 +152,7 @@ export default function MatchesPanel({ liga, onApplyMatch, onApplyMatches, onApp
       : (m.venue?.venueName || m.venue?.locationName || "")
     const data: MatchData = {
       matchId: m.matchId,
+      matchNumber: typeof m.matchNumber === "number" ? m.matchNumber : (m.matchNumber ? parseInt(m.matchNumber, 10) : null),
       homeName: home?.competitorName || "",
       awayName: away?.competitorName || "",
       homeLogo: normalizeLogoUrl(home?.images?.logo?.L1?.url || home?.images?.logo?.S1?.url || home?.images?.logo?.T1?.url),

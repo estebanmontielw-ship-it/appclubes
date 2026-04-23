@@ -23,6 +23,7 @@ export type ImportPayload =
 
 export interface MatchData {
   matchId?: number | string
+  matchNumber?: number | null   // número secuencial dentro de la competencia → para calcular jornada
   homeName: string
   awayName: string
   homeLogo?: string | null

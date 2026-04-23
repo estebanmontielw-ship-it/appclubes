@@ -85,6 +85,29 @@ function loadImage(url: string): Promise<HTMLImageElement> {
   })
 }
 
+// SVG paths estándar para íconos 24×24 (Material-style). Se renderizan con
+// fabric.Path → nítidos a cualquier escala (no como emoji que dependen del
+// font del sistema).
+const ICON_PATHS = {
+  pin:      "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6a2.5 2.5 0 0 1 0 5.5z",
+  calendar: "M19 3h-1V1h-2v2H8V1H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 16H5V8h14v11z",
+  clock:    "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm.5 5H11v6l5.25 3.15.75-1.23-4.5-2.67V7z",
+} as const
+
+function makeIcon(fabric: any, key: keyof typeof ICON_PATHS, x: number, y: number, size: number, color: string, role: string): any {
+  const path = new fabric.Path(ICON_PATHS[key], {
+    left: x, top: y,
+    fill: color,
+    originX: "left", originY: "top",
+    selectable: true,
+    role,
+  })
+  // SVG source es 24×24. Escalamos para que el bounding final sea `size`.
+  const s = size / 24
+  path.set({ scaleX: s, scaleY: s })
+  return path
+}
+
 // Fondo primario con gradiente diagonal premium (4 stops)
 function makeBgGradient(fabric: any, theme: V3Theme, format: CanvasFormat): any {
   const rect = new fabric.Rect({
@@ -213,7 +236,7 @@ function makeInfoBar(
 }
 
 // Sponsor strip al pie del canvas
-function makeSponsorStrip(
+export function makeSponsorStrip(
   fabric: any, theme: V3Theme, format: CanvasFormat,
   bg: "white" | "dark",
 ): any[] {
@@ -793,15 +816,18 @@ async function tplLanzamiento(ctx: TemplateCtx): Promise<any[]> {
   return out
 }
 
-// Card de partido reutilizable (para multi). Devuelve objetos fabric + un
-// "slot" donde se deben cargar los logos (el caller los inserta después).
+// Card de partido reutilizable — estilo V2 con info row de 3 columnas
+// (ESTADIO | FECHA | HORA) cada una con su ícono SVG + label + valor.
+// Los logos se agregan DESPUÉS del insert (el caller busca role=card-bg-N
+// y coloca los logos encima).
 function makeMatchCard(
-  fabric: any, theme: V3Theme, format: CanvasFormat,
+  fabric: any, theme: V3Theme, _format: CanvasFormat,
   x: number, y: number, w: number, h: number,
   idx: number, match: any,
 ): any[] {
   const objs: any[] = []
-  // fondo card
+
+  // 1) fondo card (gradient sutil + borde dorado)
   objs.push(new fabric.Rect({
     left: x, top: y, width: w, height: h,
     originX: "left", originY: "top",
@@ -810,79 +836,127 @@ function makeMatchCard(
     strokeWidth: 1.5, rx: 18, ry: 18,
     role: `card-bg-${idx}`,
   }))
-  // etiqueta JUEGO NN
-  objs.push(makeText(fabric, `• JUEGO ${String(idx + 1).padStart(2, "0")}`, {
+
+  // 2) etiqueta • JUEGO NN (arriba-izq)
+  objs.push(makeText(fabric, `•  JUEGO ${String(idx + 1).padStart(2, "0")}`, {
     fontFamily: theme.fontHeading,
     fontSize: h * 0.08,
     fill: theme.accent,
     charSpacing: 250, fontWeight: "bold",
-    left: x + w * 0.04, top: y + h * 0.07,
+    left: x + w * 0.04, top: y + h * 0.06,
     role: `card-label-${idx}`,
   }))
-  // VS central
+
+  // 3) VS central (más grande que antes)
+  const vsY = y + h * 0.38
   objs.push(makeText(fabric, "VS", {
     fontFamily: theme.fontDisplay,
-    fontSize: h * 0.24,
+    fontSize: h * 0.28,
     fill: theme.accent, fontWeight: "900",
-    left: x + w / 2, top: y + h * 0.36,
+    left: x + w / 2, top: vsY,
     originX: "center", originY: "center",
     role: `card-vs-${idx}`,
   }))
   // underline dorado bajo VS
   objs.push(new fabric.Rect({
-    left: x + w / 2 - w * 0.025, top: y + h * 0.52,
+    left: x + w / 2 - w * 0.025, top: vsY + h * 0.16,
     width: w * 0.05, height: 2,
     originX: "left", originY: "top",
     fill: theme.accent,
     role: `card-vs-line-${idx}`,
   }))
-  // nombres
+
+  // 4) nombres de equipos (debajo de los logos)
   objs.push(makeText(fabric, (match.homeName || "—").toUpperCase(), {
     fontFamily: theme.fontDisplay,
-    fontSize: h * 0.14,
+    fontSize: h * 0.15,
     fill: theme.fg, fontWeight: "900",
-    left: x + w * 0.22, top: y + h * 0.58,
+    left: x + w * 0.22, top: y + h * 0.56,
     originX: "center", textAlign: "center",
     role: `card-home-${idx}`,
   }))
   objs.push(makeText(fabric, (match.awayName || "—").toUpperCase(), {
     fontFamily: theme.fontDisplay,
-    fontSize: h * 0.14,
+    fontSize: h * 0.15,
     fill: theme.fg, fontWeight: "900",
-    left: x + w * 0.78, top: y + h * 0.58,
+    left: x + w * 0.78, top: y + h * 0.56,
     originX: "center", textAlign: "center",
     role: `card-away-${idx}`,
   }))
-  // info pill al pie (estadio · fecha · hora)
-  const pillY = y + h * 0.8
-  const pillH = h * 0.15
+
+  // 5) info pill al pie — 3 columnas (ESTADIO | FECHA | HORA) como V2
+  const pillY = y + h * 0.82
+  const pillH = h * 0.14
+  const pillX = x + w * 0.03
+  const pillW = w * 0.94
   objs.push(new fabric.Rect({
-    left: x + w * 0.03, top: pillY, width: w * 0.94, height: pillH,
+    left: pillX, top: pillY, width: pillW, height: pillH,
     originX: "left", originY: "top",
-    fill: hexToRgba(theme.bg, 0.75),
-    stroke: hexToRgba(theme.accent, 0.25),
+    fill: hexToRgba(theme.bg, 0.7),
+    stroke: hexToRgba(theme.accent, 0.22),
     strokeWidth: 1, rx: 10, ry: 10,
     role: `card-pill-${idx}`,
   }))
-  // fechas + venue en texto — con íconos inline en texto (📍 📅 🕐 unicode)
-  const pillText = `📍 ${match.venue || "—"}   📅 ${match.dateLabel?.split(" · ")[0] || match.dateLabel || "—"}   🕐 ${match.dateLabel?.split(" · ")[1] || ""}`
-  objs.push(makeText(fabric, pillText, {
-    fontFamily: theme.fontBody,
-    fontSize: pillH * 0.5,
-    fill: theme.fg, fontWeight: "bold",
-    charSpacing: 40,
-    left: x + w / 2, top: pillY + pillH / 2,
-    originX: "center", originY: "center",
-    role: `card-pill-text-${idx}`,
-  }))
 
-  // Si es resultado, score grande sobre el VS
+  // Parse fecha/hora
+  const datePart = match.dateLabel?.split(" · ")[0] || match.dateLabel || "—"
+  const timePart = match.dateLabel?.split(" · ")[1] || ""
+  const cols = [
+    { icon: "pin"      as const, label: "ESTADIO", value: (match.venue || "—").toUpperCase() },
+    { icon: "calendar" as const, label: "FECHA",   value: datePart.toUpperCase() },
+    { icon: "clock"    as const, label: "HORA",    value: timePart.toUpperCase() },
+  ]
+  const colW = pillW / 3
+  const iconSize = pillH * 0.34
+  const separatorColor = hexToRgba(theme.fg, 0.12)
+
+  cols.forEach((col, i) => {
+    const colX = pillX + i * colW
+    // Separador vertical entre columnas (no antes de la primera)
+    if (i > 0) {
+      objs.push(new fabric.Rect({
+        left: colX, top: pillY + pillH * 0.2,
+        width: 1, height: pillH * 0.6,
+        originX: "left", originY: "top",
+        fill: separatorColor,
+        selectable: false,
+        role: `card-pill-sep-${idx}-${i}`,
+      }))
+    }
+    // Ícono SVG + label arriba
+    objs.push(makeIcon(
+      fabric, col.icon,
+      colX + colW * 0.08, pillY + pillH * 0.18,
+      iconSize, theme.accent,
+      `card-pill-icon-${idx}-${i}`,
+    ))
+    objs.push(makeText(fabric, col.label, {
+      fontFamily: theme.fontHeading,
+      fontSize: pillH * 0.3,
+      fill: theme.accent,
+      charSpacing: 250, fontWeight: "bold",
+      left: colX + colW * 0.08 + iconSize + 8,
+      top: pillY + pillH * 0.25,
+      role: `card-pill-label-${idx}-${i}`,
+    }))
+    // Valor grande abajo
+    objs.push(makeText(fabric, col.value, {
+      fontFamily: theme.fontBody,
+      fontSize: pillH * 0.4,
+      fill: theme.fg, fontWeight: "bold",
+      left: colX + colW * 0.08,
+      top: pillY + pillH * 0.55,
+      role: `card-pill-value-${idx}-${i}`,
+    }))
+  })
+
+  // 6) Score grande sobre el VS (si es resultado)
   if (match.homeScore != null || match.awayScore != null) {
     objs.push(makeText(fabric, `${match.homeScore ?? 0} - ${match.awayScore ?? 0}`, {
       fontFamily: theme.fontDisplay,
-      fontSize: h * 0.3,
+      fontSize: h * 0.32,
       fill: theme.fg, fontWeight: "900",
-      left: x + w / 2, top: y + h * 0.36,
+      left: x + w / 2, top: vsY,
       originX: "center", originY: "center",
       role: `card-score-${idx}`,
     }))

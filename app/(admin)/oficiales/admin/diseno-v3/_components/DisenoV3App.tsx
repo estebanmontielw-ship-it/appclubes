@@ -14,7 +14,7 @@ import type { SponsorsConfig } from "./SponsorsPanel"
 import { loadFabric } from "../_lib/fabric-bridge"
 import { FORMATS, getFormat, type FormatKey } from "../_lib/formats"
 import { getDefaultTheme, type LigaKey, type V3Theme, THEMES } from "../_lib/themes"
-import { buildTemplate, type TemplateKey } from "../_lib/templates"
+import { buildTemplate, makeSponsorStrip, type TemplateKey } from "../_lib/templates"
 import { exportPNG, exportJPG, exportPDF, exportJSON, generateThumbnail } from "../_lib/export"
 import type { PatternKey } from "../_lib/patterns"
 
@@ -65,9 +65,9 @@ export default function DisenoV3App() {
     show: true,
   })
 
-  // Patrón de fondo
-  const [patternKey, setPatternKey] = useState<PatternKey>("none")
-  const [patternAlpha, setPatternAlpha] = useState(0.08)
+  // Patrón de fondo — default "scratch" a 10% como V2 Stories
+  const [patternKey, setPatternKey] = useState<PatternKey>("scratch")
+  const [patternAlpha, setPatternAlpha] = useState(0.10)
 
   const stageRef = useRef<CanvasStageHandle>(null)
   const canvasRef = useRef<any>(null)
@@ -241,12 +241,12 @@ export default function DisenoV3App() {
     [theme, format, refreshLayers, patternKey, patternAlpha, sponsorsConfig, applySponsorsToCanvas],
   )
 
-  // Sponsors config change → re-aplicar franja sin perder el resto
+  // Sponsors config change → re-aplicar franja con sponsors reales.
   const handleSponsorsChange = useCallback(async (cfg: SponsorsConfig) => {
     setSponsorsConfig(cfg)
     const c = canvasRef.current
     if (!c) return
-    // quitar sponsors previos (strip bg, label, slots, imgs)
+    // 1) quitar sponsors previos (strip bg, label, slots, imgs)
     const toRemove = c.getObjects().filter((o: any) =>
       typeof o.role === "string" && (
         o.role.startsWith("sponsor-strip") ||
@@ -256,9 +256,45 @@ export default function DisenoV3App() {
       )
     )
     toRemove.forEach((o: any) => c.remove(o))
+
+    // 2) si está visible la franja, reinsertar strip + label + slots
+    if (cfg.show) {
+      const fabric = await loadFabric()
+      const stripObjs = makeSponsorStrip(fabric, theme, format, cfg.bg)
+      stripObjs.forEach((o: any) => {
+        if (!o.id) o.id = nextId()
+        c.add(o)
+      })
+      // 3) colocar cada sponsor cargado sobre su slot
+      for (let i = 0; i < 5; i++) {
+        const url = cfg.sponsors[i]
+        if (!url) continue
+        const slot = c.getObjects().find((o: any) => o.role === `sponsor-slot-${i}`)
+        if (!slot) continue
+        const sw = (slot.width || 1) * (slot.scaleX || 1)
+        const sh = (slot.height || 1) * (slot.scaleY || 1)
+        await new Promise<void>((resolve) => {
+          fabric.Image.fromURL(url, (img: any) => {
+            const baseScale = Math.min(sw / (img.width || 1), sh / (img.height || 1))
+            const scale = baseScale * (cfg.scales[i] / 100)
+            img.set({
+              left: (slot.left || 0) + sw / 2,
+              top: (slot.top || 0) + sh / 2,
+              originX: "center", originY: "center",
+              scaleX: scale, scaleY: scale,
+              role: `sponsor-img-${i}`,
+            })
+            img.id = nextId()
+            c.add(img)
+            resolve()
+          }, { crossOrigin: "anonymous" })
+        })
+      }
+    }
+
     c.requestRenderAll()
     markDirty()
-  }, [markDirty])
+  }, [markDirty, theme, format])
 
   // --- Insert text ---
   const insertText = useCallback(
@@ -407,7 +443,14 @@ export default function DisenoV3App() {
     if (!datas.length) return
     if (datas.length === 1) return handleApplyMatch(datas[0], withScore)
     const key = withScore ? "resultados-multi" : "proximos-multi"
-    await insertTemplate(key, { matches: datas, fechaLabel: `JORNADA` })
+    // Calcular la jornada real desde los matchNumber (si existen).
+    // Para LNB (8 equipos) la jornada = ceil(matchNumber / 4). Para LNBF (menos
+    // equipos) puede ser 3. Como no sabemos el total de equipos, asumimos 4.
+    const nums = datas.map((d) => d.matchNumber).filter((n): n is number => typeof n === "number" && n > 0)
+    const perJornada = 4
+    const jornada = nums.length ? Math.ceil(Math.min(...nums) / perJornada) : null
+    const fechaLabel = jornada ? `FECHA ${jornada}` : (withScore ? "RESULTADOS" : "PRÓXIMA JORNADA")
+    await insertTemplate(key, { matches: datas, fechaLabel })
     // Cargar logos a cada card (role=card-bg-N marca la posición)
     const c = canvasRef.current
     if (!c) return
