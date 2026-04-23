@@ -8,6 +8,8 @@ import {
 } from "@/lib/programacion-lnb"
 import { LNBF } from "@/lib/themes/lnbf"
 import { LNBFBackground } from "@/lib/flyer/lnbf-backgrounds"
+import { LNB } from "@/lib/themes/lnb"
+import { LNBBackground } from "@/lib/flyer/lnb-backgrounds"
 import { geniusFetch, getLeadersFromMatches } from "@/lib/genius-sports"
 import { normalizeStandings } from "@/lib/normalize-standings"
 
@@ -310,7 +312,42 @@ function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBo
 // Tarjeta de partido para el tema LNBF Premium — diseño editorial
 // con badge "JUEGO N", VS en gold, franja de estadio + fecha y barra
 // destacada de horario violeta.
-function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize, vsFontSize, nameFontSize, showHorarioBar }: {
+type PremiumPalette = {
+  cardBg: string
+  borderColor: string   // rgb/hex para el borde principal
+  borderAlpha: string   // hex alpha suffix para el borde (ej. "33")
+  separator: string     // borde interno top del meta strip
+  gold: string          // color de VS + línea accent + dot del badge
+  accentSoft: string    // badge label, eyebrow, ESTADIO label, HORARIO label
+  bar1: string          // gradient start de la barra HORARIO
+  bar2: string          // gradient end de la barra HORARIO
+}
+
+// Paleta LNBF default (morado + gold)
+const PALETTE_LNBF: PremiumPalette = {
+  cardBg: "rgba(22,10,46,0.45)",
+  borderColor: LNBF.color.violet400,
+  borderAlpha: "33",
+  separator: "rgba(201,160,255,0.14)",
+  gold: LNBF.color.gold500,
+  accentSoft: LNBF.color.violet300,
+  bar1: LNBF.color.violet700,
+  bar2: LNBF.color.violet800,
+}
+
+// Paleta LNB (navy + gold)
+const PALETTE_LNB: PremiumPalette = {
+  cardBg: "rgba(14,29,79,0.55)",
+  borderColor: LNB.color.blue400,
+  borderAlpha: "33",
+  separator: "rgba(166,190,255,0.18)",
+  gold: LNB.color.gold500,
+  accentSoft: LNB.color.softBlue,
+  bar1: LNB.color.navy700,
+  bar2: LNB.color.navy800,
+}
+
+function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize, vsFontSize, nameFontSize, showHorarioBar, palette = PALETTE_LNBF }: {
   match: MatchData
   matchNumber: number
   isResultado: boolean
@@ -320,6 +357,7 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
   vsFontSize: number
   nameFontSize: number
   showHorarioBar: boolean
+  palette?: PremiumPalette
 }) {
   const hs = parseInt(match.homeScore ?? "")
   const as_ = parseInt(match.awayScore ?? "")
@@ -337,9 +375,9 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
   return (
     <div style={{
       width: cardW, height: cardH,
-      background: "rgba(22,10,46,0.45)",
+      background: palette.cardBg,
       borderRadius: 20,
-      border: `1.5px solid ${LNBF.color.violet400}33`,
+      border: `1.5px solid ${palette.borderColor}${palette.borderAlpha}`,
       display: "flex", flexDirection: "column",
       overflow: "hidden",
       position: "relative",
@@ -349,11 +387,11 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
         position: "absolute", top: 14, left: 20,
         display: "flex", alignItems: "center", gap: 8,
       }}>
-        <div style={{ display: "flex", width: 6, height: 6, borderRadius: 3, background: LNBF.color.gold500 }} />
+        <div style={{ display: "flex", width: 6, height: 6, borderRadius: 3, background: palette.gold }} />
         <span style={{
           fontFamily: "Inter", fontSize: badgeFont,
           fontWeight: 800, letterSpacing: 2.5,
-          color: LNBF.color.violet300, display: "flex",
+          color: palette.accentSoft, display: "flex",
         }}>
           {badge}
         </span>
@@ -377,12 +415,12 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
               <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: vsFontSize * 1.3, fontWeight: 900, lineHeight: 1, display: "flex" }}>{match.awayScore}</span>
             </div>
           ) : (
-            <span style={{ color: LNBF.color.gold500, fontFamily: "Archivo Black", fontSize: vsFontSize, fontWeight: 900, letterSpacing: -1, display: "flex", lineHeight: 1 }}>
+            <span style={{ color: palette.gold, fontFamily: "Archivo Black", fontSize: vsFontSize, fontWeight: 900, letterSpacing: -1, display: "flex", lineHeight: 1 }}>
               VS
             </span>
           )}
           {/* Accent line under VS */}
-          <div style={{ width: 38, height: 3, background: LNBF.color.gold500, marginTop: 8, borderRadius: 2, display: "flex" }} />
+          <div style={{ width: 38, height: 3, background: palette.gold, marginTop: 8, borderRadius: 2, display: "flex" }} />
         </div>
         {/* Away */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1, gap: 16 }}>
@@ -400,13 +438,13 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "10px 22px",
-        borderTop: "1px solid rgba(201,160,255,0.14)",
+        borderTop: `1px solid ${palette.separator}`,
         width: "100%",
       }}>
         <div style={{ display: "flex", alignItems: "center" }}>
           {match.venue ? (
             <>
-              <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: metaLabelFont, fontWeight: 700, letterSpacing: 2.5, display: "flex" }}>ESTADIO</span>
+              <span style={{ color: palette.accentSoft, fontFamily: "Inter", fontSize: metaLabelFont, fontWeight: 700, letterSpacing: 2.5, display: "flex" }}>ESTADIO</span>
               <span style={{ marginLeft: 12, color: "rgba(255,255,255,0.85)", fontFamily: "Inter", fontSize: metaFont, fontWeight: 500, display: "flex" }}>{match.venue}</span>
             </>
           ) : <span style={{ display: "flex" }} />}
@@ -424,10 +462,10 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
           display: "flex", alignItems: "center", justifyContent: "space-between",
           height: horarioH,
           padding: "0 22px",
-          background: `linear-gradient(90deg, ${LNBF.color.violet700} 0%, ${LNBF.color.violet800} 100%)`,
+          background: `linear-gradient(90deg, ${palette.bar1} 0%, ${palette.bar2} 100%)`,
           width: "100%",
         }}>
-          <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: Math.max(12, Math.round(horarioFont * 0.5)), fontWeight: 700, letterSpacing: 3, display: "flex" }}>
+          <span style={{ color: palette.accentSoft, fontFamily: "Inter", fontSize: Math.max(12, Math.round(horarioFont * 0.5)), fontWeight: 700, letterSpacing: 3, display: "flex" }}>
             {isResultado ? "RESULTADO" : "HORARIO"}
           </span>
           <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: horarioFont, fontWeight: 900, letterSpacing: -0.5, display: "flex" }}>
@@ -536,6 +574,12 @@ export async function GET(req: NextRequest) {
   const lnbfPattern = (["clean", "dots", "nandu", "court"].includes(lnbfPatternRaw)
     ? lnbfPatternRaw
     : "dots") as "clean" | "dots" | "nandu" | "court"
+  // Patrón de fondo para tema lnb-premium: clean / scratch / dots /
+  // court / halftone / speed. Default scratch (estilo oficial LNB).
+  const lnbPatternRaw = searchParams.get("lnbPattern") ?? "scratch"
+  const lnbPattern = (["clean", "scratch", "dots", "court", "halftone", "speed"].includes(lnbPatternRaw)
+    ? lnbPatternRaw
+    : "scratch") as "clean" | "scratch" | "dots" | "court" | "halftone" | "speed"
   // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
   // vacío no se renderiza el pill.
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
@@ -544,15 +588,18 @@ export async function GET(req: NextRequest) {
   // Mostrar u ocultar la franja de sponsors. Cuando es false, los logos
   // de sponsors igual se renderizan pero sin fondo — flotan sobre el canvas.
   const showSponsorBar = searchParams.get("showSponsorBar") !== "false"
-  // Filter + opacity que blanquea los sponsors en el tema lnbf-premium
-  // para que queden unificados sobre el fondo morado oscuro. Satori
+  // Filter + opacity que blanquea los sponsors en temas premium (lnbf
+  // o lnb) para que queden unificados sobre el fondo oscuro. Satori
   // soporta brightness + invert individualmente (no todos los filtros).
-  const sponsorFilter = theme === "lnbf-premium" ? "brightness(0) invert(1)" : undefined
-  const sponsorOpacity = theme === "lnbf-premium" ? 0.85 : 1
-  // Fondo de la barra de sponsors: en lnbf-premium forzamos un violeta
-  // oscuro translúcido; en los demás temas respetamos la elección del
-  // usuario (white/dark).
-  const lnbfSponsorBarBg = "rgba(14,4,24,0.75)"
+  const isPremiumTheme = theme === "lnbf-premium" || theme === "lnb-premium"
+  const sponsorFilter = isPremiumTheme ? "brightness(0) invert(1)" : undefined
+  const sponsorOpacity = isPremiumTheme ? 0.85 : 1
+  // Fondo de la barra de sponsors: en temas premium forzamos un tono
+  // oscuro translúcido (que combina con el canvas); en los demás temas
+  // respetamos la elección del usuario (white/dark).
+  const premiumSponsorBarBg = theme === "lnb-premium"
+    ? "rgba(3,8,26,0.78)"   // navy deep
+    : "rgba(14,4,24,0.75)"  // violet deep (lnbf)
   const isStorySafe = (fmt: string) => fmt === "historia" && safeZones
   const safeTopFor = (fmt: string) => isStorySafe(fmt) ? 240 : 0
   const safeBottomFor = (fmt: string) => isStorySafe(fmt) ? 280 : 0
@@ -599,6 +646,8 @@ export async function GET(req: NextRequest) {
     // Tema premium para LNBF — morado profundo + gold accent. Ver
     // lib/themes/lnbf.ts para tokens completos.
     "lnbf-premium": LNBF.bgHero,
+    // Tema premium para LNB Masculino — navy + gold. Ver lib/themes/lnb.ts.
+    "lnb-premium": LNB.bgHero,
   }
   const themeBg = bgImageUrl ? "#000" : (THEME_BG[theme] ?? THEME_BG.masc1)
 
@@ -646,6 +695,8 @@ export async function GET(req: NextRequest) {
             {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             {!bgImageUrl && theme === "lnbf-premium" ? (
               <LNBFBackground variant={lnbfPattern} W={W} H={H} />
+            ) : !bgImageUrl && theme === "lnb-premium" ? (
+              <LNBBackground variant={lnbPattern} W={W} H={H} />
             ) : !bgImageUrl ? (
               <>
                 <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
@@ -708,7 +759,7 @@ export async function GET(req: NextRequest) {
 
             {/* Sponsors footer */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : (
@@ -782,6 +833,8 @@ export async function GET(req: NextRequest) {
             {textureUrl && !bgImageUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
             {!bgImageUrl && theme === "lnbf-premium" ? (
               <LNBFBackground variant={lnbfPattern} W={W} H={H} />
+            ) : !bgImageUrl && theme === "lnb-premium" ? (
+              <LNBBackground variant={lnbPattern} W={W} H={H} />
             ) : !bgImageUrl ? (
               <>
                 <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
@@ -852,7 +905,7 @@ export async function GET(req: NextRequest) {
 
             {/* FOOTER */}
             {sponsorLogos.length > 0 ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)", gap: Math.round(56 * vMult), padding: "0 60px" }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : (
@@ -900,7 +953,7 @@ export async function GET(req: NextRequest) {
               {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 20, fontWeight: 600, letterSpacing: 2 }}>{jugadorClub.toUpperCase()}</span> : null}
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(48 * s.scale); return <img key={i} src={s.url} width={Math.round(150 * s.scale)} height={h} style={{ objectFit: "contain", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : <div style={{ position: "absolute", bottom: 28 + safeBottomFor(format), right: 48, display: "flex" }}><span style={{ color: "rgba(255,255,255,0.3)", fontSize: 14, letterSpacing: 2 }}>CPB · cpb.com.py</span></div>}
@@ -979,7 +1032,7 @@ export async function GET(req: NextRequest) {
               </div>
             </div>
             {sponsorLogos.length > 0 ? (
-              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 80, background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 80, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
                 {sponsorLogos.map((s, i) => { const h = Math.round(44 * s.scale); return <img key={i} src={s.url} width={Math.round(140 * s.scale)} height={h} style={{ objectFit: "contain", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
               </div>
             ) : null}
@@ -1113,6 +1166,8 @@ export async function GET(req: NextRequest) {
               porque el fondo custom ya aporta la decoración. */}
           {!bgImageUrl && theme === "lnbf-premium" ? (
             <LNBFBackground variant={lnbfPattern} W={W} H={H} />
+          ) : !bgImageUrl && theme === "lnb-premium" ? (
+            <LNBBackground variant={lnbPattern} W={W} H={H} />
           ) : !bgImageUrl ? (
             <>
               <div style={{
@@ -1131,7 +1186,10 @@ export async function GET(req: NextRequest) {
           ) : null}
 
           {/* ── HEADER ── */}
-          {theme === "lnbf-premium" ? (() => {
+          {isPremiumTheme ? (() => {
+            // Palette para badge/eyebrow/línea de accent: LNBF (violet)
+            // o LNB (navy+gold) según el tema elegido.
+            const hdrPalette = theme === "lnb-premium" ? PALETTE_LNB : PALETTE_LNBF
             // Header LNBF Premium: logo absolute top-left + badge absolute top-right,
             // eyebrow debajo, título GIGANTE left-aligned en 2 líneas.
             // Logo en POSICIÓN ABSOLUTA para que no empuje el texto cuando
@@ -1186,13 +1244,13 @@ export async function GET(req: NextRequest) {
                     position: "absolute", top: 28, right: padX,
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "9px 20px",
-                    background: "rgba(201,160,255,0.12)",
-                    border: `1px solid ${LNBF.color.violet400}55`,
+                    background: theme === "lnb-premium" ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
+                    border: `1px solid ${hdrPalette.borderColor}55`,
                     borderRadius: 999,
                   }}>
-                    <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: LNBF.color.gold500 }} />
+                    <div style={{ display: "flex", width: 7, height: 7, borderRadius: 4, background: hdrPalette.gold }} />
                     <span style={{
-                      color: LNBF.color.violet300,
+                      color: hdrPalette.accentSoft,
                       fontFamily: "Inter", fontSize: Math.round(15 * vMult),
                       fontWeight: 800, letterSpacing: 2.5, display: "flex",
                     }}>
@@ -1203,7 +1261,7 @@ export async function GET(req: NextRequest) {
 
                 {/* Eyebrow */}
                 <span style={{
-                  color: LNBF.color.violet300,
+                  color: hdrPalette.accentSoft,
                   fontFamily: "Inter", fontSize: Math.round(17 * vMult),
                   fontWeight: 600, letterSpacing: 4, marginBottom: 12,
                   display: "flex",
@@ -1284,8 +1342,20 @@ export async function GET(req: NextRequest) {
               // Si el tema es lnbf-premium y layout es Estándar, usamos
               // MatchCardLNBF (diseño editorial con badge + horario bar).
               // Compact mantiene el diseño actual hasta que se rediseñe.
-              return theme === "lnbf-premium" && layout !== "compact" ? (
-                <MatchCardLNBF key={i} match={match} matchNumber={i + 1} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} vsFontSize={vsFontSize} nameFontSize={nameFontSize} showHorarioBar={lnbfShowHorarioBar} />
+              return isPremiumTheme && layout !== "compact" ? (
+                <MatchCardLNBF
+                  key={i}
+                  match={match}
+                  matchNumber={i + 1}
+                  isResultado={isResultado}
+                  cardW={cardW}
+                  cardH={cardH}
+                  logoSize={logoSize}
+                  vsFontSize={vsFontSize}
+                  nameFontSize={nameFontSize}
+                  showHorarioBar={lnbfShowHorarioBar}
+                  palette={theme === "lnb-premium" ? PALETTE_LNB : PALETTE_LNBF}
+                />
               ) : layout === "compact" ? (
                 <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} tc={tc} cardBg={cardBg} cardBorder={cardBorder} />
               ) : (
@@ -1299,7 +1369,7 @@ export async function GET(req: NextRequest) {
             <div style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: "100%", height: Math.round(130 * vMult),
-              background: !showSponsorBar ? "transparent" : theme === "lnbf-premium" ? lnbfSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
+              background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.6)",
               gap: Math.round(56 * vMult), padding: "0 60px",
             }}>
               {sponsorLogos.map((s, i) => {

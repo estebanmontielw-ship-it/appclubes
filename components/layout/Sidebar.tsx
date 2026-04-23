@@ -141,6 +141,7 @@ function getNavSections(
             label: "Diseño V2 (Beta)",
             icon: Palette,
             subItems: [
+              { label: "LNB",  href: "/oficiales/admin/diseno-v2?liga=lnb" },
               { label: "LNBF", href: "/oficiales/admin/diseno-v2?liga=lnbf" },
             ],
           },

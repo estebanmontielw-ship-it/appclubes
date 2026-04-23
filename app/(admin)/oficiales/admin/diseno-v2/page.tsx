@@ -116,6 +116,8 @@ function DisenoInner() {
   const [lzHora, setLzHora] = useState("")
   // LNBF Premium — selector de patrón de fondo
   const [lnbfPattern, setLnbfPattern] = useState<"clean" | "dots" | "nandu" | "court">("dots")
+  // LNB Premium — selector de patrón de fondo
+  const [lnbPattern, setLnbPattern] = useState<"clean" | "scratch" | "dots" | "court" | "halftone" | "speed">("scratch")
   // Badge "FECHA X" arriba derecha (solo en tema lnbf-premium). Vacío = sin badge.
   const [lnbfBadge, setLnbfBadge] = useState("")
   // Barra HORARIO al pie de cada tarjeta (solo en tema lnbf-premium)
@@ -505,6 +507,9 @@ function DisenoInner() {
     if (theme === "lnbf-premium" && lnbfPattern !== "dots") {
       params.set("lnbfPattern", lnbfPattern)
     }
+    if (theme === "lnb-premium" && lnbPattern !== "scratch") {
+      params.set("lnbPattern", lnbPattern)
+    }
     if (theme === "lnbf-premium" && lnbfBadge.trim()) {
       params.set("lnbfBadge", lnbfBadge.trim())
     }
@@ -542,7 +547,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbPattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -776,6 +781,7 @@ function DisenoInner() {
                 { key: "fem1",  label: "Violeta",       sub: "Femenino · clásico",   from: "#2d0a4e", to: "#1a0630" },
                 { key: "fem2",  label: "Bordo/rojo",    sub: "Femenino · alternativo", from: "#4a0a1a", to: "#2a0610" },
                 { key: "lnbf-premium", label: "LNBF Premium", sub: "Morado + gold · ñandutí", from: "#3C1370", to: "#0E0418" },
+                { key: "lnb-premium",  label: "LNB Premium",  sub: "Navy + gold · scratchy",    from: "#1E3FA8", to: "#03081A" },
               ] as const).map((t) => (
                 <button
                   key={t.key}
@@ -795,35 +801,61 @@ function DisenoInner() {
                 </button>
               ))}
             </div>
-            {/* Controles específicos de LNBF Premium */}
-            {theme === "lnbf-premium" && (
+            {/* Controles específicos de temas premium (LNBF o LNB) */}
+            {(theme === "lnbf-premium" || theme === "lnb-premium") && (
               <div className="mt-3 rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden">
                 <div className="bg-primary text-white px-3 py-2 flex items-center gap-2">
                   <Sparkles className="h-3.5 w-3.5" />
-                  <span className="text-[11px] font-bold uppercase tracking-wider">Configuración LNBF Premium</span>
+                  <span className="text-[11px] font-bold uppercase tracking-wider">
+                    {theme === "lnb-premium" ? "Configuración LNB Premium" : "Configuración LNBF Premium"}
+                  </span>
                 </div>
                 <div className="p-3 space-y-3">
                 <div>
                   <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-2 block">Patrón de fondo</Label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {([
-                      { key: "clean", label: "Liso",      desc: "Solo glows" },
-                      { key: "dots",  label: "Puntos",    desc: "Constelación" },
-                      { key: "nandu", label: "Ñandutí",   desc: "Rombos" },
-                      { key: "court", label: "Cancha",    desc: "Líneas" },
-                    ] as const).map((p) => (
-                      <button
-                        key={p.key}
-                        onClick={() => setLnbfPattern(p.key)}
-                        className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold transition-colors ${
-                          lnbfPattern === p.key ? "border-primary bg-white text-primary" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                        }`}
-                        title={p.desc}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
+                  {theme === "lnbf-premium" ? (
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {([
+                        { key: "clean", label: "Liso",      desc: "Solo glows" },
+                        { key: "dots",  label: "Puntos",    desc: "Constelación" },
+                        { key: "nandu", label: "Ñandutí",   desc: "Rombos" },
+                        { key: "court", label: "Cancha",    desc: "Líneas" },
+                      ] as const).map((p) => (
+                        <button
+                          key={p.key}
+                          onClick={() => setLnbfPattern(p.key)}
+                          className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold transition-colors ${
+                            lnbfPattern === p.key ? "border-primary bg-white text-primary" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
+                          title={p.desc}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([
+                        { key: "clean",    label: "Liso",      desc: "Solo glows" },
+                        { key: "scratch",  label: "Rayones",   desc: "Estilo oficial LNB" },
+                        { key: "dots",     label: "Puntos",    desc: "Grain" },
+                        { key: "court",    label: "Cancha",    desc: "Líneas de cancha" },
+                        { key: "halftone", label: "Halftone",  desc: "Puntos radiales" },
+                        { key: "speed",    label: "Velocidad", desc: "Diagonales" },
+                      ] as const).map((p) => (
+                        <button
+                          key={p.key}
+                          onClick={() => setLnbPattern(p.key)}
+                          className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold transition-colors ${
+                            lnbPattern === p.key ? "border-primary bg-white text-primary" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
+                          title={p.desc}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1.5 block">
