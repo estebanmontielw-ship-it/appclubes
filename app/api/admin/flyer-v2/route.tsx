@@ -856,11 +856,12 @@ export async function GET(req: NextRequest) {
             {/* Sponsors footer */}
             {sponsorLogos.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", width: "100%", height: footerH, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.97)" : "rgba(0,0,0,0.55)", padding: "0 60px", position: "relative" }}>
-                {/* Hairline divisor arriba — siempre visible en temas premium,
-                    da un remate editorial entre las cards y la franja de
-                    sponsors (sin importar si la barra está o no). */}
+                {/* Hairline divisor entre cards y sponsors — siempre visible
+                    en temas premium, posicionada justo en el borde superior
+                    del container (top:0) para estar pegada a la zona de
+                    cards, sin importar si la barra tiene fondo o no. */}
                 {isPremiumTheme && (
-                  <div style={{ display: "flex", position: "absolute", top: Math.round(footerH * 0.18), left: "12%", right: "12%", height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.25) 50%, transparent 100%)" }} />
+                  <div style={{ display: "flex", position: "absolute", top: 0, left: "10%", right: "10%", height: 1, background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.28) 50%, transparent 100%)" }} />
                 )}
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: Math.round(56 * vMult), width: "100%", flex: 1 }}>
                   {sponsorLogos.map((s, i) => { const h = Math.round(70 * vMult * s.scale); return <img key={i} src={s.url} width={Math.round(220 * vMult * s.scale)} height={h} style={{ objectFit: "contain", flex: "0 0 auto", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
@@ -1316,9 +1317,11 @@ export async function GET(req: NextRequest) {
             // era 300% ahora es 100%). Sigue respetando el slider.
             const lnbfLogoBase = Math.round((count === 1 ? 200 : count === 2 ? 175 : count <= 4 ? 145 : 120) * vMult)
             const lnbfLogoSize = Math.round(lnbfLogoBase * logoScale)
-            // Padding-top del texto: altura reservada para el logo (aunque
-            // el logo sea absolute, dejamos ese aire para que no se pise).
-            const headerTopPad = 28 + Math.max(60, Math.round(lnbfLogoBase * 0.55))
+            // Padding-top del texto: reserva el espacio REAL del logo
+            // (con su scale aplicado) + margen. Antes usaba un porcentaje
+            // del base lo que causaba que el título empezara DENTRO del
+            // área del logo cuando el logoScale era grande.
+            const headerTopPad = logoUrl ? (28 + lnbfLogoSize + 24) : 40
             const isCenteredHeader = premiumHeaderLayout === "centered"
             return (
               <div style={{
