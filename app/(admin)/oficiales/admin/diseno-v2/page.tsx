@@ -792,7 +792,12 @@ function DisenoInner() {
             </div>
             {/* Controles específicos de LNBF Premium */}
             {theme === "lnbf-premium" && (
-              <div className="mt-2 p-2.5 rounded-xl border border-primary/20 bg-primary/5 space-y-2.5">
+              <div className="mt-3 rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden">
+                <div className="bg-primary text-white px-3 py-2 flex items-center gap-2">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Configuración LNBF Premium</span>
+                </div>
+                <div className="p-3 space-y-3">
                 <div>
                   <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-2 block">Patrón de fondo</Label>
                   <div className="grid grid-cols-4 gap-1.5">
@@ -828,19 +833,25 @@ function DisenoInner() {
                 </div>
                 <button
                   onClick={() => setLnbfShowHorarioBar(!lnbfShowHorarioBar)}
-                  className={`w-full p-2 rounded-lg border text-left transition-colors flex items-center gap-2 ${
-                    lnbfShowHorarioBar ? "border-primary bg-white" : "border-gray-200 bg-gray-50"
+                  className={`w-full p-2.5 rounded-lg border-2 text-left transition-colors flex items-center gap-2.5 ${
+                    lnbfShowHorarioBar ? "border-primary bg-white" : "border-gray-300 bg-gray-50"
                   }`}
                 >
-                  <div className={`h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                  <div className={`h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 ${
                     lnbfShowHorarioBar ? "border-primary bg-primary" : "border-gray-300 bg-white"
                   }`}>
-                    {lnbfShowHorarioBar && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                    {lnbfShowHorarioBar && <Check className="h-3 w-3 text-white" strokeWidth={3} />}
                   </div>
-                  <span className={`text-[11px] font-semibold ${lnbfShowHorarioBar ? "text-primary" : "text-gray-600"}`}>
-                    Mostrar barra HORARIO en cada tarjeta
-                  </span>
+                  <div className="flex-1">
+                    <span className={`text-xs font-bold block ${lnbfShowHorarioBar ? "text-primary" : "text-gray-600"}`}>
+                      Barra HORARIO en cada tarjeta
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {lnbfShowHorarioBar ? "Visible — la franja violeta grande con el horario" : "Oculta — tarjetas más compactas"}
+                    </span>
+                  </div>
                 </button>
+                </div>
               </div>
             )}
             {/* Subir fondo propio */}

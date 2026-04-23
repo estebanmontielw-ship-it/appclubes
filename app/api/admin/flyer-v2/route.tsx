@@ -1129,7 +1129,10 @@ export async function GET(req: NextRequest) {
           {theme === "lnbf-premium" ? (() => {
             // Header LNBF Premium: logo chico top-left + badge FECHA top-right,
             // eyebrow debajo, título GIGANTE left-aligned en 2 líneas
-            const heroBase = Math.round((count === 1 ? 130 : count === 2 ? 120 : count <= 4 ? 110 : 95) * vMult)
+            // Tamaños base del hero title por cantidad de partidos.
+            // Se bajó ~20% (era 130/120/110/95) porque a 100% quedaba
+            // demasiado grande y tapaba buena parte del canvas.
+            const heroBase = Math.round((count === 1 ? 108 : count === 2 ? 95 : count <= 4 ? 82 : 74) * vMult)
             const heroSize = Math.round(heroBase * titleSize)
             const tituloDefault = isResultado ? "RESULTADOS\nDE LA FECHA" : "PRÓXIMOS\nPARTIDOS"
             const tituloRaw = titulo || tituloDefault
