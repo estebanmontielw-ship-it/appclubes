@@ -995,7 +995,8 @@ function DisenoInner() {
             </div>
           </div>
 
-          {/* Textura de fondo */}
+          {/* Textura de fondo — oculta en temas premium (ya hay "Patrón de fondo" dedicado). */}
+          {theme !== "lnbf-premium" && theme !== "lnb-premium" && (
           <div>
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
               Textura de fondo <span className="normal-case font-normal">(opcional)</span>
@@ -1046,6 +1047,7 @@ function DisenoInner() {
               <p className="mt-1.5 text-[10px] text-red-600 flex items-center gap-1"><AlertCircle className="h-3 w-3" />{uploadErrors.texture}</p>
             )}
           </div>
+          )}
 
           {/* Sponsors */}
           <div>
@@ -1485,7 +1487,8 @@ function DisenoInner() {
           <div className="space-y-3">
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Texto y tarjetas</Label>
 
-            {/* Color del texto */}
+            {/* Color del texto — oculto en premium (siempre texto claro sobre fondo oscuro) */}
+            {theme !== "lnbf-premium" && theme !== "lnb-premium" && (
             <div className="grid grid-cols-2 gap-2">
               {([
                 { key: "light", label: "Texto claro",  desc: "Para fondos oscuros",  preview: "bg-gray-800" },
@@ -1508,8 +1511,10 @@ function DisenoInner() {
                 </button>
               ))}
             </div>
+            )}
 
-            {/* Estilo de tarjetas */}
+            {/* Estilo de tarjetas — oculto en premium (gradient de card y border son fijos por palette) */}
+            {theme !== "lnbf-premium" && theme !== "lnb-premium" && (
             <div className="grid grid-cols-2 gap-2">
               {([
                 { key: "glass",  label: "Box claro",   desc: "Para fondos oscuros",  bg: "rgba(255,255,255,0.15)", border: "rgba(255,255,255,0.3)" },
@@ -1533,6 +1538,7 @@ function DisenoInner() {
                 </button>
               ))}
             </div>
+            )}
 
             {/* Tamaños de texto */}
             <div className="grid grid-cols-2 gap-3">
@@ -1548,7 +1554,8 @@ function DisenoInner() {
               </div>
             </div>
 
-            {/* Peso del título */}
+            {/* Peso del título — oculto en premium (Archivo Black fijo por diseño) */}
+            {theme !== "lnbf-premium" && theme !== "lnb-premium" && (
             <div>
               <p className="text-xs text-muted-foreground mb-1.5">Peso del título</p>
               <div className="grid grid-cols-3 gap-1.5">
@@ -1569,6 +1576,7 @@ function DisenoInner() {
                 ))}
               </div>
             </div>
+            )}
           </div>
 
           {/* Lista de partidos (solo para templates que requieren selección) */}
