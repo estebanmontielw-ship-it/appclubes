@@ -210,96 +210,137 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
 
 // Opción 2: Compacto — home/away en 2 filas con nombre, tiempo/score a la
 // derecha, strip inferior con fecha + venue.
-function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBorder }: {
-  match: MatchData; isResultado: boolean; cardW: number; cardH: number
-  tc: Record<string, string>; cardBg: string; cardBorder: string
+// MatchCardCompact — versión compact adaptada a la línea premium.
+// Mismo concepto que MatchCardLNBF (gradient + hairline gold + palette)
+// pero con layout horizontal: equipos apilados a la izquierda, score/hora
+// grande a la derecha separado por un border vertical gold.
+function MatchCardCompact({ match, isResultado, cardW, cardH, palette }: {
+  match: MatchData
+  isResultado: boolean
+  cardW: number
+  cardH: number
+  palette: PremiumPalette
 }) {
   const hs = parseInt(match.homeScore ?? "")
   const as_ = parseInt(match.awayScore ?? "")
   const tied = isNaN(hs) || isNaN(as_) || hs === as_
   const homeWins = !tied && hs > as_
   const logoSz = Math.round(cardH * 0.30)
-  const teamFontSize = Math.max(18, Math.min(34, Math.round(cardH * 0.12)))
-  const timeFontSize = Math.round(cardH * 0.36)
+  const teamFontSize = Math.max(18, Math.min(32, Math.round(cardH * 0.13)))
+  const timeFontSize = Math.round(cardH * 0.38)
   const scoreFontSize = Math.round(cardH * 0.36)
   const metaFontSize = Math.max(12, Math.round(cardH * 0.085))
   const hasMeta = !!(match.date || match.venue)
 
   return (
-    <div style={{ width: cardW, height: cardH, background: cardBg, borderRadius: 20, border: cardBorder, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+    <div style={{
+      width: cardW, height: cardH,
+      background: `linear-gradient(155deg, ${palette.cardBgStart} 0%, ${palette.cardBgMid} 65%, ${palette.cardBgEnd} 100%)`,
+      borderRadius: 20,
+      border: `1.5px solid ${palette.borderColor}${palette.borderAlpha}`,
+      display: "flex", flexDirection: "column",
+      overflow: "hidden",
+      position: "relative",
+    }}>
+      {/* Gold hairline arriba */}
+      <div style={{
+        position: "absolute", top: 0, left: 24, right: 24, height: 2,
+        background: `linear-gradient(90deg, transparent, ${palette.gold}88, transparent)`,
+        display: "flex",
+      }} />
+      {/* Textura sutil radial gold */}
+      <div style={{
+        position: "absolute", top: 0, left: 0,
+        width: Math.round(cardW * 0.4), height: Math.round(cardH * 0.7),
+        background: `radial-gradient(circle at 18% 25%, ${palette.gold}1F 0%, transparent 55%)`,
+        display: "flex", pointerEvents: "none",
+      }} />
+
       {/* Main row: teams (left) + time/score (right) */}
       <div style={{ display: "flex", flex: 1, alignItems: "center", width: "100%" }}>
         {/* Teams column — home row + away row */}
-        <div style={{ display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", gap: 8, padding: "10px 20px", minWidth: 0 }}>
+        <div style={{ display: "flex", flex: 1, flexDirection: "column", justifyContent: "center", gap: 10, padding: "14px 22px", minWidth: 0 }}>
           {/* Home */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
             <Logo url={match.homeLogo} name={match.homeName} size={logoSz} />
             <span style={{
-              color: tc.team,
+              marginLeft: 16,
+              color: "white",
+              fontFamily: "Archivo Black",
               fontSize: teamFontSize,
-              fontWeight: isResultado ? (!tied && homeWins ? 900 : 600) : 700,
-              letterSpacing: 0,
+              fontWeight: 900,
+              letterSpacing: -0.3,
+              display: "flex",
               overflow: "hidden",
               whiteSpace: "nowrap",
             }}>
-              {match.homeName}
+              {match.homeName.toUpperCase()}
             </span>
           </div>
           {/* Away */}
-          <div style={{ display: "flex", alignItems: "center", gap: 14, width: "100%" }}>
+          <div style={{ display: "flex", alignItems: "center", width: "100%" }}>
             <Logo url={match.awayLogo} name={match.awayName} size={logoSz} />
             <span style={{
-              color: tc.team,
+              marginLeft: 16,
+              color: "white",
+              fontFamily: "Archivo Black",
               fontSize: teamFontSize,
-              fontWeight: isResultado ? (!tied && !homeWins ? 900 : 600) : 700,
-              letterSpacing: 0,
+              fontWeight: 900,
+              letterSpacing: -0.3,
+              display: "flex",
               overflow: "hidden",
               whiteSpace: "nowrap",
             }}>
-              {match.awayName}
+              {match.awayName.toUpperCase()}
             </span>
           </div>
         </div>
-        {/* Divider + Time/Score */}
+        {/* Divider gold + Time/Score */}
         <div style={{
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-          paddingLeft: 18, paddingRight: 24,
-          borderLeft: "1px solid rgba(255,255,255,0.10)",
+          paddingLeft: 22, paddingRight: 28,
+          borderLeft: `1px solid ${palette.gold}55`,
           minWidth: Math.round(cardW * 0.30),
           alignSelf: "stretch",
         }}>
           {isResultado && match.homeScore != null ? (
             <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-              <span style={{ color: tc.score, fontSize: scoreFontSize, fontWeight: tied ? 700 : (homeWins ? 900 : 500), lineHeight: 1 }}>{match.homeScore}</span>
-              <span style={{ color: "rgba(255,255,255,0.3)", fontSize: Math.round(scoreFontSize * 0.55), fontWeight: 700 }}>–</span>
-              <span style={{ color: tc.score, fontSize: scoreFontSize, fontWeight: tied ? 700 : (!homeWins ? 900 : 500), lineHeight: 1 }}>{match.awayScore}</span>
+              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: scoreFontSize, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5, display: "flex" }}>{match.homeScore}</span>
+              <span style={{ color: palette.gold, fontSize: Math.round(scoreFontSize * 0.5), fontWeight: 700, display: "flex" }}>-</span>
+              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: scoreFontSize, fontWeight: 900, lineHeight: 1, letterSpacing: -1.5, display: "flex" }}>{match.awayScore}</span>
             </div>
           ) : (
-            <span style={{ color: "white", fontSize: timeFontSize, fontWeight: 900, lineHeight: 1, letterSpacing: -1 }}>
-              {match.time || "–"}
+            <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: timeFontSize, fontWeight: 900, lineHeight: 1, letterSpacing: -1, display: "flex" }}>
+              {match.time || "—"}
             </span>
           )}
+          {!isResultado && match.time ? (
+            <span style={{ marginTop: 6, color: palette.gold, fontFamily: "Inter", fontSize: Math.max(10, Math.round(timeFontSize * 0.28)), fontWeight: 800, letterSpacing: 2, display: "flex" }}>
+              HS
+            </span>
+          ) : null}
         </div>
       </div>
-      {/* Bottom meta strip: fecha · venue */}
+
+      {/* Bottom meta strip: fecha · venue con accent dot gold */}
       {hasMeta && (
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "center",
-          gap: 10, padding: "7px 16px",
-          borderTop: "1px solid rgba(255,255,255,0.08)",
-          background: "rgba(0,0,0,0.25)",
+          padding: "9px 18px",
+          borderTop: `1px solid ${palette.separator}`,
+          background: "rgba(3,8,26,0.35)",
           width: "100%",
         }}>
           {match.date ? (
-            <span style={{ color: "rgba(255,255,255,0.75)", fontSize: metaFontSize, fontWeight: 600, display: "flex" }}>
-              {match.date}
+            <span style={{ color: palette.accentSoft, fontFamily: "Inter", fontSize: metaFontSize, fontWeight: 700, letterSpacing: 1.2, display: "flex" }}>
+              {match.date.toUpperCase()}
             </span>
           ) : null}
           {match.date && match.venue ? (
-            <span style={{ color: "rgba(255,255,255,0.35)", fontSize: metaFontSize, display: "flex" }}>·</span>
+            <span style={{ marginLeft: 10, marginRight: 10, color: palette.gold, fontSize: metaFontSize, display: "flex" }}>·</span>
           ) : null}
           {match.venue ? (
-            <span style={{ color: "rgba(255,255,255,0.55)", fontSize: metaFontSize, fontWeight: 500, display: "flex", overflow: "hidden", whiteSpace: "nowrap" }}>
+            <span style={{ color: "rgba(255,255,255,0.75)", fontFamily: "Inter", fontSize: metaFontSize, fontWeight: 500, display: "flex", overflow: "hidden", whiteSpace: "nowrap" }}>
               {match.venue}
             </span>
           ) : null}
@@ -404,7 +445,7 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
       <div style={{
         position: "absolute", top: 0, left: 0,
         width: Math.round(cardW * 0.35), height: Math.round(cardH * 0.6),
-        background: `radial-gradient(circle at 20% 20%, ${palette.gold}1F 0%, transparent 55%)`,
+        background: `radial-gradient(circle at 18% 22%, ${palette.gold}2E 0%, transparent 58%)`,
         display: "flex", pointerEvents: "none",
       }} />
       {/* JUEGO 0X badge con punto sutil */}
@@ -1460,7 +1501,7 @@ export async function GET(req: NextRequest) {
                   palette={theme === "lnb-premium" ? PALETTE_LNB : PALETTE_LNBF}
                 />
               ) : layout === "compact" ? (
-                <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} tc={tc} cardBg={cardBg} cardBorder={cardBorder} />
+                <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} palette={theme === "lnb-premium" ? PALETTE_LNB : PALETTE_LNBF} />
               ) : (
                 <MatchCard key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} nameFontSize={nameFontSize} vsFontSize={vsFontSize} cardStyle={cardStyle} tc={tc} />
               )
