@@ -118,6 +118,8 @@ function DisenoInner() {
   const [lnbfPattern, setLnbfPattern] = useState<"clean" | "dots" | "nandu" | "court">("dots")
   // Badge "FECHA X" arriba derecha (solo en tema lnbf-premium). Vacío = sin badge.
   const [lnbfBadge, setLnbfBadge] = useState("")
+  // Barra HORARIO al pie de cada tarjeta (solo en tema lnbf-premium)
+  const [lnbfShowHorarioBar, setLnbfShowHorarioBar] = useState(true)
   const [jugadorTeamLogo, setJugadorTeamLogo] = useState<string | null>(null)
   const [uploadingJugadorLogo, setUploadingJugadorLogo] = useState(false)
   const jugadorLogoRef = useRef<HTMLInputElement>(null)
@@ -504,6 +506,9 @@ function DisenoInner() {
     if (theme === "lnbf-premium" && lnbfBadge.trim()) {
       params.set("lnbfBadge", lnbfBadge.trim())
     }
+    if (theme === "lnbf-premium" && !lnbfShowHorarioBar) {
+      params.set("lnbfShowHorarioBar", "false")
+    }
     const activeSponsors = sponsors.filter(Boolean)
     if (activeSponsors.length > 0) {
       sponsors.forEach((s, i) => {
@@ -532,7 +537,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbfBadge])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbfBadge, lnbfShowHorarioBar])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -821,6 +826,21 @@ function DisenoInner() {
                     className="h-8 text-xs bg-white"
                   />
                 </div>
+                <button
+                  onClick={() => setLnbfShowHorarioBar(!lnbfShowHorarioBar)}
+                  className={`w-full p-2 rounded-lg border text-left transition-colors flex items-center gap-2 ${
+                    lnbfShowHorarioBar ? "border-primary bg-white" : "border-gray-200 bg-gray-50"
+                  }`}
+                >
+                  <div className={`h-4 w-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                    lnbfShowHorarioBar ? "border-primary bg-primary" : "border-gray-300 bg-white"
+                  }`}>
+                    {lnbfShowHorarioBar && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
+                  </div>
+                  <span className={`text-[11px] font-semibold ${lnbfShowHorarioBar ? "text-primary" : "text-gray-600"}`}>
+                    Mostrar barra HORARIO en cada tarjeta
+                  </span>
+                </button>
               </div>
             )}
             {/* Subir fondo propio */}

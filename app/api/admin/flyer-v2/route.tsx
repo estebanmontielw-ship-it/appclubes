@@ -310,7 +310,7 @@ function MatchCardCompact({ match, isResultado, cardW, cardH, tc, cardBg, cardBo
 // Tarjeta de partido para el tema LNBF Premium — diseño editorial
 // con badge "JUEGO N", VS en gold, franja de estadio + fecha y barra
 // destacada de horario violeta.
-function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize, vsFontSize, nameFontSize }: {
+function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize, vsFontSize, nameFontSize, showHorarioBar }: {
   match: MatchData
   matchNumber: number
   isResultado: boolean
@@ -319,6 +319,7 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
   logoSize: number
   vsFontSize: number
   nameFontSize: number
+  showHorarioBar: boolean
 }) {
   const hs = parseInt(match.homeScore ?? "")
   const as_ = parseInt(match.awayScore ?? "")
@@ -406,23 +407,25 @@ function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize
         ) : null}
       </div>
 
-      {/* Barra HORARIO (o RESULTADO) */}
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        height: horarioH,
-        padding: "0 22px",
-        background: `linear-gradient(90deg, ${LNBF.color.violet700} 0%, ${LNBF.color.violet800} 100%)`,
-        width: "100%",
-      }}>
-        <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: Math.max(12, Math.round(horarioFont * 0.5)), fontWeight: 700, letterSpacing: 3, display: "flex" }}>
-          {isResultado ? "RESULTADO" : "HORARIO"}
-        </span>
-        <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: horarioFont, fontWeight: 900, letterSpacing: -0.5, display: "flex" }}>
-          {isResultado && match.homeScore != null
-            ? `${match.homeScore} - ${match.awayScore}`
-            : `${match.time || "—"} HS`}
-        </span>
-      </div>
+      {/* Barra HORARIO (o RESULTADO) — opcional */}
+      {showHorarioBar && (
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          height: horarioH,
+          padding: "0 22px",
+          background: `linear-gradient(90deg, ${LNBF.color.violet700} 0%, ${LNBF.color.violet800} 100%)`,
+          width: "100%",
+        }}>
+          <span style={{ color: LNBF.color.violet300, fontFamily: "Inter", fontSize: Math.max(12, Math.round(horarioFont * 0.5)), fontWeight: 700, letterSpacing: 3, display: "flex" }}>
+            {isResultado ? "RESULTADO" : "HORARIO"}
+          </span>
+          <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: horarioFont, fontWeight: 900, letterSpacing: -0.5, display: "flex" }}>
+            {isResultado && match.homeScore != null
+              ? `${match.homeScore} - ${match.awayScore}`
+              : `${match.time || "—"} HS`}
+          </span>
+        </div>
+      )}
     </div>
   )
 }
@@ -525,6 +528,8 @@ export async function GET(req: NextRequest) {
   // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
   // vacío no se renderiza el pill.
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
+  // Mostrar u ocultar la barra HORARIO al pie de cada tarjeta LNBF
+  const lnbfShowHorarioBar = searchParams.get("lnbfShowHorarioBar") !== "false"
   // Filter + opacity que blanquea los sponsors en el tema lnbf-premium
   // para que queden unificados sobre el fondo morado oscuro. Satori
   // soporta brightness + invert individualmente (no todos los filtros).
@@ -1254,7 +1259,7 @@ export async function GET(req: NextRequest) {
               // MatchCardLNBF (diseño editorial con badge + horario bar).
               // Compact mantiene el diseño actual hasta que se rediseñe.
               return theme === "lnbf-premium" && layout !== "compact" ? (
-                <MatchCardLNBF key={i} match={match} matchNumber={i + 1} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} vsFontSize={vsFontSize} nameFontSize={nameFontSize} />
+                <MatchCardLNBF key={i} match={match} matchNumber={i + 1} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} vsFontSize={vsFontSize} nameFontSize={nameFontSize} showHorarioBar={lnbfShowHorarioBar} />
               ) : layout === "compact" ? (
                 <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} tc={tc} cardBg={cardBg} cardBorder={cardBorder} />
               ) : (
