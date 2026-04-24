@@ -1,12 +1,26 @@
 import { NextResponse } from "next/server"
 import { getAllPlayerStats } from "@/lib/genius-sports"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import {
+  resolveLnbCompetitionIdPublic,
+  resolveLnbfCompetitionIdPublic,
+} from "@/lib/programacion-lnb"
 
 export const revalidate = 600
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const { id } = await resolveLnbCompetitionIdPublic()
+    const { searchParams } = new URL(request.url)
+    const competition = (searchParams.get("competition") ?? "lnb").toLowerCase()
+    const explicitId = searchParams.get("competitionId")
+
+    let id: string | null = explicitId
+    if (!id) {
+      const resolver =
+        competition === "lnbf"
+          ? resolveLnbfCompetitionIdPublic
+          : resolveLnbCompetitionIdPublic
+      id = (await resolver()).id
+    }
     if (!id) return NextResponse.json({ players: [], teams: [] })
 
     const data = await getAllPlayerStats(id)

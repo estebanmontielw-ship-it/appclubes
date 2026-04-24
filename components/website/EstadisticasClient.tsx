@@ -6,8 +6,14 @@ import { Search, ChevronUp, ChevronDown, ChevronsUpDown, Loader2, BarChart2 } fr
 import type { PlayerStatFull, TeamStatFull } from "@/lib/genius-sports"
 
 type Tab = "jugadores" | "equipos"
+type CompKey = "lnb" | "lnbf"
 type SortDir = "asc" | "desc"
 interface SortState { col: string; dir: SortDir }
+
+const COMP_TABS: { key: CompKey; label: string }[] = [
+  { key: "lnb",  label: "LNB"  },
+  { key: "lnbf", label: "LNBF" },
+]
 
 function normalizeName(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim()
@@ -256,7 +262,8 @@ function TeamTable({ teams, sort, onSort, slugMap, onClickTeam }: {
 
 export default function EstadisticasClient() {
   const router = useRouter()
-  const [data, setData] = useState<{ players: PlayerStatFull[]; teams: TeamStatFull[] } | null>(null)
+  const [comp, setComp] = useState<CompKey>("lnb")
+  const [cache, setCache] = useState<Partial<Record<CompKey, { players: PlayerStatFull[]; teams: TeamStatFull[] }>>>({})
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<Tab>("jugadores")
   const [search, setSearch] = useState("")
@@ -265,27 +272,39 @@ export default function EstadisticasClient() {
   const [teamSort, setTeamSort] = useState<SortState>({ col: "ptsAvg", dir: "desc" })
   const [clubSlugMap, setClubSlugMap] = useState<Map<number, string>>(new Map())
 
+  const data = cache[comp] ?? null
+
   const goToPlayer = (personId: number) => router.push(`/jugador/${personId}`)
   const goToTeam = (slug: string) => router.push(`/clubes/${slug}`)
 
   useEffect(() => {
+    if (cache[comp]) return
+    setLoading(true)
     Promise.all([
-      fetch("/api/genius/full-stats").then(r => r.json()),
+      fetch(`/api/genius/full-stats?competition=${comp}`).then(r => r.json()),
       fetch("/api/website/clubes").then(r => r.json()).catch(() => ({ clubes: [] })),
     ])
       .then(([statsData, clubsData]) => {
-        setData(statsData)
+        setCache(prev => ({ ...prev, [comp]: { players: statsData.players ?? [], teams: statsData.teams ?? [] } }))
         const clubs: { nombre: string; slug: string }[] = clubsData.clubes ?? []
-        const map = new Map<number, string>()
+        const map = new Map<number, string>(clubSlugMap)
         for (const t of (statsData.teams ?? [])) {
           const club = clubs.find((c: { nombre: string; slug: string }) => namesMatch(c.nombre, t.teamName))
           if (club) map.set(t.teamId, club.slug)
         }
         setClubSlugMap(map)
       })
-      .catch(() => setData({ players: [], teams: [] }))
+      .catch(() => setCache(prev => ({ ...prev, [comp]: { players: [], teams: [] } })))
       .finally(() => setLoading(false))
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comp])
+
+  function handleSelectComp(next: CompKey) {
+    if (next === comp) return
+    setSearch("")
+    setTeamFilter("all")
+    setComp(next)
+  }
 
   const teamOptions = useMemo(() => {
     if (!data) return []
@@ -333,23 +352,49 @@ export default function EstadisticasClient() {
   const handleTeamSort = (col: string) =>
     setTeamSort(prev => ({ col, dir: prev.col === col && prev.dir === "desc" ? "asc" : "desc" }))
 
+  const CompSwitch = (
+    <div className="flex flex-wrap items-center gap-2">
+      {COMP_TABS.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => handleSelectComp(t.key)}
+          className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+            comp === t.key
+              ? "bg-[#0a1628] text-white border-[#0a1628] shadow-sm"
+              : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
+
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-24 gap-3">
-      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-      <p className="text-sm text-gray-400 font-semibold">Cargando estadísticas…</p>
+    <div className="space-y-6">
+      {CompSwitch}
+      <div className="flex flex-col items-center justify-center py-24 gap-3">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <p className="text-sm text-gray-400 font-semibold">Cargando estadísticas…</p>
+      </div>
     </div>
   )
 
   if (!data?.players.length) return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-16 text-center">
-      <BarChart2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
-      <p className="text-gray-500 font-semibold">Estadísticas disponibles cuando haya partidos jugados.</p>
-      <p className="text-sm text-gray-400 mt-1">Las estadísticas detalladas se publicarán a partir de la primera fecha.</p>
+    <div className="space-y-6">
+      {CompSwitch}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-6 py-16 text-center">
+        <BarChart2 className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+        <p className="text-gray-500 font-semibold">Estadísticas disponibles cuando haya partidos jugados.</p>
+        <p className="text-sm text-gray-400 mt-1">Las estadísticas detalladas se publicarán a partir de la primera fecha.</p>
+      </div>
     </div>
   )
 
   return (
     <div className="space-y-8">
+
+      {CompSwitch}
 
       {/* Hero — top 5 players, horizontal scroll on mobile */}
       <div>
