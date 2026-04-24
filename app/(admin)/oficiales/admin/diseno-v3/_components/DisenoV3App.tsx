@@ -57,12 +57,14 @@ export default function DisenoV3App() {
   const [geniusOpen, setGeniusOpen] = useState(false)
   const [docsOpen, setDocsOpen] = useState(false)
 
-  // Sponsors config — persistido y aplicado al insertar templates
+  // Sponsors config — persistido y aplicado al insertar templates.
+  // Por default la franja está APAGADA (el usuario la activa si la quiere).
+  // Los sponsors cargados se mantienen en memoria aunque `show=false`.
   const [sponsorsConfig, setSponsorsConfig] = useState<SponsorsConfig>({
     sponsors: [null, null, null, null, null],
     scales: [100, 100, 100, 100, 100],
     bg: "dark",
-    show: true,
+    show: false,
   })
 
   // Patrón de fondo — default "scratch" a 10% como V2 Stories
@@ -79,6 +81,85 @@ export default function DisenoV3App() {
     setTheme((t) => (t.liga === liga || t.key === "clean-light" ? t : defTheme))
   }, [liga])
 
+  // Al cambiar de formato, re-dimensionar las capas de fondo (background,
+  // pattern overlay, glows, sponsor strip) al nuevo tamaño. Los objetos del
+  // usuario (títulos, logos, cards) se preservan en sus coords. Este efecto
+  // NO corre en la primera render (solo cuando ya hay canvas + primer
+  // template insertado).
+  const prevFormatRef = useRef<{ w: number; h: number } | null>(null)
+  useEffect(() => {
+    const c = canvasRef.current
+    if (!c) return
+    const prev = prevFormatRef.current
+    prevFormatRef.current = { w: format.width, h: format.height }
+    if (!prev || (prev.w === format.width && prev.h === format.height)) return
+
+    // Ratios para re-escalar en X e Y independientemente (para que el bg
+    // cubra el nuevo área completa).
+    const rx = format.width / prev.w
+    const ry = format.height / prev.h
+
+    c.getObjects().forEach((o: any) => {
+      const role = o.role as string | undefined
+      if (!role) return
+      // Background, pattern y glows: se estiran para cubrir el nuevo formato
+      if (role === "background" || role === "pattern") {
+        o.set({ left: 0, top: 0, scaleX: 1, scaleY: 1, width: format.width, height: format.height })
+      } else if (role === "glow") {
+        // Los glows van a las esquinas con tamaño proporcional
+        o.set({
+          left: (o.left || 0) * rx,
+          top: (o.top || 0) * ry,
+          scaleX: (o.scaleX || 1) * rx,
+          scaleY: (o.scaleY || 1) * ry,
+        })
+      } else if (role.startsWith("sponsor-")) {
+        // Mejor eliminar toda la sponsor strip; se re-aplica abajo
+        c.remove(o)
+      }
+    })
+
+    // Re-aplicar sponsor strip con el nuevo tamaño si show=true
+    if (sponsorsConfig.show) {
+      ;(async () => {
+        const fabric = await loadFabric()
+        const strip = makeSponsorStrip(fabric, theme, format, sponsorsConfig.bg)
+        strip.forEach((o: any) => {
+          if (!o.id) o.id = nextId()
+          c.add(o)
+        })
+        for (let i = 0; i < 5; i++) {
+          const url = sponsorsConfig.sponsors[i]
+          if (!url) continue
+          const slot = c.getObjects().find((o: any) => o.role === `sponsor-slot-${i}`)
+          if (!slot) continue
+          const sw = (slot.width || 1) * (slot.scaleX || 1)
+          const sh = (slot.height || 1) * (slot.scaleY || 1)
+          await new Promise<void>((resolve) => {
+            fabric.Image.fromURL(url, (img: any) => {
+              const baseScale = Math.min(sw / (img.width || 1), sh / (img.height || 1))
+              const scale = baseScale * (sponsorsConfig.scales[i] / 100)
+              img.set({
+                left: (slot.left || 0) + sw / 2,
+                top: (slot.top || 0) + sh / 2,
+                originX: "center", originY: "center",
+                scaleX: scale, scaleY: scale,
+                role: `sponsor-img-${i}`,
+              })
+              img.id = nextId()
+              c.add(img)
+              resolve()
+            }, { crossOrigin: "anonymous" })
+          })
+        }
+        c.requestRenderAll()
+      })()
+    }
+
+    c.requestRenderAll()
+    setDirty(true)
+  }, [format.width, format.height, sponsorsConfig, theme])
+
   // Pre-llenar sponsors desde la config guardada en V2 (misma tabla diseno_configs).
   // Si el usuario ya tenía sus 5 sponsors + barra configurados en Diseño V2 para
   // esta liga, aparecen automáticamente en el SponsorsPanel del V3.
@@ -91,13 +172,16 @@ export default function DisenoV3App() {
         const c = data.config
         const sp = Array.isArray(c.sponsors) ? c.sponsors : []
         const sc = Array.isArray(c.sponsorScales) ? c.sponsorScales : []
-        setSponsorsConfig({
+        // Importar sponsors guardados del V2 pero preservar el toggle "show"
+        // actual (default: false). Así no aparece la franja sin que el
+        // usuario la active explícitamente.
+        setSponsorsConfig((prev) => ({
           sponsors: [...sp, ...Array(5)].slice(0, 5).map((v: any) => (typeof v === "string" && v ? v : null)),
           // scales en V2 viven como multiplier (1.0 = 100%); en V3 como porcentaje.
           scales: [...sc, ...Array(5)].slice(0, 5).map((v: any) => (typeof v === "number" ? Math.round(v * 100) : 100)),
           bg: (c.sponsorBg === "white" ? "white" : "dark") as "white" | "dark",
-          show: true,
-        })
+          show: prev.show,
+        }))
       })
       .catch(() => { /* silent */ })
     return () => { cancel = true }
