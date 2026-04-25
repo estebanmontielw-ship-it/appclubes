@@ -625,7 +625,23 @@ export async function loadLnbfSchedule(): Promise<LnbSchedulePayload> {
     getTeams(competitionId).catch(() => null),
   ])
 
-  const { matches, teams } = processScheduleData(rawMatches, rawTeams, false)
+  let { matches, teams } = processScheduleData(rawMatches, rawTeams, true)
+
+  const liveMatches = matches.filter(
+    (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
+  )
+  if (liveMatches.length > 0) {
+    const liveScores = await Promise.allSettled(liveMatches.map((m) => fetchFibaLiveScore(m.id)))
+    liveScores.forEach((result, i) => {
+      if (result.status === "fulfilled" && result.value) {
+        const match = liveMatches[i]
+        const idx = matches.findIndex((m) => m.id === match.id)
+        if (idx !== -1) {
+          matches[idx] = { ...matches[idx], homeScore: result.value.homeScore, awayScore: result.value.awayScore }
+        }
+      }
+    })
+  }
 
   return {
     competition: { id: competitionId, name: competitionName || "LNB Femenino" },

@@ -1,7 +1,10 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import SectionTitle from "@/components/website/SectionTitle"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import {
+  resolveLnbCompetitionIdPublic,
+  resolveLnbfCompetitionIdPublic,
+} from "@/lib/programacion-lnb"
 import { getLeadersFromMatches, type LeaderEntry } from "@/lib/genius-sports"
 import { TrendingUp, Activity, Users, BarChart2, Hash, Star } from "lucide-react"
 
@@ -94,8 +97,16 @@ function SwipeCard({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default async function LideresPage() {
-  const { id: competitionId } = await resolveLnbCompetitionIdPublic()
+export default async function LideresPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ comp?: string }>
+}) {
+  const { comp } = await searchParams
+  const isLnbf = comp === "lnbf"
+  const { id: competitionId } = isLnbf
+    ? await resolveLnbfCompetitionIdPublic()
+    : await resolveLnbCompetitionIdPublic()
 
   let scoring: LeaderEntry[] = []
   let rebounds: LeaderEntry[] = []
@@ -118,13 +129,39 @@ export default async function LideresPage() {
     }
   }
 
+  const COMP_TABS: { key: "lnb" | "lnbf"; label: string; href: string }[] = [
+    { key: "lnb",  label: "LNB",  href: "/lideres" },
+    { key: "lnbf", label: "LNBF", href: "/lideres?comp=lnbf" },
+  ]
+  const activeKey = isLnbf ? "lnbf" : "lnb"
+
   return (
     <div className="bg-[#f5f7fb] min-h-[calc(100vh-200px)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <SectionTitle
           title="Líderes"
-          subtitle="Los mejores jugadores de la LNB 2026 en cada categoría"
+          subtitle={
+            isLnbf
+              ? "Las mejores jugadoras de la LNBF 2026 en cada categoría"
+              : "Los mejores jugadores de la LNB 2026 en cada categoría"
+          }
         />
+
+        <div className="mt-6 flex flex-wrap items-center gap-2">
+          {COMP_TABS.map((t) => (
+            <Link
+              key={t.key}
+              href={t.href}
+              className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                activeKey === t.key
+                  ? "bg-[#0a1628] text-white border-[#0a1628] shadow-sm"
+                  : "bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-700"
+              }`}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
 
         {/* Totales */}
         <div className="mt-6 flex items-center justify-between mb-3">
