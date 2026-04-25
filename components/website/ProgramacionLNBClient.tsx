@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import Link from "next/link"
 import { CalendarDays, Trophy, Users, Home as HomeIcon, Plane, LayoutGrid, Clock, MapPin, BarChart2, Radio } from "lucide-react"
+import { useLiveMatchPolling, liveBadgeText } from "@/hooks/useLiveMatchPolling"
 
 export interface LnbTeam {
   id: string | number
@@ -99,54 +100,6 @@ function TeamBadge({ name, sigla, logo, align = "left" }: { name: string; sigla:
   )
 }
 
-function periodLabel(period: number | null | undefined): string | null {
-  if (period == null || !Number.isFinite(period)) return null
-  if (period <= 4) return `${period}°C`
-  return `${period - 4}°OT`
-}
-
-interface LiveState {
-  homeScore: number | null
-  awayScore: number | null
-  period: number | null
-  clock: string | null
-}
-
-function useLiveMatchPolling(matchId: string | number, enabled: boolean, initial: LiveState): LiveState {
-  const [state, setState] = useState<LiveState>(initial)
-
-  useEffect(() => {
-    if (!enabled) return
-    let cancelled = false
-
-    async function tick() {
-      try {
-        const res = await fetch(`/api/genius/live-match/${matchId}`, { cache: "no-store" })
-        if (!res.ok) return
-        const data = await res.json()
-        if (cancelled) return
-        setState((prev) => ({
-          homeScore: data.homeScore ?? prev.homeScore,
-          awayScore: data.awayScore ?? prev.awayScore,
-          period: data.period ?? prev.period,
-          clock: data.clock ?? prev.clock,
-        }))
-      } catch {
-        // ignore — keep previous state
-      }
-    }
-
-    tick()
-    const id = setInterval(tick, 30_000)
-    return () => {
-      cancelled = true
-      clearInterval(id)
-    }
-  }, [matchId, enabled])
-
-  return state
-}
-
 function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
   const isComplete = match.status === "COMPLETE"
   const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
@@ -163,9 +116,7 @@ function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
   })
   const homeScore = isLive ? live.homeScore : match.homeScore
   const awayScore = isLive ? live.awayScore : match.awayScore
-  const liveBadge = isLive
-    ? [periodLabel(live.period), live.clock].filter(Boolean).join(" · ") || null
-    : null
+  const liveBadge = isLive ? liveBadgeText(live) : null
 
   // Winner emphasis for completed matches
   const homeWins = isComplete && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore

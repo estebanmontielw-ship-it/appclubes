@@ -4,6 +4,7 @@ import { startTransition, useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { MapPin, ExternalLink } from "lucide-react"
 import type { NormalizedMatch } from "@/lib/programacion-lnb"
+import { useLiveMatchPolling, liveBadgeText } from "@/hooks/useLiveMatchPolling"
 
 const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"]
 const MONTHS = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
@@ -32,6 +33,135 @@ function TeamLogo({ logo, name, sigla }: { logo: string | null; name: string; si
     <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gray-100 flex items-center justify-center text-sm font-black text-gray-400">
       {sigla?.slice(0, 3) ?? name.slice(0, 3).toUpperCase()}
     </div>
+  )
+}
+
+function MatchCard({ match, isNext }: { match: NormalizedMatch; isNext: boolean }) {
+  const isComplete = match.status === "COMPLETE"
+  const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
+  const homeWins = isComplete && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
+  const matchTime = match.isoDateTime ? new Date(match.isoDateTime).getTime() : null
+  const minsToStart = matchTime !== null ? (matchTime - Date.now()) / 60000 : null
+  const isPreLive = !isLive && !isComplete && minsToStart !== null && minsToStart <= 30
+
+  const live = useLiveMatchPolling(match.id, isLive, {
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
+    period: match.livePeriod ?? null,
+    clock: match.liveClock ?? null,
+  })
+  const homeScore = isLive ? live.homeScore : match.homeScore
+  const awayScore = isLive ? live.awayScore : match.awayScore
+  const liveBadge = isLive ? liveBadgeText(live) : null
+
+  const cardClass = isLive
+    ? "bg-white rounded-xl border border-red-200 shadow-md shadow-red-100/60"
+    : isComplete
+    ? "bg-gray-50/70 rounded-xl border border-gray-100 shadow-sm"
+    : "bg-white rounded-xl border border-gray-100 shadow-sm hover:border-[#0a1628]/20 hover:shadow-md transition-all"
+
+  const inner = (
+    <div className={`relative ${cardClass} p-4`}>
+      {isLive && (
+        <div className="absolute top-3 left-3 flex items-center gap-1 bg-red-500 text-white text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse" />
+          EN VIVO
+        </div>
+      )}
+      {isNext && !isLive && !isComplete && (
+        <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5">
+          <span className="w-1 h-1 rounded-full bg-amber-500 inline-block" />
+          Próximo
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 mt-1">
+        <div className="flex-1 flex flex-col items-center gap-1.5">
+          <TeamLogo logo={match.homeLogo} name={match.homeName} sigla={match.homeSigla} />
+          <div className="text-center">
+            <p className="text-[11px] font-black text-[#0a1628] uppercase leading-tight line-clamp-2">
+              {match.homeName}
+            </p>
+            {match.homeSigla && (
+              <p className="text-[9px] text-gray-400 font-bold">{match.homeSigla}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="shrink-0 flex flex-col items-center gap-0.5 min-w-[60px]">
+          {isLive && homeScore != null && awayScore != null ? (
+            <>
+              {liveBadge ? (
+                <span className="text-[9px] font-black uppercase tracking-wider text-red-500 tabular-nums">{liveBadge}</span>
+              ) : (
+                <span className="text-[9px] font-black uppercase tracking-wider text-red-500">Live</span>
+              )}
+              <span className="text-xl font-black text-[#0a1628]">{homeScore}–{awayScore}</span>
+            </>
+          ) : isComplete && match.homeScore != null && match.awayScore != null ? (
+            <>
+              <span className="text-[9px] font-black uppercase tracking-wider text-gray-400">Final</span>
+              <div className="flex items-center gap-1">
+                <span className={`text-xl font-black ${homeWins ? "text-[#0a1628]" : "text-gray-400"}`}>{match.homeScore}</span>
+                <span className="text-gray-300 font-black text-sm">–</span>
+                <span className={`text-xl font-black ${!homeWins ? "text-[#0a1628]" : "text-gray-400"}`}>{match.awayScore}</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-[9px] text-gray-400 font-semibold">{fmtDate(match.date)}</span>
+              <span className="text-base font-black text-[#0a1628] tabular-nums">{match.time ?? "--:--"}</span>
+              <span className="text-[9px] text-gray-400">vs</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex-1 flex flex-col items-center gap-1.5">
+          <TeamLogo logo={match.awayLogo} name={match.awayName} sigla={match.awaySigla} />
+          <div className="text-center">
+            <p className="text-[11px] font-black text-[#0a1628] uppercase leading-tight line-clamp-2">
+              {match.awayName}
+            </p>
+            {match.awaySigla && (
+              <p className="text-[9px] text-gray-400 font-bold">{match.awaySigla}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-100">
+        {match.venue ? (
+          <div className="flex items-center gap-1 min-w-0">
+            <MapPin className="h-3 w-3 text-gray-400 shrink-0" />
+            <span className="text-[10px] text-gray-400 truncate">{match.venue}</span>
+          </div>
+        ) : <span />}
+        {(isComplete || isLive || isPreLive) ? (
+          match.statsUrl && (
+            <div className={`flex items-center gap-1 shrink-0 ml-2 text-[10px] font-semibold ${isLive || isPreLive ? "text-red-600" : "text-blue-600"}`}>
+              <ExternalLink className="h-3 w-3" />
+              {isComplete ? "Estadísticas" : "Livestats"}
+            </div>
+          )
+        ) : (
+          <div className="flex items-center gap-1 shrink-0 ml-2 text-[10px] font-semibold text-gray-500">
+            <ExternalLink className="h-3 w-3" />
+            Previa
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  if (isComplete || isLive || isPreLive) {
+    return match.statsUrl ? (
+      <a href={match.statsUrl} target="_blank" rel="noopener noreferrer" className="block">{inner}</a>
+    ) : (
+      <div>{inner}</div>
+    )
+  }
+  return (
+    <Link href={`/partido/${match.id}`} className="block">{inner}</Link>
   )
 }
 
@@ -76,125 +206,9 @@ function MatchGrid({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {roundMatches.map((match) => {
-              const isComplete = match.status === "COMPLETE"
-              const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
-              const isNext = match.id === nextMatchId
-              const homeWins = isComplete && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
-              const matchTime = match.isoDateTime ? new Date(match.isoDateTime).getTime() : null
-              const minsToStart = matchTime !== null ? (matchTime - Date.now()) / 60000 : null
-              const isPreLive = !isLive && !isComplete && minsToStart !== null && minsToStart <= 30
-
-              const cardClass = isLive
-                ? "bg-white rounded-xl border border-red-200 shadow-md shadow-red-100/60"
-                : isComplete
-                ? "bg-gray-50/70 rounded-xl border border-gray-100 shadow-sm"
-                : "bg-white rounded-xl border border-gray-100 shadow-sm hover:border-[#0a1628]/20 hover:shadow-md transition-all"
-
-              const inner = (
-                <div className={`relative ${cardClass} p-4`}>
-                  {isLive && (
-                    <div className="absolute top-3 left-3 flex items-center gap-1 bg-red-500 text-white text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-white inline-block animate-pulse" />
-                      EN VIVO
-                    </div>
-                  )}
-                  {isNext && !isLive && !isComplete && (
-                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-700 text-[9px] font-black uppercase tracking-wider rounded-full px-2 py-0.5">
-                      <span className="w-1 h-1 rounded-full bg-amber-500 inline-block" />
-                      Próximo
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 flex flex-col items-center gap-1.5">
-                      <TeamLogo logo={match.homeLogo} name={match.homeName} sigla={match.homeSigla} />
-                      <div className="text-center">
-                        <p className="text-[11px] font-black text-[#0a1628] uppercase leading-tight line-clamp-2">
-                          {match.homeName}
-                        </p>
-                        {match.homeSigla && (
-                          <p className="text-[9px] text-gray-400 font-bold">{match.homeSigla}</p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="shrink-0 flex flex-col items-center gap-0.5 min-w-[60px]">
-                      {isLive && match.homeScore != null && match.awayScore != null ? (
-                        <>
-                          <span className="text-[9px] font-black uppercase tracking-wider text-red-500">Live</span>
-                          <span className="text-xl font-black text-[#0a1628]">{match.homeScore}–{match.awayScore}</span>
-                        </>
-                      ) : isComplete && match.homeScore != null && match.awayScore != null ? (
-                        <>
-                          <span className="text-[9px] font-black uppercase tracking-wider text-gray-400">Final</span>
-                          <div className="flex items-center gap-1">
-                            <span className={`text-xl font-black ${homeWins ? "text-[#0a1628]" : "text-gray-400"}`}>{match.homeScore}</span>
-                            <span className="text-gray-300 font-black text-sm">–</span>
-                            <span className={`text-xl font-black ${!homeWins ? "text-[#0a1628]" : "text-gray-400"}`}>{match.awayScore}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-[9px] text-gray-400 font-semibold">{fmtDate(match.date)}</span>
-                          <span className="text-base font-black text-[#0a1628] tabular-nums">{match.time ?? "--:--"}</span>
-                          <span className="text-[9px] text-gray-400">vs</span>
-                        </>
-                      )}
-                    </div>
-
-                    <div className="flex-1 flex flex-col items-center gap-1.5">
-                      <TeamLogo logo={match.awayLogo} name={match.awayName} sigla={match.awaySigla} />
-                      <div className="text-center">
-                        <p className="text-[11px] font-black text-[#0a1628] uppercase leading-tight line-clamp-2">
-                          {match.awayName}
-                        </p>
-                        {match.awaySigla && (
-                          <p className="text-[9px] text-gray-400 font-bold">{match.awaySigla}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-100">
-                    {match.venue ? (
-                      <div className="flex items-center gap-1 min-w-0">
-                        <MapPin className="h-3 w-3 text-gray-400 shrink-0" />
-                        <span className="text-[10px] text-gray-400 truncate">{match.venue}</span>
-                      </div>
-                    ) : <span />}
-                    {(isComplete || isLive || isPreLive) ? (
-                      match.statsUrl && (
-                        <div className={`flex items-center gap-1 shrink-0 ml-2 text-[10px] font-semibold ${isLive || isPreLive ? "text-red-600" : "text-blue-600"}`}>
-                          <ExternalLink className="h-3 w-3" />
-                          {isComplete ? "Estadísticas" : "Livestats"}
-                        </div>
-                      )
-                    ) : (
-                      <div className="flex items-center gap-1 shrink-0 ml-2 text-[10px] font-semibold text-gray-500">
-                        <ExternalLink className="h-3 w-3" />
-                        Previa
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-
-              if (isComplete || isLive || isPreLive) {
-                return match.statsUrl ? (
-                  <a key={match.id} href={match.statsUrl} target="_blank" rel="noopener noreferrer" className="block">
-                    {inner}
-                  </a>
-                ) : (
-                  <div key={match.id}>{inner}</div>
-                )
-              }
-              return (
-                <Link key={match.id} href={`/partido/${match.id}`} className="block">
-                  {inner}
-                </Link>
-              )
-            })}
+            {roundMatches.map((match) => (
+              <MatchCard key={match.id} match={match} isNext={match.id === nextMatchId} />
+            ))}
           </div>
         </div>
       ))}
