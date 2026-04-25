@@ -8,7 +8,7 @@ import prisma from "@/lib/prisma"
 import SocialCarousel from "@/components/website/SocialCarousel"
 import LNBMatchCards from "@/components/website/LNBMatchCards"
 import LNBMatchTicker from "@/components/website/LNBMatchTicker"
-import { loadLnbSchedule } from "@/lib/programacion-lnb"
+import { loadLnbSchedule, loadLnbfSchedule, type NormalizedMatch } from "@/lib/programacion-lnb"
 
 // Revalidate homepage every 5 minutes
 export const revalidate = 300
@@ -66,42 +66,78 @@ export default async function HomePage() {
     // Table may not exist yet during development
   }
 
-  // Load LNB schedule for ticker + home cards
-  let tickerMatches: Awaited<ReturnType<typeof loadLnbSchedule>>["matches"] = []
-  let homeMatches: Awaited<ReturnType<typeof loadLnbSchedule>>["matches"] = []
-  let nextMatchId: string | number | null = null
-
-  try {
-    const { matches } = await loadLnbSchedule()
-
-    const now = new Date().toISOString()
-
-    const liveMatches = matches.filter(
+  function processSchedule(matches: NormalizedMatch[]) {
+    const nowIso = new Date().toISOString()
+    const live = matches.filter(
       (m) => m.status === "STARTED" || m.status === "LIVE" || m.status === "IN_PROGRESS"
     )
-    const upcomingMatches = matches
-      .filter((m) => m.status !== "COMPLETE" && !liveMatches.includes(m))
+    const upcoming = matches
+      .filter((m) => m.status !== "COMPLETE" && !live.includes(m))
       .sort((a, b) => (a.isoDateTime ?? "").localeCompare(b.isoDateTime ?? ""))
-    const recentComplete = matches
-      .filter((m) => m.status === "COMPLETE")
-      .slice(-4)
+    const recent = matches.filter((m) => m.status === "COMPLETE").slice(-4)
+    const next = upcoming.find((m) => m.isoDateTime && m.isoDateTime >= nowIso)
+    return {
+      ticker: [...recent, ...live, ...upcoming].slice(0, 20),
+      home: [...live, ...upcoming.slice(0, 8)],
+      nextId: next?.id ?? upcoming[0]?.id ?? null,
+      live,
+      upcoming,
+    }
+  }
 
-    // Ticker: recent results + live + next upcoming (up to 20 total)
-    tickerMatches = [...recentComplete, ...liveMatches, ...upcomingMatches].slice(0, 20)
+  /** True if any match is live or kicks off within the next 2 hours. */
+  function hasUrgentMatch(live: NormalizedMatch[], upcoming: NormalizedMatch[]): boolean {
+    if (live.length > 0) return true
+    const now = Date.now()
+    const TWO_HOURS_MS = 2 * 60 * 60 * 1000
+    return upcoming.some((m) => {
+      if (!m.isoDateTime) return false
+      const delta = new Date(m.isoDateTime).getTime() - now
+      return delta >= 0 && delta <= TWO_HOURS_MS
+    })
+  }
 
-    // Home cards: live + next 8 upcoming
-    homeMatches = [...liveMatches, ...upcomingMatches.slice(0, 8)]
+  let tickerMatches: NormalizedMatch[] = []
+  let homeMatches: NormalizedMatch[] = []
+  let nextMatchId: string | number | null = null
+  let lnbfTickerMatches: NormalizedMatch[] = []
+  let lnbfHomeMatches: NormalizedMatch[] = []
+  let lnbfNextMatchId: string | number | null = null
+  let initialLeague: "lnb" | "lnbf" = "lnb"
 
-    // Next match ID: first upcoming (by date) that is not complete
-    const next = upcomingMatches.find((m) => m.isoDateTime && m.isoDateTime >= now)
-    nextMatchId = next?.id ?? upcomingMatches[0]?.id ?? null
+  try {
+    const [lnb, lnbfResult] = await Promise.all([
+      loadLnbSchedule(),
+      loadLnbfSchedule().catch(() => null),
+    ])
+
+    const lnbProc = processSchedule(lnb.matches)
+    tickerMatches = lnbProc.ticker
+    homeMatches = lnbProc.home
+    nextMatchId = lnbProc.nextId
+
+    if (lnbfResult) {
+      const lnbfProc = processSchedule(lnbfResult.matches)
+      lnbfTickerMatches = lnbfProc.ticker
+      lnbfHomeMatches = lnbfProc.home
+      lnbfNextMatchId = lnbfProc.nextId
+
+      const lnbUrgent = hasUrgentMatch(lnbProc.live, lnbProc.upcoming)
+      const lnbfUrgent = hasUrgentMatch(lnbfProc.live, lnbfProc.upcoming)
+      // LNBF first only when LNBF has urgency and LNB does not (LNB wins ties).
+      if (lnbfUrgent && !lnbUrgent) initialLeague = "lnbf"
+    }
   } catch {
     // API unavailable — show empty state gracefully
   }
 
   return (
     <>
-      <LNBMatchTicker matches={tickerMatches} />
+      <LNBMatchTicker
+        matches={tickerMatches}
+        lnbfMatches={lnbfTickerMatches}
+        initialLeague={initialLeague}
+      />
       <HeroSection slides={heroSlides} />
 
       {/* Quick Stats / Links */}
@@ -111,7 +147,13 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <SectionTitle title="Próximos Partidos" subtitle="Calendario LNB 2026 — Liga Nacional de Básquetbol" />
         <div className="mt-6">
-          <LNBMatchCards matches={homeMatches} nextMatchId={nextMatchId} />
+          <LNBMatchCards
+            matches={homeMatches}
+            nextMatchId={nextMatchId}
+            lnbfMatches={lnbfHomeMatches}
+            lnbfNextMatchId={lnbfNextMatchId}
+            initialLeague={initialLeague}
+          />
         </div>
       </section>
 

@@ -53,11 +53,21 @@ function Separator() {
   return <span className="shrink-0 w-px h-4 bg-white/10 mx-1" />
 }
 
-export default function LNBMatchTicker({ matches: initialMatches }: { matches: NormalizedMatch[] }) {
+export default function LNBMatchTicker({
+  matches: initialMatches,
+  lnbfMatches: initialLnbfMatches,
+  initialLeague = "lnb",
+}: {
+  matches: NormalizedMatch[]
+  lnbfMatches?: NormalizedMatch[]
+  initialLeague?: "lnb" | "lnbf"
+}) {
   const [lnbMatches, setLnbMatches] = useState<NormalizedMatch[]>(initialMatches)
-  const [lnbfMatches, setLnbfMatches] = useState<NormalizedMatch[] | null>(null)
+  const [lnbfMatches, setLnbfMatches] = useState<NormalizedMatch[] | null>(
+    initialLnbfMatches && initialLnbfMatches.length > 0 ? initialLnbfMatches : null
+  )
   const [lnbfLoading, setLnbfLoading] = useState(false)
-  const [activeLeague, setActiveLeague] = useState<"lnb" | "lnbf">("lnb")
+  const [activeLeague, setActiveLeague] = useState<"lnb" | "lnbf">(initialLeague)
   const scrollRef = useRef<HTMLDivElement>(null)
 
   // Auto-poll when LNB has live matches
@@ -117,7 +127,7 @@ export default function LNBMatchTicker({ matches: initialMatches }: { matches: N
 
   const activeMatches = activeLeague === "lnb" ? lnbMatches : (lnbfMatches ?? [])
 
-  if (!lnbMatches.length) return null
+  if (!lnbMatches.length && !(lnbfMatches?.length)) return null
 
   return (
     <div className="bg-[#0a1628] border-b border-white/10">
