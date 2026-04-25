@@ -219,19 +219,27 @@ function MatchGrid({
 export default function LNBMatchCards({
   matches: initialMatches,
   nextMatchId: initialNextMatchId,
+  lnbfMatches: initialLnbfMatches,
+  lnbfNextMatchId: initialLnbfNextMatchId,
+  initialLeague = "lnb",
 }: {
   matches: NormalizedMatch[]
   nextMatchId: string | number | null
+  lnbfMatches?: NormalizedMatch[]
+  lnbfNextMatchId?: string | number | null
+  initialLeague?: "lnb" | "lnbf"
 }) {
   const [matches, setMatches] = useState<NormalizedMatch[]>(initialMatches)
   const [nextMatchId, setNextMatchId] = useState<string | number | null>(initialNextMatchId)
   const [liveCount, setLiveCount] = useState(0)
   const cancelRef = useRef(false)
 
-  // LNBF lazy state
-  const [activeLeague, setActiveLeague] = useState<"lnb" | "lnbf">("lnb")
-  const [lnbfMatches, setLnbfMatches] = useState<NormalizedMatch[] | null>(null)
-  const [lnbfNextMatchId, setLnbfNextMatchId] = useState<string | number | null>(null)
+  // LNBF lazy state — pre-populated from server when initialLeague === "lnbf"
+  const [activeLeague, setActiveLeague] = useState<"lnb" | "lnbf">(initialLeague)
+  const [lnbfMatches, setLnbfMatches] = useState<NormalizedMatch[] | null>(
+    initialLnbfMatches && initialLnbfMatches.length > 0 ? initialLnbfMatches : null
+  )
+  const [lnbfNextMatchId, setLnbfNextMatchId] = useState<string | number | null>(initialLnbfNextMatchId ?? null)
   const [lnbfLoading, setLnbfLoading] = useState(false)
 
   // Poll LNB data only
@@ -308,7 +316,7 @@ export default function LNBMatchCards({
   const activeNextMatchId = activeLeague === "lnb" ? nextMatchId : lnbfNextMatchId
   const activeLiveCount = activeLeague === "lnb" ? liveCount : 0
 
-  if (!matches.length) {
+  if (!matches.length && !(lnbfMatches?.length)) {
     return (
       <div className="py-12 text-center text-gray-400 text-sm">
         No hay partidos disponibles en este momento.
