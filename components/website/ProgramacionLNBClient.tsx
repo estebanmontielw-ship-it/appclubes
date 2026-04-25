@@ -31,6 +31,8 @@ export interface LnbMatch {
   statsUrl: string | null
   round: number | null
   roundLabel: string
+  livePeriod?: number | null
+  liveClock?: string | null
 }
 
 interface Props {
@@ -97,6 +99,54 @@ function TeamBadge({ name, sigla, logo, align = "left" }: { name: string; sigla:
   )
 }
 
+function periodLabel(period: number | null | undefined): string | null {
+  if (period == null || !Number.isFinite(period)) return null
+  if (period <= 4) return `${period}°C`
+  return `${period - 4}°OT`
+}
+
+interface LiveState {
+  homeScore: number | null
+  awayScore: number | null
+  period: number | null
+  clock: string | null
+}
+
+function useLiveMatchPolling(matchId: string | number, enabled: boolean, initial: LiveState): LiveState {
+  const [state, setState] = useState<LiveState>(initial)
+
+  useEffect(() => {
+    if (!enabled) return
+    let cancelled = false
+
+    async function tick() {
+      try {
+        const res = await fetch(`/api/genius/live-match/${matchId}`, { cache: "no-store" })
+        if (!res.ok) return
+        const data = await res.json()
+        if (cancelled) return
+        setState((prev) => ({
+          homeScore: data.homeScore ?? prev.homeScore,
+          awayScore: data.awayScore ?? prev.awayScore,
+          period: data.period ?? prev.period,
+          clock: data.clock ?? prev.clock,
+        }))
+      } catch {
+        // ignore — keep previous state
+      }
+    }
+
+    tick()
+    const id = setInterval(tick, 30_000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [matchId, enabled])
+
+  return state
+}
+
 function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
   const isComplete = match.status === "COMPLETE"
   const isLive = match.status === "STARTED" || match.status === "LIVE" || match.status === "IN_PROGRESS"
@@ -104,6 +154,18 @@ function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
   const matchTime = match.isoDateTime ? new Date(match.isoDateTime).getTime() : null
   const minsToStart = matchTime !== null ? (matchTime - Date.now()) / 60000 : null
   const isPreLive = !isLive && !isComplete && minsToStart !== null && minsToStart <= 30
+
+  const live = useLiveMatchPolling(match.id, isLive, {
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
+    period: match.livePeriod ?? null,
+    clock: match.liveClock ?? null,
+  })
+  const homeScore = isLive ? live.homeScore : match.homeScore
+  const awayScore = isLive ? live.awayScore : match.awayScore
+  const liveBadge = isLive
+    ? [periodLabel(live.period), live.clock].filter(Boolean).join(" · ") || null
+    : null
 
   // Winner emphasis for completed matches
   const homeWins = isComplete && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
@@ -155,16 +217,16 @@ function MatchCard({ match, isNext }: { match: LnbMatch; isNext?: boolean }) {
                 <Radio className="h-3 w-3 animate-pulse" />
                 En vivo
               </div>
-              {(match.homeScore != null || match.awayScore != null) && (
+              {(homeScore != null || awayScore != null) && (
                 <div className="flex items-center tabular-nums leading-none">
-                  <span className="text-2xl font-black text-red-600">{match.homeScore ?? "-"}</span>
+                  <span className="text-2xl font-black text-red-600">{homeScore ?? "-"}</span>
                   <span className="text-gray-300 mx-1.5 text-xl">–</span>
-                  <span className="text-2xl font-black text-red-600">{match.awayScore ?? "-"}</span>
+                  <span className="text-2xl font-black text-red-600">{awayScore ?? "-"}</span>
                 </div>
               )}
-              {match.time && (
+              {liveBadge && (
                 <div className="px-2 py-0.5 rounded bg-red-500 text-white text-[10px] font-bold tabular-nums">
-                  {match.time}
+                  {liveBadge}
                 </div>
               )}
             </div>

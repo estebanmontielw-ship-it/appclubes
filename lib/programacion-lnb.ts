@@ -1,8 +1,10 @@
 import { getCompetitions, getSchedule, getTeams } from "@/lib/genius-sports"
 
-/** Fetch live score from FibaLiveStats for a specific matchId.
- *  Returns { homeScore, awayScore } or null if unavailable. */
-async function fetchFibaLiveScore(matchId: string | number): Promise<{ homeScore: number; awayScore: number } | null> {
+/** Fetch live state from FibaLiveStats for a specific matchId.
+ *  Returns score + current period + clock, or null if unavailable. */
+async function fetchFibaLiveScore(
+  matchId: string | number
+): Promise<{ homeScore: number; awayScore: number; period: number | null; clock: string | null } | null> {
   try {
     const url = `https://fibalivestats.dcd.shared.geniussports.com/data/${matchId}/data.json`
     const res = await fetch(url, { next: { revalidate: 0 } })
@@ -21,11 +23,29 @@ async function fetchFibaLiveScore(matchId: string | number): Promise<{ homeScore
     const s2 = parseInt(String(t2.score ?? t2.pts ?? ""), 10)
     if (!Number.isFinite(s1) || !Number.isFinite(s2)) return null
 
+    // Period + clock — try several field name variants used by FibaLiveStats
+    const periodRaw = data?.period ?? data?.periodNumber ?? data?.actual?.period ?? null
+    const period = periodRaw != null ? Number(periodRaw) : null
+    const clockRaw = data?.clock ?? data?.gameClock ?? data?.actual?.clock ?? null
+    const clock = typeof clockRaw === "string" ? normalizeClock(clockRaw) : null
+
     // FibaLiveStats team "1" = home (the hosting team is always first)
-    return { homeScore: s1, awayScore: s2 }
+    return {
+      homeScore: s1,
+      awayScore: s2,
+      period: Number.isFinite(period) ? (period as number) : null,
+      clock,
+    }
   } catch {
     return null
   }
+}
+
+/** Normalize FibaLiveStats clock strings ("MM:SS" or "MM:SS:FF") to "MM:SS". */
+function normalizeClock(raw: string): string | null {
+  const m = raw.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/)
+  if (!m) return null
+  return `${m[1].padStart(2, "0")}:${m[2]}`
 }
 
 export interface NormalizedMatch {
@@ -48,6 +68,8 @@ export interface NormalizedMatch {
   statsUrl: string | null
   round: number | null
   roundLabel: string
+  livePeriod?: number | null
+  liveClock?: string | null
 }
 
 export interface NormalizedTeam {
@@ -598,7 +620,13 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
         const match = liveMatches[i]
         const idx = matches.findIndex((m) => m.id === match.id)
         if (idx !== -1) {
-          matches[idx] = { ...matches[idx], homeScore: result.value.homeScore, awayScore: result.value.awayScore }
+          matches[idx] = {
+            ...matches[idx],
+            homeScore: result.value.homeScore,
+            awayScore: result.value.awayScore,
+            livePeriod: result.value.period,
+            liveClock: result.value.clock,
+          }
         }
       }
     })
@@ -637,7 +665,13 @@ export async function loadLnbfSchedule(): Promise<LnbSchedulePayload> {
         const match = liveMatches[i]
         const idx = matches.findIndex((m) => m.id === match.id)
         if (idx !== -1) {
-          matches[idx] = { ...matches[idx], homeScore: result.value.homeScore, awayScore: result.value.awayScore }
+          matches[idx] = {
+            ...matches[idx],
+            homeScore: result.value.homeScore,
+            awayScore: result.value.awayScore,
+            livePeriod: result.value.period,
+            liveClock: result.value.clock,
+          }
         }
       }
     })
