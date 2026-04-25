@@ -642,6 +642,7 @@ export async function GET(req: NextRequest) {
   const isLideres     = template === "lideres"
   const isJugador     = template === "jugador"
   const isLanzamiento = template === "lanzamiento"
+  const isNoticia     = template === "noticia"
   const statType   = (searchParams.get("statType") ?? "scoring") as "scoring" | "assists" | "rebounds"
   const playerPhotoUrl = searchParams.get("playerPhoto") ?? ""
   const jugadorNombre  = searchParams.get("jugadorNombre") ?? ""
@@ -649,6 +650,11 @@ export async function GET(req: NextRequest) {
   const jugadorPremio  = searchParams.get("jugadorPremio") ?? "BROU"
   const jugadorFecha   = searchParams.get("jugadorFecha") ?? ""
   const jugadorTeamLogo = searchParams.get("jugadorTeamLogo") ?? ""
+  // Noticia — categoría, fecha y URL opcionales. Título/subtítulo y fondo
+  // reutilizan los inputs globales.
+  const noticiaCategoria = (searchParams.get("noticiaCategoria") ?? "NOTICIA").trim()
+  const noticiaFecha     = (searchParams.get("noticiaFecha") ?? "").trim()
+  const noticiaUrl       = (searchParams.get("noticiaUrl") ?? "").trim()
 
   // Encuadre de imágenes (cover = llena y recorta, contain = ve todo con márgenes)
   const bgFit = (searchParams.get("bgFit") ?? "cover") as "cover" | "contain"
@@ -729,7 +735,7 @@ export async function GET(req: NextRequest) {
   ].filter((s) => Boolean(s.url))
 
   const matchIds = matchIdsParam.split(",").map(s => s.trim()).filter(Boolean)
-  if (matchIds.length === 0 && !isTabla && !isLideres && !isJugador && !isLanzamiento) return new Response("matchIds requerido", { status: 400 })
+  if (matchIds.length === 0 && !isTabla && !isLideres && !isJugador && !isLanzamiento && !isNoticia) return new Response("matchIds requerido", { status: 400 })
 
   const isResultado = template === "resultado"
 
@@ -1027,6 +1033,8 @@ export async function GET(req: NextRequest) {
     // ── JUGADOR DEL PARTIDO ──
     if (isJugador) {
       const H = format === "historia" ? 1920 : 1350
+      const isFemLiga = liga === "lnbf" || liga === "u22f"
+      const jugadorHeading = isFemLiga ? "JUGADORA" : "JUGADOR"
       return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
@@ -1047,7 +1055,7 @@ export async function GET(req: NextRequest) {
             {logoUrl ? <img src={logoUrl} width={Math.round(80 * logoScale)} height={Math.round(80 * logoScale)} style={{ position: "absolute", top: 36 + safeTopFor(format), left: 36, objectFit: "contain", display: "flex" }} alt="Logo" /> : null}
             {jugadorTeamLogo ? <img src={jugadorTeamLogo} width={120} height={120} style={{ position: "absolute", top: Math.round(H * 0.38), left: 48, objectFit: "contain", display: "flex" }} alt={jugadorClub} /> : null}
             <div style={{ position: "absolute", bottom: Math.round(H * 0.24) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
-              <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>JUGADOR</span>
+              <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorHeading}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 4 }}>
                 <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorPremio.toUpperCase()}</span>
                 {jugadorFecha ? <div style={{ display: "flex", background: "rgba(255,255,255,0.15)", borderRadius: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}><span style={{ color: "white", fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>{jugadorFecha.toUpperCase()}</span></div> : null}
@@ -1065,6 +1073,57 @@ export async function GET(req: NextRequest) {
           </div>
         ),
         { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
+      )
+    }
+
+    // ── NOTICIA (banner de noticia) ──
+    // Hero image (bgImageUrl) + dark gradient + category pill + title +
+    // subtitle + fecha + URL opcional. Soporta Feed 4:5, Historia 9:16 y
+    // Banner web 1200×628. El tamaño del título se adapta al largo para
+    // que titulares cortos y largos queden bien.
+    if (isNoticia) {
+      const isBanner = format === "banner"
+      const noticiaW = isBanner ? 1200 : W
+      const noticiaH = isBanner ? 628 : (format === "historia" ? 1920 : 1350)
+      const tituloFinal = (titulo && titulo.trim()) || "Título de la noticia"
+      const len = tituloFinal.length
+      const sizeScale = len > 120 ? 0.55 : len > 80 ? 0.7 : len > 50 ? 0.85 : 1
+      const baseTitleSize = isBanner ? 64 : (format === "historia" ? 96 : 88)
+      const finalTitleSize = Math.round(baseTitleSize * sizeScale * titleSize)
+      const subtitleFinalSize = Math.round((isBanner ? 20 : 28) * subtitleSize)
+      const bottomGradientH = isBanner ? Math.round(noticiaH * 0.85) : Math.round(noticiaH * 0.55)
+      const catText = (noticiaCategoria || "NOTICIA").toUpperCase()
+      const sponsorBarH = isBanner ? 70 : 90
+      const showBottomSponsors = sponsorLogos.length > 0 && !isBanner
+      return new ImageResponse(
+        (
+          <div style={{ width: noticiaW, height: noticiaH, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
+            {bgImageUrl ? (
+              <img src={bgImageUrl} width={noticiaW} height={noticiaH} style={{ position: "absolute", top: 0, left: 0, width: noticiaW, height: noticiaH, objectFit: bgFit, display: "flex" }} alt="" />
+            ) : (
+              <div style={{ position: "absolute", top: 0, left: 0, width: noticiaW, height: noticiaH, background: themeBg, display: "flex" }} />
+            )}
+            {textureUrl ? <img src={textureUrl} width={noticiaW} height={noticiaH} style={{ position: "absolute", top: 0, left: 0, width: noticiaW, height: noticiaH, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: Math.round(noticiaH * 0.28), background: "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, transparent 100%)", display: "flex" }} />
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: bottomGradientH, background: "linear-gradient(180deg, transparent 0%, rgba(5,12,28,0.85) 45%, rgba(5,12,28,0.98) 100%)", display: "flex" }} />
+            {logoUrl ? <img src={logoUrl} width={Math.round(72 * logoScale)} height={Math.round(72 * logoScale)} style={{ position: "absolute", top: 36 + safeTopFor(format), left: 36, objectFit: "contain", display: "flex" }} alt="Logo" /> : null}
+            <div style={{ position: "absolute", top: 48 + safeTopFor(format), right: 36, display: "flex", background: "#e11d48", paddingLeft: 18, paddingRight: 18, paddingTop: 8, paddingBottom: 8, borderRadius: 999 }}>
+              <span style={{ color: "white", fontSize: isBanner ? 14 : 18, fontWeight: 900, letterSpacing: 2 }}>{catText}</span>
+            </div>
+            <div style={{ position: "absolute", bottom: (showBottomSponsors ? sponsorBarH : 0) + safeBottomFor(format) + (isBanner ? 24 : 48), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
+              {noticiaFecha ? <span style={{ color: "rgba(255,255,255,0.6)", fontSize: isBanner ? 13 : 18, fontWeight: 700, letterSpacing: 3, marginBottom: isBanner ? 8 : 16, display: "flex" }}>{noticiaFecha.toUpperCase()}</span> : null}
+              <span style={{ color: "white", fontSize: finalTitleSize, fontWeight: titleWeight, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{tituloFinal}</span>
+              {subtitulo ? <span style={{ color: "rgba(255,255,255,0.78)", fontSize: subtitleFinalSize, fontWeight: 500, lineHeight: 1.3, marginTop: isBanner ? 10 : 20, display: "flex" }}>{subtitulo}</span> : null}
+              {noticiaUrl ? <span style={{ color: "rgba(255,255,255,0.45)", fontSize: isBanner ? 11 : 15, fontWeight: 600, letterSpacing: 1, marginTop: isBanner ? 10 : 18, display: "flex" }}>{noticiaUrl}</span> : null}
+            </div>
+            {showBottomSponsors ? (
+              <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: sponsorBarH, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
+                {sponsorLogos.map((s, i) => { const h = Math.round(48 * s.scale); return <img key={i} src={s.url} width={Math.round(150 * s.scale)} height={h} style={{ objectFit: "contain", filter: sponsorFilter, opacity: sponsorOpacity }} alt={`Sponsor ${i + 1}`} /> })}
+              </div>
+            ) : null}
+          </div>
+        ),
+        { width: noticiaW, height: noticiaH, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
       )
     }
 

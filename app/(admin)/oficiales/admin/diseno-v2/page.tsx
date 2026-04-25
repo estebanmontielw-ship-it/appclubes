@@ -36,11 +36,16 @@ const TEMPLATES = [
   { key: "lideres",     label: "Líderes",     desc: "Top estadísticas"  },
   { key: "jugador",     label: "Jugador",     desc: "Premio del partido" },
   { key: "lanzamiento", label: "Lanzamiento", desc: "Arranque de temporada" },
+  { key: "noticia",     label: "Noticia",     desc: "Banner de noticia" },
 ]
+
+// Ligas femeninas — usan "Jugadora" en vez de "Jugador"
+const FEMENINO: Liga[] = ["lnbf", "u22f"]
 
 const FORMATS = [
   { key: "feed",     label: "Feed 4:5",      desc: "1080 × 1350" },
   { key: "historia", label: "Historia 9:16", desc: "1080 × 1920" },
+  { key: "banner",   label: "Banner web",    desc: "1200 × 628"  },
 ]
 
 function formatDate(iso: string) {
@@ -116,6 +121,11 @@ function DisenoInner() {
   // Lanzamiento (arranque de temporada) — fecha + hora opcionales
   const [lzFecha, setLzFecha] = useState("")
   const [lzHora, setLzHora] = useState("")
+  // Noticia (banner de noticia) — categoría (pill), fecha, URL opcional.
+  // El titulo/subtítulo/imagen de fondo reutilizan los inputs globales.
+  const [noticiaCategoria, setNoticiaCategoria] = useState("NOTICIA")
+  const [noticiaFecha, setNoticiaFecha] = useState("")
+  const [noticiaUrl, setNoticiaUrl] = useState("")
   // LNBF Premium — selector de patrón de fondo
   const [lnbfPattern, setLnbfPattern] = useState<"clean" | "dots" | "nandu" | "court">("dots")
   // LNB Premium — selector de patrón de fondo
@@ -488,7 +498,7 @@ function DisenoInner() {
   })()
 
   function buildFlyerUrl() {
-    const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador" || template === "lanzamiento"
+    const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador" || template === "lanzamiento" || template === "noticia"
     if (!isAutoTemplate && selected.size === 0) return null
     const ids = isAutoTemplate ? template : Array.from(selected).join(",")
     const params = new URLSearchParams({ matchIds: ids, template, liga: ligaParam, format })
@@ -523,6 +533,11 @@ function DisenoInner() {
     if (template === "lanzamiento") {
       if (lzFecha.trim()) params.set("lzFecha", lzFecha.trim())
       if (lzHora.trim()) params.set("lzHora", lzHora.trim())
+    }
+    if (template === "noticia") {
+      if (noticiaCategoria.trim() && noticiaCategoria.trim() !== "NOTICIA") params.set("noticiaCategoria", noticiaCategoria.trim())
+      if (noticiaFecha.trim()) params.set("noticiaFecha", noticiaFecha.trim())
+      if (noticiaUrl.trim()) params.set("noticiaUrl", noticiaUrl.trim())
     }
     if (theme === "lnbf-premium" && lnbfPattern !== "dots") {
       params.set("lnbfPattern", lnbfPattern)
@@ -570,7 +585,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, lnbfPattern, lnbPattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, noticiaCategoria, noticiaFecha, noticiaUrl, lnbfPattern, lnbPattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -625,10 +640,13 @@ function DisenoInner() {
   // Cambiar sección (tab): setea template por defecto de la sección si el actual no pertenece
   function handleSection(val: "partidos" | "estadisticas") {
     setSection(val)
-    const templatesPartidos = ["pre", "resultado", "jugador"]
+    const templatesPartidos = ["pre", "resultado", "jugador", "noticia"]
     const templatesEstadisticas = ["tabla", "lideres"]
     const currentValid = val === "partidos" ? templatesPartidos.includes(template) : templatesEstadisticas.includes(template)
-    if (!currentValid) setTemplate(val === "partidos" ? "pre" : "tabla")
+    if (!currentValid) {
+      setTemplate(val === "partidos" ? "pre" : "tabla")
+      if (format === "banner") setFormat("feed")
+    }
     setPreviewUrl(null)
     setPreviewError(null)
   }
@@ -718,7 +736,7 @@ function DisenoInner() {
     })
   }
 
-  const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador"
+  const isAutoTemplate = template === "tabla" || template === "lideres" || template === "jugador" || template === "lanzamiento" || template === "noticia"
   const canGenerate = selected.size > 0 || isAutoTemplate
 
   return (
@@ -1179,20 +1197,28 @@ function DisenoInner() {
             <div className="grid grid-cols-2 gap-2">
               {TEMPLATES
                 .filter((t) => section === "partidos"
-                  ? ["pre", "resultado", "jugador"].includes(t.key)
+                  ? ["pre", "resultado", "jugador", "noticia"].includes(t.key)
                   : ["tabla", "lideres"].includes(t.key))
-                .map((t) => (
+                .map((t) => {
+                  const isFem = FEMENINO.includes(ligaParam)
+                  const label = t.key === "jugador" && isFem ? "Jugadora" : t.label
+                  return (
                   <button
                     key={t.key}
-                    onClick={() => { setTemplate(t.key); setPreviewUrl(null); setPreviewError(null) }}
+                    onClick={() => {
+                      setTemplate(t.key)
+                      if (t.key !== "noticia" && format === "banner") setFormat("feed")
+                      setPreviewUrl(null); setPreviewError(null)
+                    }}
                     className={`p-3 rounded-xl border text-left transition-colors ${
                       template === t.key ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300 bg-white"
                     }`}
                   >
-                    <p className={`text-sm font-semibold ${template === t.key ? "text-primary" : "text-gray-800"}`}>{t.label}</p>
+                    <p className={`text-sm font-semibold ${template === t.key ? "text-primary" : "text-gray-800"}`}>{label}</p>
                     <p className="text-xs text-muted-foreground mt-0.5">{t.desc}</p>
                   </button>
-                ))}
+                  )
+                })}
             </div>
           </div>
 
@@ -1297,12 +1323,15 @@ function DisenoInner() {
           )}
 
           {/* Jugador del partido config */}
-          {template === "jugador" && (
+          {template === "jugador" && (() => {
+            const isFem = FEMENINO.includes(ligaParam)
+            const jugadorLabel = isFem ? "jugadora" : "jugador"
+            return (
             <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
-              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Datos del jugador</Label>
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Datos de la {jugadorLabel}</Label>
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">Nombre completo</Label>
-                <Input value={jugadorNombre} onChange={(e) => { setJugadorNombre(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Juan Pérez" className="h-8 text-xs" />
+                <Input value={jugadorNombre} onChange={(e) => { setJugadorNombre(e.target.value); setPreviewUrl(null) }} placeholder={isFem ? "Ej: María Pérez" : "Ej: Juan Pérez"} className="h-8 text-xs" />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -1320,7 +1349,7 @@ function DisenoInner() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">Foto del jugador</Label>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Foto de la {jugadorLabel}</Label>
                   <input ref={playerPhotoRef} type="file" accept="image/*" className="hidden"
                     onChange={(e) => { const f = e.target.files?.[0]; if (f) handlePlayerPhotoUpload(f); e.target.value = "" }} />
                   {playerPhotoUrl ? (
@@ -1406,13 +1435,36 @@ function DisenoInner() {
                 </div>
               </div>
             </div>
+            )
+          })()}
+
+          {/* Noticia config */}
+          {template === "noticia" && (
+            <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
+              <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Datos de la noticia</Label>
+              <p className="text-[10px] text-muted-foreground -mt-1">El título y subtítulo (más abajo) se usan como titular y bajada. Subí la foto de la noticia en “Subir propio fondo”.</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Categoría</Label>
+                  <Input value={noticiaCategoria} onChange={(e) => { setNoticiaCategoria(e.target.value); setPreviewUrl(null) }} placeholder="Ej: 3X3 · SELECCIÓN" className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Fecha</Label>
+                  <Input value={noticiaFecha} onChange={(e) => { setNoticiaFecha(e.target.value); setPreviewUrl(null) }} placeholder="Ej: 25 ABR 2026" className="h-8 text-xs" />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">URL del artículo <span className="text-muted-foreground/70">(opcional)</span></Label>
+                <Input value={noticiaUrl} onChange={(e) => { setNoticiaUrl(e.target.value); setPreviewUrl(null) }} placeholder="cpb.com.py/noticias/..." className="h-8 text-xs" />
+              </div>
+            </div>
           )}
 
           {/* Formato */}
           <div>
             <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">Formato</Label>
             <div className="grid grid-cols-2 gap-2">
-              {FORMATS.map((f) => (
+              {FORMATS.filter((f) => f.key !== "banner" || template === "noticia").map((f) => (
                 <button
                   key={f.key}
                   onClick={() => { setFormat(f.key); setPreviewUrl(null); setPreviewError(null) }}
