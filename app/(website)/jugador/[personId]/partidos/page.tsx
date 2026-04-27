@@ -12,7 +12,7 @@ interface GameLog {
   oppSigla: string | null
   myScore: number | null
   oppScore: number | null
-  result: "W" | "L" | "E" | null
+  result: "W" | "L" | null
   pos: string | null
   min: string | number | null
   pts: number
@@ -31,9 +31,9 @@ interface GameLog {
   plusMinus: number | null
 }
 
-function ResultBadge({ result }: { result: "W" | "L" | "E" | null }) {
+function ResultBadge({ result }: { result: "W" | "L" | null }) {
   if (!result) return <span className="text-gray-300">—</span>
-  const styles = { W: "bg-green-100 text-green-700", L: "bg-red-100 text-red-600", E: "bg-gray-100 text-gray-500" }
+  const styles = { W: "bg-green-100 text-green-700", L: "bg-red-100 text-red-600" }
   return <span className={`inline-block text-[9px] font-black px-1.5 py-0.5 rounded-full ${styles[result]}`}>{result}</span>
 }
 

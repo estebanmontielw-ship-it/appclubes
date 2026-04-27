@@ -111,7 +111,7 @@ function MatchCard({ m, clubName }: { m: NormalizedMatch; clubName: string }) {
   if (isComplete && hasScore && myScore != null && oppScore != null) {
     if (myScore > oppScore) { resultColor = "text-green-600 bg-green-50 border-green-100"; resultLabel = "G" }
     else if (myScore < oppScore) { resultColor = "text-red-500 bg-red-50 border-red-100"; resultLabel = "P" }
-    else { resultColor = "text-gray-500 bg-gray-50 border-gray-100"; resultLabel = "E" }
+    // Equal scores in basketball indicate broken data (e.g. OT not reflected in scoreString) — show no badge
   }
 
   return (

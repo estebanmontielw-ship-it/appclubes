@@ -594,6 +594,31 @@ export async function resolveU22FCompetitionIdPublic() { return resolveU22FCompe
 // Schedule loaders
 // ─────────────────────────────────────────────────────────────────────────────
 
+// In basketball there are no ties — if Genius returns equal scores for a
+// completed match (it does for some games that ended in OT), fall back to
+// FibaLiveStats data.json which always has the correct final score.
+async function fixBrokenCompletedScores(matches: NormalizedMatch[]): Promise<void> {
+  const broken: NormalizedMatch[] = matches.filter(
+    (m) =>
+      m.status === "COMPLETE" &&
+      ((m.homeScore != null && m.awayScore != null && m.homeScore === m.awayScore) ||
+        m.homeScore == null ||
+        m.awayScore == null)
+  )
+  if (broken.length === 0) return
+
+  const fixes = await Promise.allSettled(broken.map((m) => fetchFibaLiveScore(m.id)))
+  fixes.forEach((result, i) => {
+    if (result.status !== "fulfilled" || !result.value) return
+    const { homeScore, awayScore } = result.value
+    if (homeScore === awayScore) return // FibaLiveStats also tied — skip
+    const idx = matches.findIndex((m) => m.id === broken[i].id)
+    if (idx !== -1) {
+      matches[idx] = { ...matches[idx], homeScore, awayScore }
+    }
+  })
+}
+
 export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
   const { id: competitionId, name: competitionName } = await resolveLnbCompetitionId()
   if (!competitionId) {
@@ -631,6 +656,8 @@ export async function loadLnbSchedule(): Promise<LnbSchedulePayload> {
       }
     })
   }
+
+  await fixBrokenCompletedScores(matches)
 
   return {
     competition: { id: competitionId, name: competitionName || "Liga Nacional de Básquetbol" },
@@ -676,6 +703,8 @@ export async function loadLnbfSchedule(): Promise<LnbSchedulePayload> {
       }
     })
   }
+
+  await fixBrokenCompletedScores(matches)
 
   return {
     competition: { id: competitionId, name: competitionName || "LNB Femenino" },

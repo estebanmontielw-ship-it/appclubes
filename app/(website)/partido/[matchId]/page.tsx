@@ -28,7 +28,7 @@ interface FormResult {
   oppSigla: string | null
   oppLogo: string | null
   isHome: boolean
-  result: "W" | "L" | "E"
+  result: "W" | "L" | null
 }
 
 interface TopPlayer {
@@ -120,7 +120,7 @@ function FormBadge({ r }: { r: FormResult }) {
   const color = r.result === "W" ? "bg-green-500 text-white" : r.result === "L" ? "bg-red-100 text-red-600" : "bg-gray-200 text-gray-500"
   return (
     <div className={`group relative flex items-center justify-center w-7 h-7 rounded-full text-[10px] font-black cursor-default ${color}`}>
-      {r.result}
+      {r.result ?? "—"}
       <div className="absolute bottom-full mb-1.5 left-1/2 -translate-x-1/2 hidden group-hover:block z-10 bg-[#0a1628] text-white text-[9px] font-semibold rounded-lg px-2 py-1 whitespace-nowrap shadow-lg">
         {r.isHome ? "vs" : "@"} {r.oppSigla ?? r.oppName} {r.myScore}–{r.oppScore}
       </div>
