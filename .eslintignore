@@ -10,3 +10,4 @@ ios/
 android/
 *.min.js
 prisma/generated/
+design-handoff/
