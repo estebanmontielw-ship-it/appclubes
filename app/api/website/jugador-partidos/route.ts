@@ -46,7 +46,7 @@ async function getGameLog(personId: number, competitionId: string | number): Pro
           const oppScore = parseInt(oppComp?.scoreString ?? "") || null
           const result_ =
             myScore != null && oppScore != null
-              ? myScore > oppScore ? "W" : myScore < oppScore ? "L" : "E"
+              ? myScore > oppScore ? "W" : myScore < oppScore ? "L" : null
               : null
 
           const twoM = player.sTwoPointersMade ?? 0

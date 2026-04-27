@@ -80,7 +80,7 @@ export async function GET(request: Request) {
             oppSigla: opp?.teamCode ?? null,
             oppLogo: getLogo(opp),
             isHome: Number(mine?.isHomeCompetitor) === 1,
-            result: myScore > oppScore ? "W" : myScore < oppScore ? "L" : "E",
+            result: myScore > oppScore ? "W" : myScore < oppScore ? "L" : null,
           }
         })
     }
