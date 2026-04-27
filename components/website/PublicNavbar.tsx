@@ -25,7 +25,13 @@ const navLinks = [
   { label: "Clubes", href: "/clubes" },
   { label: "Selecciones", href: "/selecciones" },
   { label: "Reglamentos", href: "/reglamentos" },
-  { label: "Contacto", href: "/contacto" },
+  {
+    label: "Contacto",
+    children: [
+      { label: "Contacto general", href: "/contacto" },
+      { label: "Canal de Denuncias", href: "/contacto/denuncias" },
+    ],
+  },
 ]
 
 type SessionState = "loading" | "logged_in" | "logged_out"
@@ -35,7 +41,7 @@ export default function PublicNavbar() {
   const pathname = usePathname()
   const router = useRouter()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const [sessionState, setSessionState] = useState<SessionState>("loading")
   const [userInfo, setUserInfo] = useState<UserInfo>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
@@ -120,8 +126,8 @@ export default function PublicNavbar() {
                   <div
                     key={link.label}
                     className="relative"
-                    onMouseEnter={() => setDropdownOpen(true)}
-                    onMouseLeave={() => setDropdownOpen(false)}
+                    onMouseEnter={() => setOpenDropdown(link.label)}
+                    onMouseLeave={() => setOpenDropdown(null)}
                   >
                     <button
                       className={cn(
@@ -132,7 +138,7 @@ export default function PublicNavbar() {
                       {link.label}
                       <ChevronDown className="h-3.5 w-3.5" />
                     </button>
-                    {dropdownOpen && (
+                    {openDropdown === link.label && (
                       <>
                         {/* Invisible bridge: fills the mt-1 gap so onMouseLeave doesn't fire */}
                         <div className="absolute top-full left-0 right-0 h-1" />
