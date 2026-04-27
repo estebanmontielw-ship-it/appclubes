@@ -829,3 +829,141 @@ export async function getLnbScheduleContext(): Promise<string> {
     return ""
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Standings computed from matches (independent of Genius's getStandings endpoint)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface ComputedStanding {
+  rank: number
+  teamId: string | number
+  teamName: string
+  teamSigla: string | null
+  teamLogo: string | null
+  gamesPlayed: number
+  wins: number
+  losses: number
+  winPct: number | null
+  pointsFor: number | null
+  pointsAgainst: number | null
+  pointDiff: number | null
+}
+
+/** Compute league standings from the corrected match data. Independent of
+ *  Genius's getStandings() endpoint, which can return stale/wrong records
+ *  for OT games where Genius's own scoreString is broken. */
+export function computeStandingsFromMatches(
+  matches: NormalizedMatch[],
+  teams: NormalizedTeam[]
+): ComputedStanding[] {
+  const completed = matches.filter(
+    (m) => m.status === "COMPLETE" && m.homeScore != null && m.awayScore != null
+  )
+  if (completed.length === 0) return []
+
+  type Acc = {
+    teamId: string | number
+    teamName: string
+    teamSigla: string | null
+    teamLogo: string | null
+    wins: number
+    losses: number
+    gamesPlayed: number
+    pointsFor: number
+    pointsAgainst: number
+  }
+  const stats = new Map<string, Acc>()
+
+  // Seed with all known teams so non-played teams still show up.
+  for (const t of teams) {
+    stats.set(String(t.id), {
+      teamId: t.id,
+      teamName: t.name,
+      teamSigla: t.sigla,
+      teamLogo: t.logo,
+      wins: 0,
+      losses: 0,
+      gamesPlayed: 0,
+      pointsFor: 0,
+      pointsAgainst: 0,
+    })
+  }
+
+  const upsert = (
+    id: string | number | null,
+    name: string,
+    sigla: string | null,
+    logo: string | null
+  ): Acc | null => {
+    if (id == null) return null
+    const key = String(id)
+    let acc = stats.get(key)
+    if (!acc) {
+      acc = {
+        teamId: id,
+        teamName: name,
+        teamSigla: sigla,
+        teamLogo: logo,
+        wins: 0,
+        losses: 0,
+        gamesPlayed: 0,
+        pointsFor: 0,
+        pointsAgainst: 0,
+      }
+      stats.set(key, acc)
+    }
+    return acc
+  }
+
+  for (const m of completed) {
+    if (m.homeScore === m.awayScore) continue // can't happen post-fix in basket
+    const home = upsert(m.homeId, m.homeName, m.homeSigla, m.homeLogo)
+    const away = upsert(m.awayId, m.awayName, m.awaySigla, m.awayLogo)
+    if (!home || !away) continue
+    home.gamesPlayed++
+    away.gamesPlayed++
+    home.pointsFor += m.homeScore!
+    home.pointsAgainst += m.awayScore!
+    away.pointsFor += m.awayScore!
+    away.pointsAgainst += m.homeScore!
+    if (m.homeScore! > m.awayScore!) {
+      home.wins++
+      away.losses++
+    } else {
+      away.wins++
+      home.losses++
+    }
+  }
+
+  const rows = Array.from(stats.values())
+    .filter((s) => s.gamesPlayed > 0)
+    .map<ComputedStanding>((s) => ({
+      rank: 0,
+      teamId: s.teamId,
+      teamName: s.teamName,
+      teamSigla: s.teamSigla,
+      teamLogo: s.teamLogo,
+      gamesPlayed: s.gamesPlayed,
+      wins: s.wins,
+      losses: s.losses,
+      winPct: s.gamesPlayed > 0 ? s.wins / s.gamesPlayed : null,
+      pointsFor: s.pointsFor,
+      pointsAgainst: s.pointsAgainst,
+      pointDiff: s.pointsFor - s.pointsAgainst,
+    }))
+
+  // Sort: wins desc, win% desc, point diff desc, PF desc
+  rows.sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins
+    const aPct = a.winPct ?? 0
+    const bPct = b.winPct ?? 0
+    if (bPct !== aPct) return bPct - aPct
+    const aDiff = a.pointDiff ?? 0
+    const bDiff = b.pointDiff ?? 0
+    if (bDiff !== aDiff) return bDiff - aDiff
+    return (b.pointsFor ?? 0) - (a.pointsFor ?? 0)
+  })
+
+  rows.forEach((r, i) => (r.rank = i + 1))
+  return rows
+}

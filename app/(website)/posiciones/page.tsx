@@ -1,9 +1,7 @@
 import type { Metadata } from "next"
 import SectionTitle from "@/components/website/SectionTitle"
 import PosicionesClient from "@/components/website/PosicionesClient"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
-import { getStandings } from "@/lib/genius-sports"
-import { normalizeStandings } from "@/lib/normalize-standings"
+import { computeStandingsFromMatches, loadLnbSchedule } from "@/lib/programacion-lnb"
 import type { StandingRow } from "@/components/website/LNBStandings"
 
 export const revalidate = 300
@@ -21,15 +19,12 @@ export const metadata: Metadata = {
 
 
 export default async function PosicionesPage() {
-  const { id: competitionId } = await resolveLnbCompetitionIdPublic()
-
   let standings: StandingRow[] = []
   let error: string | null = null
 
   try {
-    if (!competitionId) throw new Error("No se encontró la competencia LNB activa.")
-    const sRaw = await getStandings(competitionId)
-    standings = normalizeStandings(sRaw).sort((a, b) => a.rank - b.rank)
+    const { matches, teams } = await loadLnbSchedule()
+    standings = computeStandingsFromMatches(matches, teams)
   } catch (e: any) {
     error = e?.message ?? "Error desconocido"
   }
