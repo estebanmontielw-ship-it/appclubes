@@ -42,9 +42,10 @@ export async function GET(req: NextRequest) {
     const norm = (s: string) => s.toLowerCase().trim()
     const computedByName = new Map(computed.map((r) => [norm(r.teamName), r]))
     const geniusByName = new Map(genius.map((r) => [norm(r.teamName), r]))
-    const allNames = Array.from(
-      new Set<string>([...computedByName.keys(), ...geniusByName.keys()])
-    )
+    const nameSet = new Set<string>()
+    Array.from(computedByName.keys()).forEach((k) => nameSet.add(k))
+    Array.from(geniusByName.keys()).forEach((k) => nameSet.add(k))
+    const allNames = Array.from(nameSet)
     const diff = allNames.map((name) => {
       const c = computedByName.get(name) ?? null
       const g = geniusByName.get(name) ?? null
