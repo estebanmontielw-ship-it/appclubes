@@ -760,10 +760,20 @@ export async function loadU22FSchedule(): Promise<LnbSchedulePayload> {
   }
 }
 
+/** Mapeo de liga (key del flyer) a su schedule loader correspondiente. */
+export function loadScheduleByLiga(liga: string): Promise<LnbSchedulePayload> {
+  switch (liga) {
+    case "lnbf": return loadLnbfSchedule()
+    case "u22m": return loadU22MSchedule()
+    case "u22f": return loadU22FSchedule()
+    case "lnb":
+    default:     return loadLnbSchedule()
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AI chatbot context
 // ─────────────────────────────────────────────────────────────────────────────
-
 /** Returns a plain-text summary of the LNB schedule for AI chatbot context. */
 export async function getLnbScheduleContext(): Promise<string> {
   try {

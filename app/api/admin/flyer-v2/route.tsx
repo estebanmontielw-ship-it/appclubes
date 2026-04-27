@@ -12,6 +12,7 @@ import { LNB } from "@/lib/themes/lnb"
 import { LNBBackground } from "@/lib/flyer/lnb-backgrounds"
 import { geniusFetch, getLeadersFromMatches } from "@/lib/genius-sports"
 import { normalizeStandings } from "@/lib/normalize-standings"
+import { computeStandingsFromMatches, loadScheduleByLiga } from "@/lib/programacion-lnb"
 
 export const dynamic = "force-dynamic"
 
@@ -886,8 +887,11 @@ export async function GET(req: NextRequest) {
 
     // ── TABLA DE POSICIONES ──
     if (isTabla) {
-      const standingsRaw = await geniusFetch(`/competitions/${compId}/standings`, "short")
-      const allRows = normalizeStandings(standingsRaw).sort((a, b) => a.rank - b.rank)
+      // Recalculamos la tabla desde los partidos (ya con scores corregidos
+      // via FibaLiveStats fallback). El endpoint /standings de Genius devuelve
+      // datos rotos para partidos que terminaron en OT — ver fix 8665fad.
+      const { matches, teams: scheduleTeams } = await loadScheduleByLiga(liga)
+      const allRows = computeStandingsFromMatches(matches, scheduleTeams)
       if (allRows.length === 0) return new Response("No hay datos de tabla disponibles", { status: 404 })
 
       const H = format === "historia" ? 1920 : 1350
