@@ -8,7 +8,7 @@ import {
   Home, User, CreditCard, BookOpen, FileText,
   Calendar, Bell, LogOut, Users, GraduationCap,
   Trophy, FolderOpen, ChevronDown, Banknote,
-  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList, Calculator, Palette,
+  DollarSign, BarChart3, Lock, X, Globe, Bot, Search, Zap, Camera, ClipboardList, Calculator, Palette, Shield,
 } from "lucide-react"
 import type { TipoRol } from "@prisma/client"
 
@@ -183,6 +183,12 @@ function getNavSections(
               { label: "Mensajes", href: "/oficiales/admin/website/contacto" },
             ],
           },
+        ],
+      },
+      {
+        label: "INTEGRIDAD",
+        items: [
+          { label: "Canal de Denuncias", href: "/oficiales/admin/denuncias", icon: Shield },
         ],
       },
       {

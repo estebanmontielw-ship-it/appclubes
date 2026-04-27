@@ -718,6 +718,51 @@ model MensajeContacto {
   @@map("mensajes_contacto")
 }
 
+// ─── CANAL DE DENUNCIAS — INTEGRIDAD ─────────────────────
+
+enum TipoSituacionDenuncia {
+  MANIPULACION_RESULTADO
+  ACTIVIDAD_APUESTAS
+  SOBORNO_INCENTIVO
+  CONDUCTA_SOSPECHOSA
+  OTRA
+}
+
+enum EstadoDenuncia {
+  NUEVA
+  EN_REVISION
+  ESCALADA
+  ARCHIVADA
+}
+
+model Denuncia {
+  id                      String                @id @default(uuid())
+  tipoSituacion           TipoSituacionDenuncia
+  competencia             String?
+  partidoEvento           String?
+  descripcion             String                @db.Text
+  fechaOcurrencia         String?
+  personasInvolucradas    String?               @db.Text
+  tieneEvidencia          Boolean               @default(false)
+  descripcionEvidencia    String?               @db.Text
+  archivosUrls            String?               @db.Text // JSON array
+  modo                    String                @default("anonimo") // "anonimo" | "identificado"
+  contactoNombre          String?
+  contactoEmail           String?
+  contactoTelefono        String?
+  ipHash                  String?
+  userAgent               String?
+  estado                  EstadoDenuncia        @default(NUEVA)
+  notasAdmin              String?               @db.Text
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@index([estado])
+  @@index([createdAt])
+  @@index([ipHash])
+  @@map("denuncias")
+}
+
 // ─── CPB BOT (Asistente IA) ─────────────────────────────
 
 model ConversacionBot {
