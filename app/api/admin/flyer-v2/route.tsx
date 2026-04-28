@@ -725,6 +725,14 @@ export async function GET(req: NextRequest) {
   const u22Pattern = (["clean", "dots", "stripes", "court", "bandera", "paper"].includes(u22PatternRaw)
     ? u22PatternRaw
     : "bandera") as U22Variant
+  // Color de acento para U22 Premium: rojo Paraguay (default), azul
+  // Paraguay vivido, o blanco/paper. Reemplaza el `gold` de la palette
+  // (VS, hairlines, badge dot, dividers, JUEGO 0X). Solo aplica cuando
+  // el theme es u22m-premium o u22f-premium; ignorado en LNB/LNBF.
+  const u22AccentRaw = searchParams.get("u22Accent") ?? "rojo"
+  const u22Accent = (["rojo", "azul", "blanco"].includes(u22AccentRaw)
+    ? u22AccentRaw
+    : "rojo") as "rojo" | "azul" | "blanco"
   // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
   // vacío no se renderiza el pill.
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
@@ -743,6 +751,15 @@ export async function GET(req: NextRequest) {
   // soporta brightness + invert individualmente (no todos los filtros).
   const isPremiumTheme = theme === "lnbf-premium" || theme === "lnb-premium" || theme === "u22m-premium" || theme === "u22f-premium"
   const sponsorFilter = isPremiumTheme ? "brightness(0) invert(1)" : undefined
+  // Override del accent para U22: aplica solo cuando el tema es U22*.
+  // Reemplazamos `gold` (rojo default) en una copia de la palette para
+  // no mutar la const global.
+  const u22AccentHex =
+      u22Accent === "azul"   ? "#3F66E0"
+    : u22Accent === "blanco" ? "#F4F2EC"
+    :                          "" // "rojo" usa el `gold` original de la palette
+  const PALETTE_U22M_ACTIVE = u22AccentHex ? { ...PALETTE_U22M, gold: u22AccentHex } : PALETTE_U22M
+  const PALETTE_U22F_ACTIVE = u22AccentHex ? { ...PALETTE_U22F, gold: u22AccentHex } : PALETTE_U22F
   const sponsorOpacity = isPremiumTheme ? 0.85 : 1
   // Fondo de la barra de sponsors: en temas premium forzamos un tono
   // oscuro translúcido (que combina con el canvas); en los demás temas
@@ -1452,8 +1469,8 @@ export async function GET(req: NextRequest) {
             // o LNB (navy+gold) según el tema elegido.
             const hdrPalette =
                 theme === "lnb-premium"  ? PALETTE_LNB
-              : theme === "u22m-premium" ? PALETTE_U22M
-              : theme === "u22f-premium" ? PALETTE_U22F
+              : theme === "u22m-premium" ? PALETTE_U22M_ACTIVE
+              : theme === "u22f-premium" ? PALETTE_U22F_ACTIVE
               : PALETTE_LNBF
             // Header LNBF Premium: logo absolute top-left + badge absolute top-right,
             // eyebrow debajo, título GIGANTE left-aligned en 2 líneas.
@@ -1564,6 +1581,31 @@ export async function GET(req: NextRequest) {
                   )
                 ) : null}
 
+                {/* Badge de categoría U22 — solid fill con accent.
+                    Marca la identidad U22 vs LNB/LNBF (que con la misma
+                    base azul + cards podían confundirse). Solo aparece
+                    en u22m-premium / u22f-premium. */}
+                {(theme === "u22m-premium" || theme === "u22f-premium") ? (
+                  <div style={{
+                    display: "flex", alignItems: "center",
+                    padding: "8px 18px",
+                    background: hdrPalette.gold,
+                    borderRadius: 999,
+                    marginBottom: 14,
+                    alignSelf: isCenteredHeader ? "center" : "flex-start",
+                  }}>
+                    <span style={{
+                      color: u22Accent === "blanco" ? "#0A1230" : "#FFFFFF",
+                      fontFamily: "Inter",
+                      fontSize: Math.round(15 * vMult),
+                      fontWeight: 900, letterSpacing: 3,
+                      display: "flex",
+                    }}>
+                      {theme === "u22m-premium" ? "U22 MASCULINO" : "U22 FEMENINO"}
+                    </span>
+                  </div>
+                ) : null}
+
                 {/* Eyebrow */}
                 <span style={{
                   color: hdrPalette.accentSoft,
@@ -1661,10 +1703,10 @@ export async function GET(req: NextRequest) {
                   vsFontSize={vsFontSize}
                   nameFontSize={nameFontSize}
                   showHorarioBar={lnbfShowHorarioBar}
-                  palette={theme === "lnb-premium" ? PALETTE_LNB : theme === "u22m-premium" ? PALETTE_U22M : theme === "u22f-premium" ? PALETTE_U22F : PALETTE_LNBF}
+                  palette={theme === "lnb-premium" ? PALETTE_LNB : theme === "u22m-premium" ? PALETTE_U22M_ACTIVE : theme === "u22f-premium" ? PALETTE_U22F_ACTIVE : PALETTE_LNBF}
                 />
               ) : layout === "compact" ? (
-                <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} palette={theme === "lnb-premium" ? PALETTE_LNB : theme === "u22m-premium" ? PALETTE_U22M : theme === "u22f-premium" ? PALETTE_U22F : PALETTE_LNBF} />
+                <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} palette={theme === "lnb-premium" ? PALETTE_LNB : theme === "u22m-premium" ? PALETTE_U22M_ACTIVE : theme === "u22f-premium" ? PALETTE_U22F_ACTIVE : PALETTE_LNBF} />
               ) : (
                 <MatchCard key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} nameFontSize={nameFontSize} vsFontSize={vsFontSize} cardStyle={cardStyle} tc={tc} />
               )

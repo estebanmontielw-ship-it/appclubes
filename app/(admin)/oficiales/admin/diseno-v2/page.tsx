@@ -138,6 +138,9 @@ function DisenoInner() {
   // U22 Premium (Masc/Fem) — selector de patrón Paraguay. Default
   // "bandera" (composición triangular Paraguay tipo flyer formal).
   const [u22Pattern, setU22Pattern] = useState<"clean" | "dots" | "stripes" | "court" | "bandera" | "paper">("bandera")
+  // U22 Premium — color del acento (VS, hairlines, badge fill). Rojo
+  // Paraguay default; azul = #3F66E0; blanco = #F4F2EC (paper).
+  const [u22Accent, setU22Accent] = useState<"rojo" | "azul" | "blanco">("rojo")
   // Layout del header premium: "split" (logo izq + badge der, default)
   // o "centered" (logo centrado arriba + badge debajo, estilo V1 LNB oficial)
   const [premiumHeaderLayout, setPremiumHeaderLayout] = useState<"split" | "centered">("split")
@@ -566,6 +569,9 @@ function DisenoInner() {
     if ((theme === "u22m-premium" || theme === "u22f-premium") && u22Pattern !== "bandera") {
       params.set("u22Pattern", u22Pattern)
     }
+    if ((theme === "u22m-premium" || theme === "u22f-premium") && u22Accent !== "rojo") {
+      params.set("u22Accent", u22Accent)
+    }
     if ((theme === "lnbf-premium" || theme === "lnb-premium" || theme === "u22m-premium" || theme === "u22f-premium") && premiumHeaderLayout !== "split") {
       params.set("premiumHeaderLayout", premiumHeaderLayout)
     }
@@ -606,7 +612,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, noticiaCategoria, noticiaFecha, noticiaUrl, lnbfPattern, lnbPattern, u22Pattern, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, noticiaCategoria, noticiaFecha, noticiaUrl, lnbfPattern, lnbPattern, u22Pattern, u22Accent, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -945,6 +951,32 @@ function DisenoInner() {
                     </div>
                   )}
                 </div>
+                {(theme === "u22m-premium" || theme === "u22f-premium") && (
+                  <div>
+                    <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-2 block">
+                      Color de acento
+                    </Label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {([
+                        { key: "rojo",   label: "Rojo",   swatch: "#B61E2E", desc: "Rojo Paraguay (default)" },
+                        { key: "azul",   label: "Azul",   swatch: "#3F66E0", desc: "Azul Paraguay vivido" },
+                        { key: "blanco", label: "Blanco", swatch: "#F4F2EC", desc: "Paper / minimalista" },
+                      ] as const).map((c) => (
+                        <button
+                          key={c.key}
+                          onClick={() => setU22Accent(c.key)}
+                          className={`px-2 py-1.5 rounded-lg border text-[10px] font-semibold transition-colors flex items-center justify-center gap-1.5 ${
+                            u22Accent === c.key ? "border-primary bg-white text-primary" : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
+                          title={c.desc}
+                        >
+                          <span className="inline-block h-3 w-3 rounded-full border border-gray-300" style={{ background: c.swatch }} />
+                          {c.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <div>
                   <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide mb-1.5 block">
                     Badge arriba derecha <span className="normal-case font-normal text-muted-foreground">(vacío = sin badge)</span>
