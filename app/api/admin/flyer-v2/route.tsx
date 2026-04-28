@@ -731,12 +731,14 @@ export async function GET(req: NextRequest) {
     ? lnbPatternRaw
     : "scratch") as "clean" | "scratch" | "dots" | "court" | "halftone" | "speed"
   // Patrón de fondo para temas u22*-premium: clean / dots / stripes /
-  // court / bandera / paper. Default "bandera" (composición Paraguay
-  // triangular tipo flyer formal).
-  const u22PatternRaw = searchParams.get("u22Pattern") ?? "bandera"
+  // court / bandera / paper. Default "clean" — bandera + paper son
+  // opt-in porque rendericen sobre todo el flyer (modo "fondo
+  // alternativo Paraguay") y satori a veces tiene problemas con sus
+  // clip-paths.
+  const u22PatternRaw = searchParams.get("u22Pattern") ?? "clean"
   const u22Pattern = (["clean", "dots", "stripes", "court", "bandera", "paper"].includes(u22PatternRaw)
     ? u22PatternRaw
-    : "bandera") as U22Variant
+    : "clean") as U22Variant
   // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
   // vacío no se renderiza el pill.
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
