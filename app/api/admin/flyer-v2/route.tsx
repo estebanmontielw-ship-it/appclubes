@@ -10,6 +10,9 @@ import { LNBF } from "@/lib/themes/lnbf"
 import { LNBFBackground } from "@/lib/flyer/lnbf-backgrounds"
 import { LNB } from "@/lib/themes/lnb"
 import { LNBBackground } from "@/lib/flyer/lnb-backgrounds"
+import { U22M } from "@/lib/themes/u22m"
+import { U22F } from "@/lib/themes/u22f"
+import { U22MBackground, U22FBackground, type U22Variant } from "@/lib/flyer/u22-backgrounds"
 import { geniusFetch, getLeadersFromMatches } from "@/lib/genius-sports"
 import { normalizeStandings } from "@/lib/normalize-standings"
 import { computeStandingsFromMatches, loadScheduleByLiga } from "@/lib/programacion-lnb"
@@ -397,6 +400,38 @@ const PALETTE_LNB: PremiumPalette = {
   bar2: LNB.color.navy800,
 }
 
+// Paleta U22 Masculino (azul Paraguay + rojo). Reutiliza la forma de
+// PremiumPalette, pero "gold" ahora es el rojo Paraguay (acento real
+// del país) y accentSoft es paper claro.
+const PALETTE_U22M: PremiumPalette = {
+  cardBgStart: "rgba(30,51,153,0.48)",
+  cardBgMid:   "rgba(15,26,72,0.72)",
+  cardBgEnd:   "rgba(10,18,48,0.80)",
+  borderColor: U22M.color.blue400,
+  borderAlpha: "33",
+  separator: "rgba(168,188,245,0.18)",
+  gold: U22M.color.red600,
+  accentSoft: U22M.color.paper200,
+  bar1: U22M.color.blue700,
+  bar2: U22M.color.blue900,
+}
+
+// Paleta U22 Femenino (azul Paraguay + rojo, con rosa sutil en eyebrows).
+// Idéntica a U22M salvo accentSoft (rosa --f-accent-soft) y separator
+// con un toque rosa para diferenciar género de forma muy sutil.
+const PALETTE_U22F: PremiumPalette = {
+  cardBgStart: "rgba(30,51,153,0.46)",
+  cardBgMid:   "rgba(15,26,72,0.72)",
+  cardBgEnd:   "rgba(10,18,48,0.80)",
+  borderColor: U22F.color.blue400,
+  borderAlpha: "33",
+  separator: "rgba(244,168,214,0.20)",
+  gold: U22F.color.red600,
+  accentSoft: U22F.color.fAccentSoftDim,
+  bar1: U22F.color.blue700,
+  bar2: U22F.color.blue900,
+}
+
 function MatchCardLNBF({ match, matchNumber, isResultado, cardW, cardH, logoSize, vsFontSize, nameFontSize, showHorarioBar, palette = PALETTE_LNBF }: {
   match: MatchData
   matchNumber: number
@@ -678,6 +713,13 @@ export async function GET(req: NextRequest) {
   const lnbPattern = (["clean", "scratch", "dots", "court", "halftone", "speed"].includes(lnbPatternRaw)
     ? lnbPatternRaw
     : "scratch") as "clean" | "scratch" | "dots" | "court" | "halftone" | "speed"
+  // Patrón de fondo para temas u22*-premium: clean / dots / stripes /
+  // court / bandera / paper. Default "bandera" (composición Paraguay
+  // triangular tipo flyer formal).
+  const u22PatternRaw = searchParams.get("u22Pattern") ?? "bandera"
+  const u22Pattern = (["clean", "dots", "stripes", "court", "bandera", "paper"].includes(u22PatternRaw)
+    ? u22PatternRaw
+    : "bandera") as U22Variant
   // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
   // vacío no se renderiza el pill.
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
@@ -694,15 +736,17 @@ export async function GET(req: NextRequest) {
   // Filter + opacity que blanquea los sponsors en temas premium (lnbf
   // o lnb) para que queden unificados sobre el fondo oscuro. Satori
   // soporta brightness + invert individualmente (no todos los filtros).
-  const isPremiumTheme = theme === "lnbf-premium" || theme === "lnb-premium"
+  const isPremiumTheme = theme === "lnbf-premium" || theme === "lnb-premium" || theme === "u22m-premium" || theme === "u22f-premium"
   const sponsorFilter = isPremiumTheme ? "brightness(0) invert(1)" : undefined
   const sponsorOpacity = isPremiumTheme ? 0.85 : 1
   // Fondo de la barra de sponsors: en temas premium forzamos un tono
   // oscuro translúcido (que combina con el canvas); en los demás temas
   // respetamos la elección del usuario (white/dark).
-  const premiumSponsorBarBg = theme === "lnb-premium"
-    ? "rgba(3,8,26,0.78)"   // navy deep
-    : "rgba(14,4,24,0.75)"  // violet deep (lnbf)
+  const premiumSponsorBarBg =
+    theme === "lnb-premium"   ? "rgba(3,8,26,0.78)"   // navy deep
+  : theme === "u22m-premium"  ? "rgba(10,18,48,0.78)" // azul Paraguay deep
+  : theme === "u22f-premium"  ? "rgba(10,18,48,0.78)" // azul Paraguay deep
+                              : "rgba(14,4,24,0.75)"  // violet deep (lnbf default)
   const isStorySafe = (fmt: string) => fmt === "historia" && safeZones
   const safeTopFor = (fmt: string) => isStorySafe(fmt) ? 240 : 0
   const safeBottomFor = (fmt: string) => isStorySafe(fmt) ? 280 : 0
@@ -751,6 +795,11 @@ export async function GET(req: NextRequest) {
     "lnbf-premium": LNBF.bgHero,
     // Tema premium para LNB Masculino — navy + gold. Ver lib/themes/lnb.ts.
     "lnb-premium": LNB.bgHero,
+    // Temas premium U22 (Sub 22 Masc/Fem) — azul Paraguay + rojo. Ver
+    // lib/themes/u22m.ts y u22f.ts. El bg base es idéntico (paleta país)
+    // y el accent femenino aparece sólo en eyebrows/chips de las cards.
+    "u22m-premium": U22M.bgHero,
+    "u22f-premium": U22F.bgHero,
   }
   const themeBg = bgImageUrl ? "#000" : (THEME_BG[theme] ?? THEME_BG.masc1)
 
@@ -800,6 +849,10 @@ export async function GET(req: NextRequest) {
               <LNBFBackground variant={lnbfPattern} W={W} H={H} />
             ) : !bgImageUrl && theme === "lnb-premium" ? (
               <LNBBackground variant={lnbPattern} W={W} H={H} />
+            ) : !bgImageUrl && theme === "u22m-premium" ? (
+              <U22MBackground variant={u22Pattern} W={W} H={H} />
+            ) : !bgImageUrl && theme === "u22f-premium" ? (
+              <U22FBackground variant={u22Pattern} W={W} H={H} />
             ) : !bgImageUrl ? (
               <>
                 <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
@@ -950,6 +1003,10 @@ export async function GET(req: NextRequest) {
               <LNBFBackground variant={lnbfPattern} W={W} H={H} />
             ) : !bgImageUrl && theme === "lnb-premium" ? (
               <LNBBackground variant={lnbPattern} W={W} H={H} />
+            ) : !bgImageUrl && theme === "u22m-premium" ? (
+              <U22MBackground variant={u22Pattern} W={W} H={H} />
+            ) : !bgImageUrl && theme === "u22f-premium" ? (
+              <U22FBackground variant={u22Pattern} W={W} H={H} />
             ) : !bgImageUrl ? (
               <>
                 <div style={{ position: "absolute", top: -200, left: -200, width: 700, height: 700, borderRadius: "50%", background: "radial-gradient(circle, rgba(30,80,160,0.35) 0%, transparent 70%)", display: "flex" }} />
@@ -1349,6 +1406,10 @@ export async function GET(req: NextRequest) {
             <LNBFBackground variant={lnbfPattern} W={W} H={H} />
           ) : !bgImageUrl && theme === "lnb-premium" ? (
             <LNBBackground variant={lnbPattern} W={W} H={H} />
+          ) : !bgImageUrl && theme === "u22m-premium" ? (
+            <U22MBackground variant={u22Pattern} W={W} H={H} />
+          ) : !bgImageUrl && theme === "u22f-premium" ? (
+            <U22FBackground variant={u22Pattern} W={W} H={H} />
           ) : !bgImageUrl ? (
             <>
               <div style={{
@@ -1370,7 +1431,11 @@ export async function GET(req: NextRequest) {
           {isPremiumTheme ? (() => {
             // Palette para badge/eyebrow/línea de accent: LNBF (violet)
             // o LNB (navy+gold) según el tema elegido.
-            const hdrPalette = theme === "lnb-premium" ? PALETTE_LNB : PALETTE_LNBF
+            const hdrPalette =
+                theme === "lnb-premium"  ? PALETTE_LNB
+              : theme === "u22m-premium" ? PALETTE_U22M
+              : theme === "u22f-premium" ? PALETTE_U22F
+              : PALETTE_LNBF
             // Header LNBF Premium: logo absolute top-left + badge absolute top-right,
             // eyebrow debajo, título GIGANTE left-aligned en 2 líneas.
             // Logo en POSICIÓN ABSOLUTA para que no empuje el texto cuando
@@ -1445,7 +1510,7 @@ export async function GET(req: NextRequest) {
                     <div style={{
                       display: "flex", alignItems: "center", gap: 8,
                       padding: "9px 20px",
-                      background: theme === "lnb-premium" ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
+                      background: (theme === "lnb-premium" || theme === "u22m-premium" || theme === "u22f-premium") ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
                       border: `1px solid ${hdrPalette.borderColor}55`,
                       borderRadius: 999,
                       marginBottom: 14,
@@ -1464,7 +1529,7 @@ export async function GET(req: NextRequest) {
                       position: "absolute", top: 28, right: padX,
                       display: "flex", alignItems: "center", gap: 8,
                       padding: "9px 20px",
-                      background: theme === "lnb-premium" ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
+                      background: (theme === "lnb-premium" || theme === "u22m-premium" || theme === "u22f-premium") ? "rgba(166,190,255,0.12)" : "rgba(201,160,255,0.12)",
                       border: `1px solid ${hdrPalette.borderColor}55`,
                       borderRadius: 999,
                     }}>
@@ -1577,10 +1642,10 @@ export async function GET(req: NextRequest) {
                   vsFontSize={vsFontSize}
                   nameFontSize={nameFontSize}
                   showHorarioBar={lnbfShowHorarioBar}
-                  palette={theme === "lnb-premium" ? PALETTE_LNB : PALETTE_LNBF}
+                  palette={theme === "lnb-premium" ? PALETTE_LNB : theme === "u22m-premium" ? PALETTE_U22M : theme === "u22f-premium" ? PALETTE_U22F : PALETTE_LNBF}
                 />
               ) : layout === "compact" ? (
-                <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} palette={theme === "lnb-premium" ? PALETTE_LNB : PALETTE_LNBF} />
+                <MatchCardCompact key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} palette={theme === "lnb-premium" ? PALETTE_LNB : theme === "u22m-premium" ? PALETTE_U22M : theme === "u22f-premium" ? PALETTE_U22F : PALETTE_LNBF} />
               ) : (
                 <MatchCard key={i} match={match} isResultado={isResultado} cardW={cardW} cardH={cardH} logoSize={logoSize} nameFontSize={nameFontSize} vsFontSize={vsFontSize} cardStyle={cardStyle} tc={tc} />
               )
