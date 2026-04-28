@@ -98,7 +98,12 @@ function MatchCard({ match, isResultado, cardW, cardH, logoSize, nameFontSize, v
   tc: Record<string, string>
 }) {
   const cardBg = cardStyle === "solid" ? "rgba(0,0,0,0.45)" : cardStyle === "minimal" ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.08)"
-  const cardBorder = cardStyle === "solid" ? "none" : cardStyle === "minimal" ? "1.5px solid rgba(255,255,255,0.07)" : "1.5px solid rgba(255,255,255,0.14)"
+  // satori revienta cuando recibe `border: "none"` — intenta parsearlo
+  // como shorthand de 3 valores (width/style/color) y al no encontrar
+  // el segundo y tercero hace .trim() sobre undefined ("Cannot read
+  // properties of undefined reading 'trim'"). Usamos un border 0
+  // transparente para "solid", que es equivalente visualmente.
+  const cardBorder = cardStyle === "solid" ? "0 solid transparent" : cardStyle === "minimal" ? "1.5px solid rgba(255,255,255,0.07)" : "1.5px solid rgba(255,255,255,0.14)"
   return (
     <div style={{
       width: cardW, height: cardH,

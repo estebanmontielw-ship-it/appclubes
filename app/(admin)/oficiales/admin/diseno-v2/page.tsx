@@ -515,7 +515,17 @@ function DisenoInner() {
     if (subtitulo.trim()) params.set("subtitulo", subtitulo.trim())
     else if (suggestedSubtitle) params.set("subtitulo", suggestedSubtitle)
     if (logoUrl) { params.set("logoUrl", logoUrl); if (logoScale !== 100) params.set("logoScale", String(logoScale)) }
-    if (!bgImageUrl) params.set("theme", theme)
+    // SIEMPRE mandamos `theme` — antes solo iba cuando no había
+    // bgImageUrl porque "el theme determina el fondo". Pero el theme
+    // controla MUCHO más que el fondo: isPremiumTheme decide qué
+    // MatchCard se usa, el layout del header, la palette de las
+    // tarjetas, el color de los sponsors, el accent dorado/rojo, etc.
+    // Cuando el theme se omitía, el server defaulteaba a "masc1" (V1
+    // viejo) y caía al path de MatchCard estándar — y la combinación
+    // (cardStyle=solid → border:"none") tiraba a satori en "Cannot
+    // read properties of undefined (reading 'trim')". El bgImageUrl
+    // se sigue respetando como override del bg, eso ya lo hace el server.
+    params.set("theme", theme)
     if (bgImageUrl) { params.set("bgImageUrl", bgImageUrl); if (bgFit !== "cover") params.set("bgFit", bgFit) }
     if (textureUrl) { params.set("textureUrl", textureUrl); params.set("textureOpacity", String(textureOpacity)) }
     if (playerPhotoUrl && photoFit !== "cover") params.set("photoFit", photoFit)
