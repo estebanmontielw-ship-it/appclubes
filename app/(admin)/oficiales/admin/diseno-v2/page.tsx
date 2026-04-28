@@ -234,7 +234,7 @@ function DisenoInner() {
             ? "lnb-premium"
             : (savedTheme === "fem1" || savedTheme === "fem2")
             ? "lnbf-premium"
-            : (savedTheme || (ligaParam === "lnbf" || ligaParam === "u22f" ? "lnbf-premium" : "lnb-premium"))
+            : (savedTheme || defaultPremiumTheme)
           setTheme(migratedTheme)
           setBgImageUrl(c.bgImageUrl ?? null)
           setBgFit((c.bgFit as "cover" | "contain") ?? "cover")

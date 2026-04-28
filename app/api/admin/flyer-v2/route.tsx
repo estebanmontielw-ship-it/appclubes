@@ -1283,16 +1283,30 @@ export async function GET(req: NextRequest) {
       const away = (m.competitors ?? []).find((c: any) => Number(c.isHomeCompetitor) === 0) ?? m.competitors?.[1]
       const { date, time } = formatMatchTime(m.matchTime ?? "")
 
+      // Coerción explícita a string para todo lo que después renderiza
+      // satori. La API de Genius a veces devuelve estos campos como
+      // objetos i18n (`{en: "X", es: "X"}`) o como `null`/`undefined`; si
+      // un text node de JSX recibe algo que no sea string, satori
+      // explota con "Cannot read properties of undefined (reading 'trim')"
+      // y el ImageResponse muere mid-stream con un 500 HTML genérico.
+      const asText = (v: unknown, fallback = ""): string =>
+        typeof v === "string" ? v : v == null ? fallback : String(v)
+      const asUrl = (v: unknown): string | null => {
+        if (typeof v !== "string") return null
+        const t = v.trim()
+        return t ? t : null
+      }
+
       matchDataList.push({
-        homeName: home?.competitorName ?? "Local",
-        awayName: away?.competitorName ?? "Visitante",
-        homeLogo: home?.images?.logo?.L1?.url ?? home?.images?.logo?.S1?.url ?? null,
-        awayLogo: away?.images?.logo?.L1?.url ?? away?.images?.logo?.S1?.url ?? null,
-        homeScore: isResultado ? (home?.scoreString ?? null) : null,
-        awayScore: isResultado ? (away?.scoreString ?? null) : null,
-        date,
-        time,
-        venue: m.venue?.venueName ?? m.venueName ?? "",
+        homeName: asText(home?.competitorName, "Local"),
+        awayName: asText(away?.competitorName, "Visitante"),
+        homeLogo: asUrl(home?.images?.logo?.L1?.url) ?? asUrl(home?.images?.logo?.S1?.url),
+        awayLogo: asUrl(away?.images?.logo?.L1?.url) ?? asUrl(away?.images?.logo?.S1?.url),
+        homeScore: isResultado ? (asText(home?.scoreString) || null) : null,
+        awayScore: isResultado ? (asText(away?.scoreString) || null) : null,
+        date: asText(date),
+        time: asText(time),
+        venue: asText(m.venue?.venueName ?? m.venueName),
       })
     }
 
