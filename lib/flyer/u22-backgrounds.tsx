@@ -113,12 +113,46 @@ function U22BackgroundBase({
     display: "flex", position: "absolute", top: 0, left: 0, width: W, height: H,
   }
 
-  // La variante "bandera" sobreescribe el fondo: en lugar del gradient
-  // azul, dibujamos el SVG triangular Paraguay con paper claro central.
+  // La variante "bandera" sobreescribe el fondo con la composición
+  // triangular Paraguay (paper central + cuñas azul/roja abajo).
+  // Implementado con divs absolutamente posicionados y `clipPath:
+  // polygon(...)`, NO con un <img> de SVG data-URI. Satori procesa el
+  // SVG embebido por un path distinto al de los divs CSS, y la combinación
+  // `<img src="data:image/svg+xml..." style={{ objectFit: "cover" }}>`
+  // dispara un bug interno ("Cannot read properties of undefined reading
+  // 'trim'" en `qr` de @vercel/og) que mata el render entero del flyer.
+  // Con divs nativos satori no necesita parsear SVG y el flyer sale OK.
   if (variant === "bandera") {
+    const wedgeBlue: React.CSSProperties = {
+      display: "flex", position: "absolute", left: 0, bottom: 0,
+      width: W * 0.5, height: H * 0.22,
+      background: "#1E3399",
+      clipPath: "polygon(0% 0%, 0% 100%, 100% 100%, 33% 38%)",
+    }
+    const wedgeRed: React.CSSProperties = {
+      display: "flex", position: "absolute", right: 0, bottom: 0,
+      width: W * 0.5, height: H * 0.22,
+      background: "#B61E2E",
+      clipPath: "polygon(0% 100%, 67% 38%, 100% 0%, 100% 100%)",
+    }
+    const paperFill: React.CSSProperties = {
+      display: "flex", position: "absolute", top: 0, left: 0,
+      width: W, height: H * 0.99,
+      background: "#F4F2EC",
+      clipPath: "polygon(0% 0%, 100% 0%, 100% 78%, 50% 100%, 0% 78%)",
+    }
     return (
       <div style={{ ...fill }}>
-        <img src={banderaDataUrl()} width={W} height={H} style={{ ...fill, objectFit: "cover" }} alt="" />
+        {/* Capa base (queda detrás de los recortes) */}
+        <div style={{ ...fill, background: "#0A1230" }} />
+        <div style={paperFill} />
+        <div style={wedgeBlue} />
+        <div style={wedgeRed} />
+        {/* Destellos sobre las cuñas (círculos translucidos) */}
+        <div style={{ display: "flex", position: "absolute", left: W * 0.08, bottom: H * 0.085, width: 80, height: 80, borderRadius: 40, background: "rgba(255,255,255,0.85)" }} />
+        <div style={{ display: "flex", position: "absolute", left: W * 0.04, bottom: H * 0.05, width: 180, height: 180, borderRadius: 90, background: "rgba(255,255,255,0.16)" }} />
+        <div style={{ display: "flex", position: "absolute", right: W * 0.08, bottom: H * 0.085, width: 80, height: 80, borderRadius: 40, background: "rgba(255,255,255,0.85)" }} />
+        <div style={{ display: "flex", position: "absolute", right: W * 0.04, bottom: H * 0.05, width: 180, height: 180, borderRadius: 90, background: "rgba(255,255,255,0.16)" }} />
       </div>
     )
   }
