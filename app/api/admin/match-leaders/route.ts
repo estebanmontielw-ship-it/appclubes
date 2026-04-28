@@ -99,17 +99,15 @@ export async function GET(req: NextRequest) {
     const homeTeamId = Number(home.teamId ?? home.competitorId)
     const awayTeamId = Number(away.teamId ?? away.competitorId)
 
-    function teamMeta(c: any, isWinner: boolean) {
-      return {
-        teamName:  asUrl(c.competitorName) ?? "",
-        teamSigla: asUrl(c.teamCode) ?? null,
-        teamLogo:
-          asUrl(c.images?.logo?.L1?.url) ??
-          asUrl(c.images?.logo?.S1?.url) ??
-          asUrl(c.images?.logo?.T1?.url),
-        isWinningTeam: isWinner,
-      }
-    }
+    const teamMeta = (c: any, isWinner: boolean) => ({
+      teamName:  asUrl(c.competitorName) ?? "",
+      teamSigla: asUrl(c.teamCode) ?? null,
+      teamLogo:
+        asUrl(c.images?.logo?.L1?.url) ??
+        asUrl(c.images?.logo?.S1?.url) ??
+        asUrl(c.images?.logo?.T1?.url),
+      isWinningTeam: isWinner,
+    })
     const homeMeta = teamMeta(home, homeWins)
     const awayMeta = teamMeta(away, awayWins)
 
