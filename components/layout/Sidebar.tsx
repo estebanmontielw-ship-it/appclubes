@@ -143,6 +143,8 @@ function getNavSections(
             subItems: [
               { label: "LNB",  href: "/oficiales/admin/diseno-v2?liga=lnb" },
               { label: "LNBF", href: "/oficiales/admin/diseno-v2?liga=lnbf" },
+              { label: "U22 Masc", href: "/oficiales/admin/diseno-v2?liga=u22m" },
+              { label: "U22 Fem",  href: "/oficiales/admin/diseno-v2?liga=u22f" },
             ],
           },
           {
