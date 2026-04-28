@@ -688,9 +688,13 @@ export async function GET(req: NextRequest) {
   const playerPhotoUrl = searchParams.get("playerPhoto") ?? ""
   const jugadorNombre  = searchParams.get("jugadorNombre") ?? ""
   const jugadorClub    = searchParams.get("jugadorClub") ?? ""
-  const jugadorPremio  = searchParams.get("jugadorPremio") ?? "BROU"
+  const jugadorPremio  = searchParams.get("jugadorPremio") ?? "DEL PARTIDO"
   const jugadorFecha   = searchParams.get("jugadorFecha") ?? ""
   const jugadorTeamLogo = searchParams.get("jugadorTeamLogo") ?? ""
+  // Rival del partido del jugador — para la línea sutil "vs RIVAL · FECHA X"
+  // debajo del club. Se autofillea desde el selector de partido del admin
+  // (sin logo del rival, solo texto).
+  const jugadorRival   = searchParams.get("jugadorRival") ?? ""
   // Stats del jugador para el template "Jugador del Partido" — vienen
   // del autoselect del partido en el admin (top 5 del equipo ganador,
   // datos de Genius). Se renderizan como una fila grande PTS·REB·AST
@@ -1139,39 +1143,51 @@ export async function GET(req: NextRequest) {
                 </div>
               )
             })() : <div style={{ position: "absolute", top: 0, left: 0, width: W, height: H, background: themeBg, display: "flex" }} />}
+            {/* Top fade — más sutil que antes para que la foto respire */}
+            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 220, background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, transparent 100%)", display: "flex" }} />
+            {/* Bottom fade — donde viven el título grande y los stats */}
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: Math.round(H * 0.46), background: "linear-gradient(180deg, transparent 0%, rgba(10,20,50,0.92) 30%, rgba(10,20,50,0.98) 100%)", display: "flex" }} />
+            {/* Textura va POR ENCIMA de los gradients para que se vea
+                también sobre las zonas oscuras (antes quedaba enterrada
+                detrás del fade y parecía no estar aplicada). */}
             {textureUrl ? <img src={textureUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: "cover", opacity: textureOpacity / 100, display: "flex" }} alt="" /> : null}
-            <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 300, background: "linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 100%)", display: "flex" }} />
-            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: Math.round(H * 0.42), background: "linear-gradient(180deg, transparent 0%, rgba(10,20,50,0.92) 30%, rgba(10,20,50,0.98) 100%)", display: "flex" }} />
             {logoUrl ? <img src={logoUrl} width={Math.round(80 * logoScale)} height={Math.round(80 * logoScale)} style={{ position: "absolute", top: 36 + safeTopFor(format), left: 36, objectFit: "contain", display: "flex" }} alt="Logo" /> : null}
-            {jugadorTeamLogo ? <img src={jugadorTeamLogo} width={120} height={120} style={{ position: "absolute", top: Math.round(H * 0.38), left: 48, objectFit: "contain", display: "flex" }} alt={jugadorClub} /> : null}
-            <div style={{ position: "absolute", bottom: Math.round(H * 0.24) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
+            {/* Heading "JUGADOR/A DEL PARTIDO" — dos líneas. El segundo
+                slot solía ser el "premio" (BROU) pero ahora siempre dice
+                "DEL PARTIDO" por default; el user puede sobreescribirlo
+                desde el input de Premio si querés algo personalizado. */}
+            <div style={{ position: "absolute", bottom: Math.round(H * 0.28) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column" }}>
               <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorHeading}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 20, marginTop: 4 }}>
-                <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3 }}>{jugadorPremio.toUpperCase()}</span>
-                {jugadorFecha ? <div style={{ display: "flex", background: "rgba(255,255,255,0.15)", borderRadius: 8, paddingLeft: 12, paddingRight: 12, paddingTop: 6, paddingBottom: 6 }}><span style={{ color: "white", fontSize: 18, fontWeight: 700, letterSpacing: 1 }}>{jugadorFecha.toUpperCase()}</span></div> : null}
-              </div>
+              <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3, marginTop: 4 }}>{jugadorPremio.toUpperCase()}</span>
             </div>
-            <div style={{ position: "absolute", bottom: Math.round(H * 0.11) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column", gap: 4 }}>
-              <span style={{ color: "white", fontSize: 34, fontWeight: 800, letterSpacing: 1 }}>{jugadorNombre.toUpperCase()}</span>
-              {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 20, fontWeight: 600, letterSpacing: 2 }}>{jugadorClub.toUpperCase()}</span> : null}
+            <div style={{ position: "absolute", bottom: Math.round(H * 0.10) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column", gap: 2 }}>
+              <span style={{ color: "white", fontSize: 36, fontWeight: 900, letterSpacing: 1, display: "flex" }}>{jugadorNombre.toUpperCase()}</span>
+              {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 19, fontWeight: 700, letterSpacing: 2.5, display: "flex" }}>{jugadorClub.toUpperCase()}</span> : null}
+              {/* Línea sutil "vs RIVAL · FECHA X" — sin logo del rival,
+                  solo texto. Combina lo que tengamos (rival y/o fecha). */}
+              {(jugadorRival || jugadorFecha) ? (
+                <span style={{ color: "rgba(255,255,255,0.45)", fontSize: 15, fontWeight: 600, letterSpacing: 2, marginTop: 4, display: "flex" }}>
+                  {[jugadorRival ? `vs ${jugadorRival.toUpperCase()}` : null, jugadorFecha ? jugadorFecha.toUpperCase() : null].filter(Boolean).join(" · ")}
+                </span>
+              ) : null}
               {(jPts || jReb || jAst) ? (
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 28, marginTop: 14 }}>
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 32, marginTop: 18 }}>
                   {jPts ? (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 72, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jPts}</span>
-                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>PUNTOS</span>
+                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 76, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jPts}</span>
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>PUNTOS</span>
                     </div>
                   ) : null}
                   {jReb ? (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 72, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jReb}</span>
-                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>REBOTES</span>
+                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 76, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jReb}</span>
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>REBOTES</span>
                     </div>
                   ) : null}
                   {jAst ? (
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
-                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 72, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jAst}</span>
-                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>ASIST.</span>
+                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 76, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jAst}</span>
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 13, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>ASIST.</span>
                     </div>
                   ) : null}
                 </div>

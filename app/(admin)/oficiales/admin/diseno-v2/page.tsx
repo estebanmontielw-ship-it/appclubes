@@ -121,8 +121,14 @@ function DisenoInner() {
   const playerPhotoRef = useRef<HTMLInputElement>(null)
   const [jugadorNombre, setJugadorNombre] = useState("")
   const [jugadorClub, setJugadorClub] = useState("")
-  const [jugadorPremio, setJugadorPremio] = useState("BROU")
+  // El "premio" antes era el sponsor (BROU). Ahora es la segunda línea
+  // del título grande — default "DEL PARTIDO" y editable si querés
+  // poner algo distinto (ej. "BROU MVP").
+  const [jugadorPremio, setJugadorPremio] = useState("DEL PARTIDO")
   const [jugadorFecha, setJugadorFecha] = useState("")
+  // Rival del partido — muestra una línea sutil debajo del club:
+  // "vs OLIMPIA · FECHA 5". Sin logo, solo texto.
+  const [jugadorRival, setJugadorRival] = useState("")
   // Stats del jugador del partido — se autofillean cuando el user
   // clickea un candidato del top 5 del partido seleccionado. Quedan
   // editables a mano si querés ajustar.
@@ -370,6 +376,15 @@ function DisenoInner() {
     setJugadorPts(String(c.stats.points))
     setJugadorReb(String(c.stats.rebounds))
     setJugadorAst(String(c.stats.assists))
+    // Auto-llenar rival y fecha desde el partido seleccionado.
+    const partido = partidos.find((p) => p.matchId === jugadorMatchId)
+    if (partido) {
+      const rival = c.teamName.toLowerCase() === partido.homeName.toLowerCase()
+        ? partido.awayName
+        : partido.homeName
+      setJugadorRival(rival)
+      if (typeof partido.round === "number") setJugadorFecha(`Fecha ${partido.round}`)
+    }
     // Foto de Genius como fallback — solo si el user no subió una propia.
     if (!playerPhotoUrl && c.photoUrl) setPlayerPhotoUrl(c.photoUrl)
     setPreviewUrl(null)
@@ -610,9 +625,10 @@ function DisenoInner() {
     if (playerPhotoUrl) params.set("playerPhoto", playerPhotoUrl)
     if (jugadorNombre.trim()) params.set("jugadorNombre", jugadorNombre.trim())
     if (jugadorClub.trim()) params.set("jugadorClub", jugadorClub.trim())
-    if (jugadorPremio.trim() && jugadorPremio !== "BROU") params.set("jugadorPremio", jugadorPremio.trim())
+    if (jugadorPremio.trim() && jugadorPremio !== "DEL PARTIDO") params.set("jugadorPremio", jugadorPremio.trim())
     if (jugadorFecha.trim()) params.set("jugadorFecha", jugadorFecha.trim())
     if (jugadorTeamLogo) params.set("jugadorTeamLogo", jugadorTeamLogo)
+    if (jugadorRival.trim()) params.set("jugadorRival", jugadorRival.trim())
     if (jugadorPts.trim()) params.set("jPts", jugadorPts.trim())
     if (jugadorReb.trim()) params.set("jReb", jugadorReb.trim())
     if (jugadorAst.trim()) params.set("jAst", jugadorAst.trim())
@@ -677,7 +693,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, jugadorPts, jugadorReb, jugadorAst, safeZones, lzFecha, lzHora, noticiaCategoria, noticiaFecha, noticiaUrl, lnbfPattern, lnbPattern, u22Pattern, u22Accent, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, jugadorRival, jugadorPts, jugadorReb, jugadorAst, safeZones, lzFecha, lzHora, noticiaCategoria, noticiaFecha, noticiaUrl, lnbfPattern, lnbPattern, u22Pattern, u22Accent, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -1582,13 +1598,21 @@ function DisenoInner() {
                   <Input value={jugadorClub} onChange={(e) => { setJugadorClub(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Olimpia" className="h-8 text-xs" />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground mb-1 block">Premio</Label>
-                  <Input value={jugadorPremio} onChange={(e) => { setJugadorPremio(e.target.value); setPreviewUrl(null) }} placeholder="Ej: BROU" className="h-8 text-xs" />
+                  <Label className="text-xs text-muted-foreground mb-1 block">
+                    Línea grande <span className="font-normal italic">(2°)</span>
+                  </Label>
+                  <Input value={jugadorPremio} onChange={(e) => { setJugadorPremio(e.target.value); setPreviewUrl(null) }} placeholder="DEL PARTIDO" className="h-8 text-xs" />
                 </div>
               </div>
-              <div>
-                <Label className="text-xs text-muted-foreground mb-1 block">Fecha / Jornada</Label>
-                <Input value={jugadorFecha} onChange={(e) => { setJugadorFecha(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Fecha 5" className="h-8 text-xs" />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Rival <span className="font-normal italic">(auto)</span></Label>
+                  <Input value={jugadorRival} onChange={(e) => { setJugadorRival(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Olimpia" className="h-8 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground mb-1 block">Fecha / Jornada</Label>
+                  <Input value={jugadorFecha} onChange={(e) => { setJugadorFecha(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Fecha 5" className="h-8 text-xs" />
+                </div>
               </div>
               {/* Stats — auto-filled al elegir un candidato, editable a
                   mano. Vacío = la fila grande no se renderiza. */}
