@@ -1161,8 +1161,11 @@ export async function GET(req: NextRequest) {
               <span style={{ color: "white", fontSize: Math.round(80 * titleSize), fontWeight: titleWeight, lineHeight: 0.9, letterSpacing: -3, marginTop: 4 }}>{jugadorPremio.toUpperCase()}</span>
             </div>
             <div style={{ position: "absolute", bottom: Math.round(H * 0.10) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column", gap: 2 }}>
-              <span style={{ color: "white", fontSize: 36, fontWeight: 900, letterSpacing: 1, display: "flex" }}>{jugadorNombre.toUpperCase()}</span>
-              {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 19, fontWeight: 700, letterSpacing: 2.5, display: "flex" }}>{jugadorClub.toUpperCase()}</span> : null}
+              {/* Nombre del jugador — Archivo Black 64px para llenar el
+                  espacio entre el título grande y los stats. Antes era
+                  36px y se veía perdido en ese gap. */}
+              <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 64, fontWeight: 900, letterSpacing: -1.5, lineHeight: 1, display: "flex" }}>{jugadorNombre.toUpperCase()}</span>
+              {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.65)", fontSize: 22, fontWeight: 700, letterSpacing: 2.5, marginTop: 6, display: "flex" }}>{jugadorClub.toUpperCase()}</span> : null}
               {/* Línea sutil "vs RIVAL · FECHA X" — sin logo del rival,
                   solo texto. Combina lo que tengamos (rival y/o fecha). */}
               {(jugadorRival || jugadorFecha) ? (
@@ -1553,7 +1556,11 @@ export async function GET(req: NextRequest) {
                 position: "relative",
                 alignItems: isCenteredHeader ? "center" : "flex-start",
               }}>
-                {/* Logo — absolute top-left (split) o centrado arriba (centered) */}
+                {/* Logo — absolute top-left (split) o centrado arriba (centered).
+                    Para "centered" usamos la posición exacta en pixels en
+                    vez de `left: 50%` + marginLeft negativo: satori no
+                    centra confiablemente con porcentajes en absolute, así
+                    el logo SIEMPRE queda al medio independiente del tamaño. */}
                 {logoUrl ? (
                   isCenteredHeader ? (
                     <img
@@ -1562,8 +1569,8 @@ export async function GET(req: NextRequest) {
                       height={lnbfLogoSize}
                       style={{
                         position: "absolute",
-                        top: 28, left: "50%",
-                        marginLeft: -Math.round(lnbfLogoSize / 2),
+                        top: 28,
+                        left: Math.round((W - lnbfLogoSize) / 2),
                         objectFit: "contain",
                         display: "flex",
                       }}

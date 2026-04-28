@@ -1487,7 +1487,10 @@ function DisenoInner() {
           {template === "jugador" && (() => {
             const isFem = FEMENINO.includes(ligaParam)
             const jugadorLabel = isFem ? "jugadora" : "jugador"
-            const finishedPartidos = partidos.filter((p) => p.matchStatus === "COMPLETE")
+            const finishedPartidos = partidos
+              .filter((p) => p.matchStatus === "COMPLETE")
+              .slice()
+              .sort((a, b) => (b.matchTime || "").localeCompare(a.matchTime || ""))
             return (
             <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Datos de la {jugadorLabel}</Label>
