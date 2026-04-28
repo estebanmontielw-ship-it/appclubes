@@ -657,6 +657,14 @@ async function renderImage(
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
+  // Log params al inicio de cada request — el error de satori no llega a
+  // nuestro try/catch (revienta en un microtask aparte, se ve en logs
+  // pero sin contexto). Imprimiendo los params al entrar tenemos la
+  // request y el error en líneas adyacentes del log de Vercel.
+  const paramsDump = Array.from(searchParams.entries())
+    .map(([k, v]) => `${k}=${v.length > 120 ? v.slice(0, 120) + "..." : v}`)
+    .join(" ")
+  console.log("[flyer-v2] GET", paramsDump)
   const fonts = await loadFonts()
   const matchIdsParam = searchParams.get("matchIds") ?? searchParams.get("matchId") ?? ""
   const template = searchParams.get("template") ?? "pre"
@@ -1726,11 +1734,16 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     // Surface the full chain (incluye el `cause` que tira satori cuando
     // un text node de la JSX recibe undefined). Se loguea a console
-    // para que aparezca en Vercel runtime logs.
+    // para que aparezca en Vercel runtime logs junto con los params
+    // de la request — sin esto debugger es imposible.
     const cause = e?.cause ? `\nCause: ${e.cause?.message ?? String(e.cause)}` : ""
     const msg = `${e?.message ?? "Error generando flyer"}${cause}`
-    console.error("[flyer-v2] render error:", e)
+    const paramsDump = Array.from(req.nextUrl.searchParams.entries())
+      .map(([k, v]) => `  ${k}=${v.length > 200 ? v.slice(0, 200) + "..." : v}`)
+      .join("\n")
+    console.error("[flyer-v2] render error:", e?.message, "\nparams:\n" + paramsDump)
     if (e?.cause) console.error("[flyer-v2] cause:", e.cause)
+    if (e?.stack) console.error("[flyer-v2] stack:", e.stack)
     return new Response(msg, { status: 500 })
   }
 }
