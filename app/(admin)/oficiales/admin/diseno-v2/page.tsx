@@ -123,6 +123,32 @@ function DisenoInner() {
   const [jugadorClub, setJugadorClub] = useState("")
   const [jugadorPremio, setJugadorPremio] = useState("BROU")
   const [jugadorFecha, setJugadorFecha] = useState("")
+  // Stats del jugador del partido — se autofillean cuando el user
+  // clickea un candidato del top 5 del partido seleccionado. Quedan
+  // editables a mano si querés ajustar.
+  const [jugadorPts, setJugadorPts] = useState("")
+  const [jugadorReb, setJugadorReb] = useState("")
+  const [jugadorAst, setJugadorAst] = useState("")
+  // Partido seleccionado para el template Jugador y candidatos cargados
+  // desde /api/admin/match-leaders. teamFilter alterna entre ganador
+  // (default) y perdedor cuando el MVP fue del equipo que perdió.
+  const [jugadorMatchId, setJugadorMatchId] = useState<string>("")
+  const [jugadorTeamFilter, setJugadorTeamFilter] = useState<"winner" | "loser">("winner")
+  type Candidate = {
+    personId: number
+    playerName: string
+    jerseyNumber: number | null
+    photoUrl: string | null
+    teamName: string
+    teamSigla: string | null
+    teamLogo: string | null
+    isWinningTeam: boolean
+    stats: { points: number; rebounds: number; assists: number; minutes: number }
+  }
+  const [candidates, setCandidates] = useState<Candidate[]>([])
+  const [candidatesLoading, setCandidatesLoading] = useState(false)
+  const [candidatesError, setCandidatesError] = useState<string | null>(null)
+  const [selectedCandidateId, setSelectedCandidateId] = useState<number | null>(null)
   // Lanzamiento (arranque de temporada) — fecha + hora opcionales
   const [lzFecha, setLzFecha] = useState("")
   const [lzHora, setLzHora] = useState("")
@@ -312,6 +338,42 @@ function DisenoInner() {
       .catch(() => setPreviewError("Error al cargar los partidos"))
       .finally(() => setLoading(false))
   }, [ligaConfig.api])
+
+  // Cuando se cambia el partido o el filtro de equipo (ganador/perdedor)
+  // del template Jugador, traemos top 5 jugadores con stats desde Genius.
+  useEffect(() => {
+    if (!jugadorMatchId) {
+      setCandidates([])
+      setCandidatesError(null)
+      return
+    }
+    let cancelled = false
+    setCandidatesLoading(true)
+    setCandidatesError(null)
+    fetch(`/api/admin/match-leaders?matchId=${jugadorMatchId}&liga=${ligaParam}&team=${jugadorTeamFilter}`)
+      .then(async (r) => {
+        const j = await r.json()
+        if (cancelled) return
+        if (!r.ok) throw new Error(j.error ?? "Error al cargar jugadores")
+        setCandidates(Array.isArray(j.players) ? j.players : [])
+      })
+      .catch((e: any) => { if (!cancelled) setCandidatesError(e.message ?? "Error al cargar jugadores") })
+      .finally(() => { if (!cancelled) setCandidatesLoading(false) })
+    return () => { cancelled = true }
+  }, [jugadorMatchId, jugadorTeamFilter, ligaParam])
+
+  function pickCandidate(c: Candidate) {
+    setSelectedCandidateId(c.personId)
+    setJugadorNombre(c.playerName)
+    setJugadorClub(c.teamName)
+    setJugadorTeamLogo(c.teamLogo)
+    setJugadorPts(String(c.stats.points))
+    setJugadorReb(String(c.stats.rebounds))
+    setJugadorAst(String(c.stats.assists))
+    // Foto de Genius como fallback — solo si el user no subió una propia.
+    if (!playerPhotoUrl && c.photoUrl) setPlayerPhotoUrl(c.photoUrl)
+    setPreviewUrl(null)
+  }
 
   const displayed = partidos
     .filter((p) => filter === "jugados" ? p.matchStatus === "COMPLETE" : p.matchStatus !== "COMPLETE")
@@ -551,6 +613,9 @@ function DisenoInner() {
     if (jugadorPremio.trim() && jugadorPremio !== "BROU") params.set("jugadorPremio", jugadorPremio.trim())
     if (jugadorFecha.trim()) params.set("jugadorFecha", jugadorFecha.trim())
     if (jugadorTeamLogo) params.set("jugadorTeamLogo", jugadorTeamLogo)
+    if (jugadorPts.trim()) params.set("jPts", jugadorPts.trim())
+    if (jugadorReb.trim()) params.set("jReb", jugadorReb.trim())
+    if (jugadorAst.trim()) params.set("jAst", jugadorAst.trim())
     if (template === "lanzamiento") {
       if (lzFecha.trim()) params.set("lzFecha", lzFecha.trim())
       if (lzHora.trim()) params.set("lzHora", lzHora.trim())
@@ -612,7 +677,7 @@ function DisenoInner() {
         .finally(() => setPreviewLoading(false))
     }, 700)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, safeZones, lzFecha, lzHora, noticiaCategoria, noticiaFecha, noticiaUrl, lnbfPattern, lnbPattern, u22Pattern, u22Accent, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
+  }, [selected, template, format, titulo, subtitulo, logoUrl, logoScale, theme, bgImageUrl, bgFit, photoFit, photoPosX, photoPosY, photoScale, textureUrl, textureOpacity, sponsors, sponsorScales, sponsorBg, titleSize, subtitleSize, titleWeight, cardStyle, textColor, ligaParam, layout, statType, playerPhotoUrl, jugadorNombre, jugadorClub, jugadorPremio, jugadorFecha, jugadorTeamLogo, jugadorPts, jugadorReb, jugadorAst, safeZones, lzFecha, lzHora, noticiaCategoria, noticiaFecha, noticiaUrl, lnbfPattern, lnbPattern, u22Pattern, u22Accent, lnbfBadge, lnbfShowHorarioBar, showSponsorBar, premiumHeaderLayout])
 
   // Cualquier cambio de las deps re-dispara el preview (incluye escribir
   // el título/subtítulo, cambiar sponsors, logo, etc. — antes solo algunos
@@ -1406,9 +1471,107 @@ function DisenoInner() {
           {template === "jugador" && (() => {
             const isFem = FEMENINO.includes(ligaParam)
             const jugadorLabel = isFem ? "jugadora" : "jugador"
+            const finishedPartidos = partidos.filter((p) => p.matchStatus === "COMPLETE")
             return (
             <div className="p-4 rounded-xl border border-gray-200 bg-gray-50/50 space-y-3">
               <Label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block">Datos de la {jugadorLabel}</Label>
+
+              {/* Selector de partido + candidatos del top 5. El user
+                  todavía puede editar a mano los inputs de abajo si
+                  querés ajustar — esto solo precarga los valores. */}
+              <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-2">
+                <Label className="text-[11px] font-semibold text-primary uppercase tracking-wide block">
+                  Auto-cargar desde un partido jugado
+                </Label>
+                <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                  <select
+                    value={jugadorMatchId}
+                    onChange={(e) => {
+                      setJugadorMatchId(e.target.value)
+                      setSelectedCandidateId(null)
+                    }}
+                    className="h-8 text-xs rounded border border-gray-300 bg-white px-2"
+                  >
+                    <option value="">— Elegí un partido jugado —</option>
+                    {finishedPartidos.length === 0 ? (
+                      <option value="" disabled>(no hay partidos completos aún)</option>
+                    ) : finishedPartidos.map((p) => {
+                      const dayLabel = p.matchTime ? p.matchTime.slice(8, 10) + "/" + p.matchTime.slice(5, 7) : ""
+                      const score =
+                        p.homeScore != null && p.awayScore != null
+                          ? ` (${p.homeScore}-${p.awayScore})`
+                          : ""
+                      return (
+                        <option key={p.matchId} value={p.matchId}>
+                          {dayLabel} · {p.homeName} vs {p.awayName}{score}
+                        </option>
+                      )
+                    })}
+                  </select>
+                  {jugadorMatchId ? (
+                    <div className="flex gap-1">
+                      {(["winner", "loser"] as const).map((tf) => (
+                        <button
+                          key={tf}
+                          onClick={() => setJugadorTeamFilter(tf)}
+                          className={`px-2.5 py-1 text-[10px] font-semibold rounded border transition-colors ${
+                            jugadorTeamFilter === tf
+                              ? "border-primary bg-primary text-white"
+                              : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                          }`}
+                        >
+                          {tf === "winner" ? "Ganador" : "Perdedor"}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Cards de candidatos */}
+                {jugadorMatchId && candidatesLoading ? (
+                  <p className="text-[11px] text-muted-foreground italic">Cargando jugadores...</p>
+                ) : candidatesError ? (
+                  <p className="text-[11px] text-red-600">{candidatesError}</p>
+                ) : candidates.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {candidates.map((c, i) => (
+                      <button
+                        key={c.personId}
+                        onClick={() => pickCandidate(c)}
+                        className={`flex items-center gap-2.5 p-2 rounded-lg border transition-colors text-left ${
+                          selectedCandidateId === c.personId
+                            ? "border-primary bg-primary/5"
+                            : "border-gray-200 bg-white hover:border-gray-300"
+                        }`}
+                      >
+                        <span className="w-5 text-[10px] font-bold text-muted-foreground tabular-nums">
+                          #{i + 1}
+                        </span>
+                        {c.photoUrl ? (
+                          <img src={c.photoUrl} alt={c.playerName} className="h-9 w-9 rounded-full object-cover bg-gray-100 shrink-0" />
+                        ) : (
+                          <div className="h-9 w-9 rounded-full bg-gray-200 flex items-center justify-center shrink-0">
+                            <span className="text-[11px] font-bold text-gray-500">{c.playerName.charAt(0)}</span>
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="text-xs font-semibold truncate">
+                            {c.playerName}
+                            {c.jerseyNumber != null ? <span className="text-muted-foreground font-normal"> · #{c.jerseyNumber}</span> : null}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground truncate">{c.teamName}</div>
+                        </div>
+                        <div className="flex gap-2 text-[10px] tabular-nums shrink-0">
+                          <span><strong className="text-sm">{c.stats.points}</strong> pts</span>
+                          <span><strong className="text-sm">{c.stats.rebounds}</strong> reb</span>
+                          <span><strong className="text-sm">{c.stats.assists}</strong> ast</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">Nombre completo</Label>
                 <Input value={jugadorNombre} onChange={(e) => { setJugadorNombre(e.target.value); setPreviewUrl(null) }} placeholder={isFem ? "Ej: María Pérez" : "Ej: Juan Pérez"} className="h-8 text-xs" />
@@ -1426,6 +1589,36 @@ function DisenoInner() {
               <div>
                 <Label className="text-xs text-muted-foreground mb-1 block">Fecha / Jornada</Label>
                 <Input value={jugadorFecha} onChange={(e) => { setJugadorFecha(e.target.value); setPreviewUrl(null) }} placeholder="Ej: Fecha 5" className="h-8 text-xs" />
+              </div>
+              {/* Stats — auto-filled al elegir un candidato, editable a
+                  mano. Vacío = la fila grande no se renderiza. */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  Estadísticas <span className="font-normal italic">(vacío = sin fila grande)</span>
+                </Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Input
+                    value={jugadorPts}
+                    onChange={(e) => { setJugadorPts(e.target.value); setPreviewUrl(null) }}
+                    placeholder="PTS"
+                    inputMode="numeric"
+                    className="h-8 text-xs text-center"
+                  />
+                  <Input
+                    value={jugadorReb}
+                    onChange={(e) => { setJugadorReb(e.target.value); setPreviewUrl(null) }}
+                    placeholder="REB"
+                    inputMode="numeric"
+                    className="h-8 text-xs text-center"
+                  />
+                  <Input
+                    value={jugadorAst}
+                    onChange={(e) => { setJugadorAst(e.target.value); setPreviewUrl(null) }}
+                    placeholder="AST"
+                    inputMode="numeric"
+                    className="h-8 text-xs text-center"
+                  />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>

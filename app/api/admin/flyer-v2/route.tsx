@@ -691,6 +691,13 @@ export async function GET(req: NextRequest) {
   const jugadorPremio  = searchParams.get("jugadorPremio") ?? "BROU"
   const jugadorFecha   = searchParams.get("jugadorFecha") ?? ""
   const jugadorTeamLogo = searchParams.get("jugadorTeamLogo") ?? ""
+  // Stats del jugador para el template "Jugador del Partido" — vienen
+  // del autoselect del partido en el admin (top 5 del equipo ganador,
+  // datos de Genius). Se renderizan como una fila grande PTS·REB·AST
+  // debajo del nombre. Vacío = no se muestra la fila.
+  const jPts = searchParams.get("jPts") ?? ""
+  const jReb = searchParams.get("jReb") ?? ""
+  const jAst = searchParams.get("jAst") ?? ""
   // Noticia — categoría, fecha y URL opcionales. Título/subtítulo y fondo
   // reutilizan los inputs globales.
   const noticiaCategoria = (searchParams.get("noticiaCategoria") ?? "NOTICIA").trim()
@@ -1147,6 +1154,28 @@ export async function GET(req: NextRequest) {
             <div style={{ position: "absolute", bottom: Math.round(H * 0.11) + safeBottomFor(format), left: 48, right: 48, display: "flex", flexDirection: "column", gap: 4 }}>
               <span style={{ color: "white", fontSize: 34, fontWeight: 800, letterSpacing: 1 }}>{jugadorNombre.toUpperCase()}</span>
               {jugadorClub ? <span style={{ color: "rgba(255,255,255,0.55)", fontSize: 20, fontWeight: 600, letterSpacing: 2 }}>{jugadorClub.toUpperCase()}</span> : null}
+              {(jPts || jReb || jAst) ? (
+                <div style={{ display: "flex", alignItems: "flex-end", gap: 28, marginTop: 14 }}>
+                  {jPts ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 72, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jPts}</span>
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>PUNTOS</span>
+                    </div>
+                  ) : null}
+                  {jReb ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 72, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jReb}</span>
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>REBOTES</span>
+                    </div>
+                  ) : null}
+                  {jAst ? (
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                      <span style={{ color: "white", fontFamily: "Archivo Black", fontSize: 72, fontWeight: 900, lineHeight: 0.95, letterSpacing: -2, display: "flex" }}>{jAst}</span>
+                      <span style={{ color: "rgba(255,255,255,0.6)", fontSize: 14, fontWeight: 800, letterSpacing: 3, marginTop: 2, display: "flex" }}>ASIST.</span>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
             {sponsorLogos.length > 0 ? (
               <div style={{ position: "absolute", bottom: safeBottomFor(format), left: 0, right: 0, height: 90, background: !showSponsorBar ? "transparent" : isPremiumTheme ? premiumSponsorBarBg : sponsorBg === "white" ? "rgba(255,255,255,0.92)" : "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", gap: 40 }}>
