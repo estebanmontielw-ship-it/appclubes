@@ -1606,9 +1606,13 @@ export async function GET(req: NextRequest) {
                   </div>
                 ) : null}
 
-                {/* Eyebrow */}
+                {/* Eyebrow + título respetan textColor (claro / oscuro).
+                    En modo dark (fondo claro tipo paper) el blanco hardcoded
+                    quedaba invisible — pasa típico cuando el bg image tiene
+                    un triángulo paper arriba. Ahora título cae a deep navy
+                    y eyebrow al accent del hdrPalette (que es solid). */}
                 <span style={{
-                  color: hdrPalette.accentSoft,
+                  color: textColor === "dark" ? hdrPalette.gold : hdrPalette.accentSoft,
                   fontFamily: "Inter", fontSize: Math.round(17 * vMult),
                   fontWeight: 600, letterSpacing: 4, marginBottom: 12,
                   display: "flex",
@@ -1621,7 +1625,8 @@ export async function GET(req: NextRequest) {
                 <div style={{ display: "flex", flexDirection: "column", alignItems: isCenteredHeader ? "center" : "flex-start" }}>
                   {tituloLines.map((ln, i) => (
                     <span key={i} style={{
-                      color: "white", fontFamily: "Archivo Black",
+                      color: textColor === "dark" ? "#0A1230" : "white",
+                      fontFamily: "Archivo Black",
                       fontSize: heroSize, fontWeight: 900,
                       letterSpacing: -4, lineHeight: 0.92, display: "flex",
                       textAlign: isCenteredHeader ? "center" : "left",
