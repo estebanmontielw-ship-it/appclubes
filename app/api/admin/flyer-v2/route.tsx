@@ -638,6 +638,23 @@ async function loadFonts() {
   return fonts
 }
 
+// Materializa el ImageResponse antes de retornar al cliente: consume el
+// stream de satori sincrónicamente. Si satori falla, el error revienta
+// adentro del `try/catch` del handler en lugar de morir mid-stream
+// (que es cuando Next devuelve la HTML genérica de 500 que bypasea
+// nuestro `e.message`). Con esto cualquier "Cannot read properties of
+// undefined" llega al cliente como texto plano y queda visible en logs.
+async function renderImage(
+  jsx: ConstructorParameters<typeof ImageResponse>[0],
+  options: ConstructorParameters<typeof ImageResponse>[1],
+): Promise<Response> {
+  const imgResp = new ImageResponse(jsx, options)
+  const buf = await imgResp.arrayBuffer()
+  const headers = new Headers(imgResp.headers)
+  if (!headers.has("content-type")) headers.set("content-type", "image/png")
+  return new Response(buf, { status: 200, headers })
+}
+
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
   const fonts = await loadFonts()
@@ -840,7 +857,7 @@ export async function GET(req: NextRequest) {
         Math.floor((W - horizontalPadding * 2 - gap * (perRow - 1)) / perRow)
       )
 
-      return new ImageResponse(
+      return renderImage(
         (
           <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: LNBF.font.body, position: "relative", overflow: "hidden", paddingTop: safeTopFor(format), paddingBottom: safeBottomFor(format) }}>
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
@@ -994,7 +1011,7 @@ export async function GET(req: NextRequest) {
       const colHeaderFont  = Math.round(14 * vMult)
       const tituloFinal = titulo || "TABLA DE POSICIONES"
 
-      return new ImageResponse(
+      return renderImage(
         (
           <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: "sans-serif", position: "relative", overflow: "hidden", paddingTop: safeTopFor(format), paddingBottom: safeBottomFor(format) }}>
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
@@ -1096,7 +1113,7 @@ export async function GET(req: NextRequest) {
       const H = format === "historia" ? 1920 : 1350
       const isFemLiga = liga === "lnbf" || liga === "u22f"
       const jugadorHeading = isFemLiga ? "JUGADORA" : "JUGADOR"
-      return new ImageResponse(
+      return renderImage(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {playerPhotoUrl ? (() => {
@@ -1156,7 +1173,7 @@ export async function GET(req: NextRequest) {
       const catText = (noticiaCategoria || "NOTICIA").toUpperCase()
       const sponsorBarH = isBanner ? 70 : 90
       const showBottomSponsors = sponsorLogos.length > 0 && !isBanner
-      return new ImageResponse(
+      return renderImage(
         (
           <div style={{ width: noticiaW, height: noticiaH, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {bgImageUrl ? (
@@ -1202,7 +1219,7 @@ export async function GET(req: NextRequest) {
       const vMult = format === "historia" ? (safeZones ? 1.0 : 1.4) : 1.0
       const tituloFinal = titulo || `Líder en ${statLabel.toLowerCase()}`
       const photoSrc = playerPhotoUrl || leader.photoUrl || ""
-      return new ImageResponse(
+      return renderImage(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {photoSrc ? (() => {
@@ -1367,7 +1384,7 @@ export async function GET(req: NextRequest) {
     const cardH = Math.max(160, baseCardH - Math.ceil(extraHeader / count))
     const gapBetweenCards = Math.round((count === 1 ? 0 : count <= 3 ? 20 : 16) * vMult)
 
-    return new ImageResponse(
+    return renderImage(
       (
         <div style={{
           width: W, height: H,
@@ -1705,6 +1722,13 @@ export async function GET(req: NextRequest) {
       { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
     )
   } catch (e: any) {
-    return new Response(e.message ?? "Error generando flyer", { status: 500 })
+    // Surface the full chain (incluye el `cause` que tira satori cuando
+    // un text node de la JSX recibe undefined). Se loguea a console
+    // para que aparezca en Vercel runtime logs.
+    const cause = e?.cause ? `\nCause: ${e.cause?.message ?? String(e.cause)}` : ""
+    const msg = `${e?.message ?? "Error generando flyer"}${cause}`
+    console.error("[flyer-v2] render error:", e)
+    if (e?.cause) console.error("[flyer-v2] cause:", e.cause)
+    return new Response(msg, { status: 500 })
   }
 }
