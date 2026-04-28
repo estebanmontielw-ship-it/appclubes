@@ -643,33 +643,8 @@ async function loadFonts() {
   return fonts
 }
 
-// Materializa el ImageResponse antes de retornar al cliente: consume el
-// stream de satori sincrónicamente. Si satori falla, el error revienta
-// adentro del `try/catch` del handler en lugar de morir mid-stream
-// (que es cuando Next devuelve la HTML genérica de 500 que bypasea
-// nuestro `e.message`). Con esto cualquier "Cannot read properties of
-// undefined" llega al cliente como texto plano y queda visible en logs.
-async function renderImage(
-  jsx: ConstructorParameters<typeof ImageResponse>[0],
-  options: ConstructorParameters<typeof ImageResponse>[1],
-): Promise<Response> {
-  const imgResp = new ImageResponse(jsx, options)
-  const buf = await imgResp.arrayBuffer()
-  const headers = new Headers(imgResp.headers)
-  if (!headers.has("content-type")) headers.set("content-type", "image/png")
-  return new Response(buf, { status: 200, headers })
-}
-
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl
-  // Log params al inicio de cada request — el error de satori no llega a
-  // nuestro try/catch (revienta en un microtask aparte, se ve en logs
-  // pero sin contexto). Imprimiendo los params al entrar tenemos la
-  // request y el error en líneas adyacentes del log de Vercel.
-  const paramsDump = Array.from(searchParams.entries())
-    .map(([k, v]) => `${k}=${v.length > 120 ? v.slice(0, 120) + "..." : v}`)
-    .join(" ")
-  console.log("[flyer-v2] GET", paramsDump)
   const fonts = await loadFonts()
   const matchIdsParam = searchParams.get("matchIds") ?? searchParams.get("matchId") ?? ""
   const template = searchParams.get("template") ?? "pre"
@@ -744,14 +719,12 @@ export async function GET(req: NextRequest) {
     ? lnbPatternRaw
     : "scratch") as "clean" | "scratch" | "dots" | "court" | "halftone" | "speed"
   // Patrón de fondo para temas u22*-premium: clean / dots / stripes /
-  // court / bandera / paper. Default "clean" — bandera + paper son
-  // opt-in porque rendericen sobre todo el flyer (modo "fondo
-  // alternativo Paraguay") y satori a veces tiene problemas con sus
-  // clip-paths.
-  const u22PatternRaw = searchParams.get("u22Pattern") ?? "clean"
+  // court / bandera / paper. Default "bandera" (composición Paraguay
+  // triangular tipo flyer formal).
+  const u22PatternRaw = searchParams.get("u22Pattern") ?? "bandera"
   const u22Pattern = (["clean", "dots", "stripes", "court", "bandera", "paper"].includes(u22PatternRaw)
     ? u22PatternRaw
-    : "clean") as U22Variant
+    : "bandera") as U22Variant
   // Badge arriba derecha en tema lnbf-premium (ej. "FECHA 1"). Si viene
   // vacío no se renderiza el pill.
   const lnbfBadge = (searchParams.get("lnbfBadge") ?? "").trim()
@@ -872,7 +845,7 @@ export async function GET(req: NextRequest) {
         Math.floor((W - horizontalPadding * 2 - gap * (perRow - 1)) / perRow)
       )
 
-      return renderImage(
+      return new ImageResponse(
         (
           <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: LNBF.font.body, position: "relative", overflow: "hidden", paddingTop: safeTopFor(format), paddingBottom: safeBottomFor(format) }}>
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
@@ -1026,7 +999,7 @@ export async function GET(req: NextRequest) {
       const colHeaderFont  = Math.round(14 * vMult)
       const tituloFinal = titulo || "TABLA DE POSICIONES"
 
-      return renderImage(
+      return new ImageResponse(
         (
           <div style={{ width: W, height: H, background: themeBg, display: "flex", flexDirection: "column", alignItems: "center", fontFamily: "sans-serif", position: "relative", overflow: "hidden", paddingTop: safeTopFor(format), paddingBottom: safeBottomFor(format) }}>
             {bgImageUrl ? <img src={bgImageUrl} width={W} height={H} style={{ position: "absolute", top: 0, left: 0, width: W, height: H, objectFit: bgFit, display: "flex" }} alt="" /> : null}
@@ -1128,7 +1101,7 @@ export async function GET(req: NextRequest) {
       const H = format === "historia" ? 1920 : 1350
       const isFemLiga = liga === "lnbf" || liga === "u22f"
       const jugadorHeading = isFemLiga ? "JUGADORA" : "JUGADOR"
-      return renderImage(
+      return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {playerPhotoUrl ? (() => {
@@ -1188,7 +1161,7 @@ export async function GET(req: NextRequest) {
       const catText = (noticiaCategoria || "NOTICIA").toUpperCase()
       const sponsorBarH = isBanner ? 70 : 90
       const showBottomSponsors = sponsorLogos.length > 0 && !isBanner
-      return renderImage(
+      return new ImageResponse(
         (
           <div style={{ width: noticiaW, height: noticiaH, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {bgImageUrl ? (
@@ -1234,7 +1207,7 @@ export async function GET(req: NextRequest) {
       const vMult = format === "historia" ? (safeZones ? 1.0 : 1.4) : 1.0
       const tituloFinal = titulo || `Líder en ${statLabel.toLowerCase()}`
       const photoSrc = playerPhotoUrl || leader.photoUrl || ""
-      return renderImage(
+      return new ImageResponse(
         (
           <div style={{ width: W, height: H, display: "flex", fontFamily: "sans-serif", position: "relative", overflow: "hidden", background: themeBg }}>
             {photoSrc ? (() => {
@@ -1399,7 +1372,7 @@ export async function GET(req: NextRequest) {
     const cardH = Math.max(160, baseCardH - Math.ceil(extraHeader / count))
     const gapBetweenCards = Math.round((count === 1 ? 0 : count <= 3 ? 20 : 16) * vMult)
 
-    return renderImage(
+    return new ImageResponse(
       (
         <div style={{
           width: W, height: H,
@@ -1737,18 +1710,6 @@ export async function GET(req: NextRequest) {
       { width: W, height: H, fonts, headers: { "cache-control": "public, max-age=60, s-maxage=0, must-revalidate" } }
     )
   } catch (e: any) {
-    // Surface the full chain (incluye el `cause` que tira satori cuando
-    // un text node de la JSX recibe undefined). Se loguea a console
-    // para que aparezca en Vercel runtime logs junto con los params
-    // de la request — sin esto debugger es imposible.
-    const cause = e?.cause ? `\nCause: ${e.cause?.message ?? String(e.cause)}` : ""
-    const msg = `${e?.message ?? "Error generando flyer"}${cause}`
-    const paramsDump = Array.from(req.nextUrl.searchParams.entries())
-      .map(([k, v]) => `  ${k}=${v.length > 200 ? v.slice(0, 200) + "..." : v}`)
-      .join("\n")
-    console.error("[flyer-v2] render error:", e?.message, "\nparams:\n" + paramsDump)
-    if (e?.cause) console.error("[flyer-v2] cause:", e.cause)
-    if (e?.stack) console.error("[flyer-v2] stack:", e.stack)
-    return new Response(msg, { status: 500 })
+    return new Response(e?.message ?? "Error generando flyer", { status: 500 })
   }
 }
