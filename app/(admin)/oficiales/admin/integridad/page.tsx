@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import {
   Activity, AlertTriangle, AlertCircle, Loader2, RefreshCw, Play,
-  Shield, Users, ExternalLink, ChevronRight, X, FileText, Clock,
+  Shield, Users, ExternalLink, ChevronRight, X, FileText, Clock, Radio,
 } from "lucide-react"
 
 // ─── TIPOS ───────────────────────────────────────────────────
@@ -477,7 +477,7 @@ function TabPartidos() {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [monitoreados, setMonitoreados] = useState<Array<{ name: string; sigla: string }>>([])
   const [loading, setLoading] = useState(true)
-  const [filtroEstado, setFiltroEstado] = useState<"todos" | "finalizados" | "pendientes" | "criticos">("finalizados")
+  const [filtroEstado, setFiltroEstado] = useState<"todos" | "finalizados" | "pendientes" | "criticos" | "en_vivo">("finalizados")
   const [analizandoId, setAnalizandoId] = useState<string | null>(null)
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
 
@@ -517,9 +517,12 @@ function TabPartidos() {
   const filtrados = partidos.filter((p) => {
     if (filtroEstado === "criticos") return p.esCritico
     if (filtroEstado === "finalizados") return p.estado === "COMPLETE"
+    if (filtroEstado === "en_vivo") return p.estado === "IN_PROGRESS" || p.estado === "EN_CURSO"
     if (filtroEstado === "pendientes") return p.estado !== "COMPLETE"
     return true
   })
+
+  const liveCount = partidos.filter((p) => p.estado === "IN_PROGRESS" || p.estado === "EN_CURSO").length
 
   return (
     <div className="space-y-4">
@@ -537,6 +540,22 @@ function TabPartidos() {
 
       {/* Filtros */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {liveCount > 0 && (
+          <button
+            onClick={() => setFiltroEstado("en_vivo")}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border ${
+              filtroEstado === "en_vivo"
+                ? "bg-red-600 text-white border-red-600"
+                : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
+            }`}
+          >
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500" />
+            </span>
+            EN VIVO ({liveCount})
+          </button>
+        )}
         {[
           { v: "finalizados", l: "Finalizados" },
           { v: "criticos", l: "Críticos (2 monitoreados)" },
@@ -590,9 +609,14 @@ function TabPartidos() {
       {seleccionado && (
         <ModalAnalisis
           matchId={seleccionado}
+          partidoEnVivo={
+            partidos.find((p) => p.matchId === seleccionado)?.estado === "IN_PROGRESS" ||
+            partidos.find((p) => p.matchId === seleccionado)?.estado === "EN_CURSO"
+          }
           onClose={() => setSeleccionado(null)}
           onReanalizar={() => analizar(seleccionado, true)}
           reanalizando={analizandoId === seleccionado}
+          onLiveUpdate={() => load()}
         />
       )}
     </div>
@@ -606,15 +630,25 @@ function PartidoCard({ partido: p, analizando, onAnalizar, onVer }: {
   onVer: () => void
 }) {
   const finalizado = p.estado === "COMPLETE"
+  const enVivo = p.estado === "IN_PROGRESS" || p.estado === "EN_CURSO"
   const tieneAnalisis = p.analisis !== null
 
   return (
     <div className={`bg-white rounded-xl border p-4 transition-shadow hover:shadow-sm ${
-      p.esCritico ? "border-red-200" : "border-gray-100"
+      enVivo ? "border-red-300 ring-1 ring-red-200" : p.esCritico ? "border-red-200" : "border-gray-100"
     }`}>
       <div className="flex items-start gap-3">
         {/* Badges izquierda */}
         <div className="shrink-0 flex flex-col gap-1">
+          {enVivo && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+              </span>
+              EN VIVO
+            </span>
+          )}
           {p.esCritico && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200">
               <AlertTriangle className="h-3 w-3" /> CRÍTICO
@@ -666,6 +700,14 @@ function PartidoCard({ partido: p, analizando, onAnalizar, onVer }: {
                 {analizando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
               </button>
             </>
+          ) : enVivo ? (
+            <button
+              onClick={onVer}
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-red-600 text-white hover:bg-red-700"
+              title="Monitorear en vivo (polling FibaLiveStats cada 60s)"
+            >
+              <Radio className="h-3.5 w-3.5" /> Monitorear
+            </button>
           ) : (
             <button
               onClick={() => onAnalizar(false)}
@@ -703,15 +745,20 @@ function TeamBadge({ logo, sigla, name }: {
 
 // ─── MODAL: DETALLE DEL ANÁLISIS ─────────────────────────────
 
-function ModalAnalisis({ matchId, onClose, onReanalizar, reanalizando }: {
+function ModalAnalisis({ matchId, partidoEnVivo, onClose, onReanalizar, reanalizando, onLiveUpdate }: {
   matchId: string
+  partidoEnVivo: boolean
   onClose: () => void
   onReanalizar: () => void
   reanalizando: boolean
+  onLiveUpdate: () => void
 }) {
   const [analisis, setAnalisis] = useState<Analisis | null>(null)
   const [loading, setLoading] = useState(true)
+  const [pollingActivo, setPollingActivo] = useState(partidoEnVivo)
+  const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null)
 
+  // Carga inicial del análisis cacheado
   useEffect(() => {
     setLoading(true)
     fetch(`/api/admin/integridad/analisis/${matchId}`, { credentials: "include" })
@@ -721,15 +768,59 @@ function ModalAnalisis({ matchId, onClose, onReanalizar, reanalizando }: {
       .finally(() => setLoading(false))
   }, [matchId, reanalizando])
 
+  // Live polling cada 60s vía FibaLiveStats (cero quota Genius)
+  useEffect(() => {
+    if (!pollingActivo) return
+
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/admin/integridad/analisis/${matchId}?mode=live`, {
+          method: "POST",
+          credentials: "include",
+        })
+        const data = await res.json()
+        if (res.ok && data.analisis) {
+          setAnalisis(data.analisis)
+          setUltimaActualizacion(new Date())
+          // Si el partido pasó a COMPLETE, paramos el polling y refrescamos lista
+          if (data.analisis.estadoPartido === "COMPLETE") {
+            setPollingActivo(false)
+            onLiveUpdate()
+          }
+        }
+      } catch {
+        // ignorar errores transitorios de red
+      }
+    }
+
+    tick() // disparar inmediato al abrir
+    const id = setInterval(tick, 60_000)
+    return () => clearInterval(id)
+  }, [pollingActivo, matchId, onLiveUpdate])
+
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
       <div className="bg-white w-full sm:max-w-3xl max-h-[95vh] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
-          <div className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold text-gray-900">
+          <div className="flex items-center gap-2 min-w-0">
+            <Activity className="h-5 w-5 text-primary shrink-0" />
+            <h2 className="font-semibold text-gray-900 truncate">
               Análisis · partido {matchId}
             </h2>
+            {pollingActivo && (
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white shrink-0">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white opacity-75" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-white" />
+                </span>
+                EN VIVO
+              </span>
+            )}
+            {ultimaActualizacion && pollingActivo && (
+              <span className="text-[10px] text-gray-400 hidden sm:inline shrink-0">
+                · {ultimaActualizacion.toLocaleTimeString("es-PY")}
+              </span>
+            )}
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
             <X className="h-5 w-5" />
