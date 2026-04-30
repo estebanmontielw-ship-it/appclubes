@@ -1121,7 +1121,9 @@ function RecomendacionBox({ a }: { a: Analisis }) {
 // ─── MODAL: DETALLE DEL JUGADOR ──────────────────────────────
 
 interface DetalleJugador {
-  jugador: JugadorTierRow
+  jugador: JugadorTierRow & { personId?: number | null }
+  personIdSource: "stored" | "snapshot" | "discovered" | null
+  datos: "genius_warehouse" | "snapshots_cacheados"
   statsAgregadas: {
     games: number
     minsAvg: number
@@ -1129,8 +1131,10 @@ interface DetalleJugador {
     fg2m: number; fg2a: number; fg2Pct: number | null
     fg3m: number; fg3a: number; fg3Pct: number | null
     ftm: number; fta: number; ftPct: number | null
-    rebAvg: number; astAvg: number
-    stlAvg: number; blkAvg: number; toAvg: number; pfAvg: number
+    rebAvg: number; rebOff: number; rebDef: number
+    astAvg: number
+    stlAvg: number; blkAvg: number; toAvg: number; pfAvg: number; fr: number
+    effAvg: number
     starts: number
   } | null
   patrones: Array<{
@@ -1163,9 +1167,13 @@ interface DetalleJugador {
     fg2m: number; fg2a: number; fg2Pct: number | null
     fg3m: number; fg3a: number; fg3Pct: number | null
     ftm: number; fta: number; ftPct: number | null
+    rebOff: number; rebDef: number
     reb: number; ast: number
     stl: number; blk: number
-    to: number; pf: number
+    to: number; pf: number; fr: number
+    eff: number | null
+    plusMinus: number | null
+    pos: string | null
     starter: boolean; captain: boolean
     patronesEnPartido: string[]
   }>
@@ -1254,12 +1262,17 @@ function ModalDetalleJugador({ jugador, onClose, onEdit }: {
                       <StatBox label="3PT%" value={data.statsAgregadas.fg3Pct != null ? `${data.statsAgregadas.fg3Pct.toFixed(1)}%` : "—"} sub={`${data.statsAgregadas.fg3m}/${data.statsAgregadas.fg3a}`} />
                       <StatBox label="TL%" value={data.statsAgregadas.ftPct != null ? `${data.statsAgregadas.ftPct.toFixed(1)}%` : "—"} sub={`${data.statsAgregadas.ftm}/${data.statsAgregadas.fta}`} />
                       <StatBox label="FALTAS/G" value={data.statsAgregadas.pfAvg.toFixed(1)} />
-                      <StatBox label="TITULAR" value={`${data.statsAgregadas.starts}/${data.statsAgregadas.games}`} />
+                      <StatBox label="EFF/G" value={data.statsAgregadas.effAvg.toFixed(1)} />
                     </div>
+                    <p className="text-[10px] text-gray-400 text-center mt-2">
+                      {data.datos === "genius_warehouse"
+                        ? `Datos de Genius Warehouse — todos los partidos del año${data.jugador.personId ? ` (Person ID ${data.jugador.personId})` : ""}`
+                        : "Datos de los análisis cacheados — solo partidos analizados"}
+                    </p>
                   </div>
                 ) : (
                   <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500 text-center">
-                    Sin partidos analizados todavía. Las stats aparecen una vez que se analizan partidos donde participe.
+                    Sin partidos disponibles. Verificá que el jugador tenga partidos jugados en la temporada actual.
                   </div>
                 )}
               </div>
@@ -1310,26 +1323,32 @@ function ModalDetalleJugador({ jugador, onClose, onEdit }: {
                           <th className="text-left p-2 text-gray-500">Fecha</th>
                           <th className="text-left p-2 text-gray-500">Oponente</th>
                           <th className="text-center p-2 text-gray-500">Resultado</th>
+                          <th className="text-center p-2 text-gray-500">Pos</th>
                           <th className="text-center p-2 text-gray-500">MIN</th>
                           <th className="text-center p-2 text-gray-500">PTS</th>
-                          <th className="text-center p-2 text-gray-500">FG</th>
+                          <th className="text-center p-2 text-gray-500" title="2 puntos">2PT</th>
                           <th className="text-center p-2 text-gray-500">3PT</th>
                           <th className="text-center p-2 text-gray-500">TL</th>
+                          <th className="text-center p-2 text-gray-500" title="Rebotes Of/Def">RO/RD</th>
                           <th className="text-center p-2 text-gray-500">REB</th>
                           <th className="text-center p-2 text-gray-500">AST</th>
+                          <th className="text-center p-2 text-gray-500">STL</th>
+                          <th className="text-center p-2 text-gray-500">BLK</th>
                           <th className="text-center p-2 text-gray-500">TO</th>
-                          <th className="text-center p-2 text-gray-500">PF</th>
+                          <th className="text-center p-2 text-gray-500" title="Faltas pers./recibidas">PF/FR</th>
+                          <th className="text-center p-2 text-gray-500" title="Eficiencia">EFF</th>
+                          <th className="text-center p-2 text-gray-500" title="Plus/minus">+/-</th>
                           <th className="text-left p-2 text-gray-500">⚠️</th>
                         </tr>
                       </thead>
                       <tbody>
                         {data.partidosRecientes.map((p) => (
                           <tr key={p.matchId} className="border-b border-gray-100 last:border-0 hover:bg-white">
-                            <td className="p-2 text-gray-600">{p.fecha ?? "—"}</td>
-                            <td className="p-2">
+                            <td className="p-2 text-gray-600 whitespace-nowrap">{p.fecha ?? "—"}</td>
+                            <td className="p-2 whitespace-nowrap">
                               {p.esLocal ? "vs" : "@"} <span className="font-medium">{p.oponenteSigla || p.oponente.slice(0, 6)}</span>
                             </td>
-                            <td className="p-2 text-center font-mono">
+                            <td className="p-2 text-center font-mono whitespace-nowrap">
                               <span className={
                                 p.resultado === "GANADO" ? "text-green-700" :
                                 p.resultado === "PERDIDO" ? "text-red-700" : "text-gray-500"
@@ -1337,15 +1356,27 @@ function ModalDetalleJugador({ jugador, onClose, onEdit }: {
                                 {p.scorePropio ?? "–"}-{p.scoreOponente ?? "–"}
                               </span>
                             </td>
+                            <td className="p-2 text-center text-gray-500">{p.pos ?? "—"}</td>
                             <td className="p-2 text-center font-mono">{p.mins != null ? p.mins.toFixed(0) : "–"}</td>
                             <td className="p-2 text-center font-mono font-bold">{p.pts}</td>
-                            <td className="p-2 text-center font-mono">{p.fg2m + p.fg3m}/{p.fg2a + p.fg3a}</td>
+                            <td className="p-2 text-center font-mono">{p.fg2m}/{p.fg2a}</td>
                             <td className="p-2 text-center font-mono">{p.fg3m}/{p.fg3a}</td>
                             <td className="p-2 text-center font-mono">{p.ftm}/{p.fta}</td>
-                            <td className="p-2 text-center font-mono">{p.reb}</td>
+                            <td className="p-2 text-center font-mono text-gray-500">{p.rebOff}/{p.rebDef}</td>
+                            <td className="p-2 text-center font-mono font-bold">{p.reb}</td>
                             <td className="p-2 text-center font-mono">{p.ast}</td>
+                            <td className="p-2 text-center font-mono">{p.stl}</td>
+                            <td className="p-2 text-center font-mono">{p.blk}</td>
                             <td className="p-2 text-center font-mono">{p.to}</td>
-                            <td className="p-2 text-center font-mono">{p.pf}</td>
+                            <td className="p-2 text-center font-mono text-gray-500">{p.pf}/{p.fr}</td>
+                            <td className="p-2 text-center font-mono">{p.eff != null ? Math.round(p.eff) : "—"}</td>
+                            <td className={`p-2 text-center font-mono font-bold ${
+                              p.plusMinus == null ? "text-gray-300" :
+                              p.plusMinus > 0 ? "text-green-600" :
+                              p.plusMinus < 0 ? "text-red-500" : "text-gray-400"
+                            }`}>
+                              {p.plusMinus == null ? "—" : p.plusMinus > 0 ? `+${p.plusMinus}` : String(p.plusMinus)}
+                            </td>
                             <td className="p-2 text-amber-600 font-bold">{p.patronesEnPartido.length > 0 ? p.patronesEnPartido.length : ""}</td>
                           </tr>
                         ))}

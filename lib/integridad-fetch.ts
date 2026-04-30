@@ -44,7 +44,10 @@ function pickLogo(c: any): string | null {
 
 /** Mapeo robusto de un objeto player (Genius warehouse o FibaLiveStats). */
 function mapPlayer(p: any): BoxscorePlayer {
+  const rawPid = p.personId ?? p.pid ?? null
+  const personId = rawPid != null && Number.isFinite(Number(rawPid)) ? Number(rawPid) : null
   return {
+    personId,
     name: (p.personName ?? `${p.fn ?? p.firstName ?? ""} ${p.ln ?? p.familyName ?? p.lastName ?? ""}`).trim(),
     number: String(p.no ?? p.shirtNumber ?? p.shirt ?? "–"),
     min: p.sMinutes ?? p.min ?? "–",

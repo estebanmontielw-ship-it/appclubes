@@ -30,6 +30,8 @@ export type Severidad = "BAJO" | "MEDIO" | "ALTO" | "CRITICO"
 export type Tier = "TIER_1" | "TIER_2" | "TIER_3"
 
 export interface BoxscorePlayer {
+  /** Genius personId (1M-3M range). null si solo viene de FibaLiveStats. */
+  personId: number | null
   name: string
   number: string
   /** minutos: número (Genius warehouse) o string "MM:SS" (FibaLiveStats). */
