@@ -6,6 +6,9 @@ import { handleApiError } from "@/lib/api-errors"
 import { detectPatterns, esPartidoCritico, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot, buildLiveSnapshotFromFiba } from "@/lib/integridad-fetch"
+import { emailIntegridadAnalisis } from "@/lib/email"
+
+const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
 
 export const dynamic = "force-dynamic"
 
@@ -189,6 +192,35 @@ export async function POST(
           detalles: { totalPatrones: patrones.length, severidadMax: sevMax } as any,
         },
       })
+    }
+
+    // 6. Email al admin si el partido finalizó y hay algo que reportar
+    //    Solo dispara cuando el partido pasó a COMPLETE en este análisis.
+    //    Para evitar spam, requerimos: patrones detectados o partido crítico.
+    const transitionToComplete =
+      snap.estadoPartido === "COMPLETE" &&
+      (existing?.estadoPartido !== "COMPLETE" || force)
+    const tieneAlgoQueReportar = patrones.length > 0 || esPartidoCritico(snap)
+
+    if (transitionToComplete && tieneAlgoQueReportar && INTEGRIDAD_NOTIFY_EMAIL) {
+      emailIntegridadAnalisis(INTEGRIDAD_NOTIFY_EMAIL, {
+        matchId: params.matchId,
+        equipoLocal: snap.equipoLocal,
+        equipoLocalSigla: snap.equipoLocalSigla,
+        equipoVisit: snap.equipoVisit,
+        equipoVisitSigla: snap.equipoVisitSigla,
+        scoreLocal: snap.scoreLocal,
+        scoreVisit: snap.scoreVisit,
+        totalPuntos: snap.totalPuntos,
+        esCritico: esPartidoCritico(snap),
+        totalPatrones: patrones.length,
+        severidadMax: sevMax,
+        patrones: patrones.map((p) => ({
+          tipoLabel: p.tipoLabel,
+          severidad: p.severidad,
+          descripcion: p.descripcion,
+        })),
+      }).catch(() => {})
     }
 
     return NextResponse.json({ analisis, cached: false })

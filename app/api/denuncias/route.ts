@@ -2,7 +2,10 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import prisma from "@/lib/prisma"
 import { sendAdminPush } from "@/lib/admin-push"
+import { emailDenunciaNueva } from "@/lib/email"
 import { handleApiError } from "@/lib/api-errors"
+
+const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
 
 const TIPOS_VALIDOS = [
   "MANIPULACION_RESULTADO",
@@ -126,6 +129,16 @@ export async function POST(request: Request) {
       "Nueva denuncia recibida",
       `Canal de Integridad: ${tipoSituacion.replaceAll("_", " ")}`
     ).catch(() => {})
+
+    // Email al admin (fire-and-forget — no bloquea respuesta)
+    if (INTEGRIDAD_NOTIFY_EMAIL) {
+      const denunciaParaEmail = await prisma.denuncia.findUnique({
+        where: { id: denuncia.id },
+      })
+      if (denunciaParaEmail) {
+        emailDenunciaNueva(INTEGRIDAD_NOTIFY_EMAIL, denunciaParaEmail).catch(() => {})
+      }
+    }
 
     return NextResponse.json({
       ok: true,

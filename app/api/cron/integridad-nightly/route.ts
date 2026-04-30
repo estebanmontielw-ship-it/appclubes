@@ -5,6 +5,9 @@ import { getSchedule } from "@/lib/genius-sports"
 import { detectPatterns, esPartidoCritico, isMonitoredTeam, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot } from "@/lib/integridad-fetch"
+import { emailIntegridadAnalisis } from "@/lib/email"
+
+const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300 // 5 min — analizar varios partidos secuencial
@@ -151,6 +154,29 @@ export async function GET(request: Request) {
           matchId, ok: true,
           patrones: patrones.length, severidadMax: sevMax,
         })
+
+        // Email al admin si hay algo que reportar
+        const tieneAlgoQueReportar = patrones.length > 0 || esPartidoCritico(snap)
+        if (tieneAlgoQueReportar && INTEGRIDAD_NOTIFY_EMAIL) {
+          emailIntegridadAnalisis(INTEGRIDAD_NOTIFY_EMAIL, {
+            matchId,
+            equipoLocal: snap.equipoLocal,
+            equipoLocalSigla: snap.equipoLocalSigla,
+            equipoVisit: snap.equipoVisit,
+            equipoVisitSigla: snap.equipoVisitSigla,
+            scoreLocal: snap.scoreLocal,
+            scoreVisit: snap.scoreVisit,
+            totalPuntos: snap.totalPuntos,
+            esCritico: esPartidoCritico(snap),
+            totalPatrones: patrones.length,
+            severidadMax: sevMax,
+            patrones: patrones.map((p) => ({
+              tipoLabel: p.tipoLabel,
+              severidad: p.severidad,
+              descripcion: p.descripcion,
+            })),
+          }).catch(() => {})
+        }
       } catch (err: any) {
         resultados.push({
           matchId, ok: false,
