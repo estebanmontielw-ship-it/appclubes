@@ -185,6 +185,18 @@ export async function buildMatchSnapshot(matchId: string | number): Promise<Matc
   const totalPuntos =
     home.score != null && away.score != null ? home.score + away.score : null
 
+  // Genius a veces tarda 24-72h en marcar matchStatus=COMPLETE pero ya tiene
+  // los scores cargados (FibaLiveStats actualiza al instante, Warehouse API no).
+  // Si tenemos ambos scores válidos, lo tratamos como COMPLETE.
+  const estadoOriginal: string | null = m?.matchStatus ?? null
+  const tieneScoresFinales =
+    home.score != null && away.score != null &&
+    Number.isFinite(home.score) && Number.isFinite(away.score) &&
+    (home.score > 0 || away.score > 0)
+  const estadoPartido = estadoOriginal === "COMPLETE" || tieneScoresFinales
+    ? "COMPLETE"
+    : estadoOriginal
+
   return {
     matchId: String(matchId),
     fecha: parseDateTime(m?.matchTime),
@@ -198,7 +210,7 @@ export async function buildMatchSnapshot(matchId: string | number): Promise<Matc
     scoreVisit: away.score,
     totalPuntos,
     periodScores,
-    estadoPartido: m?.matchStatus ?? null,
+    estadoPartido,
     home: homeTeam,
     away: awayTeam,
   }

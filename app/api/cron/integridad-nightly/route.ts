@@ -50,10 +50,17 @@ export async function GET(request: Request) {
     const matches: any[] = raw?.response?.data ?? raw?.data ?? []
 
     // 2. Filtrar finalizados con clubes monitoreados
+    //    Tratamos como finalizado si matchStatus=COMPLETE O si tiene ambos
+    //    scores cargados (Genius a veces tarda en actualizar el status).
     const candidatos = matches.filter((m) => {
-      if (m.matchStatus !== "COMPLETE") return false
       const homeC = m.competitors?.find((c: any) => c.isHomeCompetitor === 1) ?? m.competitors?.[0]
       const awayC = m.competitors?.find((c: any) => c.isHomeCompetitor === 0) ?? m.competitors?.[1]
+      const sH = homeC?.scoreString ? parseInt(homeC.scoreString, 10) : null
+      const sA = awayC?.scoreString ? parseInt(awayC.scoreString, 10) : null
+      const tieneScores = sH != null && sA != null &&
+        Number.isFinite(sH) && Number.isFinite(sA) && (sH > 0 || sA > 0)
+      if (m.matchStatus !== "COMPLETE" && !tieneScores) return false
+
       const homeMonit = isMonitoredTeam(
         homeC?.competitorName ?? "",
         homeC?.teamCode ?? null
