@@ -111,9 +111,10 @@ export function normalizeName(s: string): string {
 
 /**
  * Convierte minutos de cualquier formato a número decimal.
- * Acepta: number, "MM:SS", "MM", "–", "".
+ * Acepta: number, "MM:SS", "MM", "–", "", null.
  */
-export function parseMinutes(min: number | string): number | null {
+export function parseMinutes(min: number | string | null | undefined): number | null {
+  if (min == null) return null
   if (typeof min === "number") return Number.isFinite(min) ? min : null
   if (typeof min !== "string") return null
   const trimmed = min.trim()
