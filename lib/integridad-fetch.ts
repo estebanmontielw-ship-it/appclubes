@@ -204,5 +204,109 @@ export async function buildMatchSnapshot(matchId: string | number): Promise<Matc
   }
 }
 
+/**
+ * Construye un MatchSnapshot SOLO desde FibaLiveStats data.json.
+ *
+ * Para uso en polling EN VIVO. Cero llamadas al API de Genius (cero
+ * quota). FibaLiveStats es público y se puede llamar libremente.
+ *
+ * Devuelve null si FibaLiveStats no tiene datos del partido todavía.
+ */
+export async function buildLiveSnapshotFromFiba(
+  matchId: string | number
+): Promise<MatchSnapshot | null> {
+  let fibaData: any = null
+  try {
+    const r = await fetch(`${FIBA_BASE}/data/${matchId}/data.json`, {
+      next: { revalidate: 0 },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!r.ok) return null
+    fibaData = await r.json()
+  } catch {
+    return null
+  }
+
+  const fibaTeams: any[] = fibaData?.tm ? Object.values(fibaData.tm) : []
+  const fibaHome = fibaTeams.find((t: any) => t.sno === "1") ?? fibaTeams[0] ?? null
+  const fibaAway = fibaTeams.find((t: any) => t.sno === "2") ?? fibaTeams[1] ?? null
+  if (!fibaHome || !fibaAway) return null
+
+  const homeName: string = fibaHome.name ?? fibaHome.fullName ?? fibaHome.shortName ?? "Local"
+  const awayName: string = fibaAway.name ?? fibaAway.fullName ?? fibaAway.shortName ?? "Visitante"
+  const homeSigla: string | null = fibaHome.code ?? fibaHome.shortName ?? null
+  const awaySigla: string | null = fibaAway.code ?? fibaAway.shortName ?? null
+
+  const parseN = (v: any): number | null => {
+    if (typeof v === "number") return Number.isFinite(v) ? v : null
+    if (typeof v !== "string" || v === "") return null
+    const n = parseInt(v, 10)
+    return Number.isFinite(n) ? n : null
+  }
+
+  const homeScore = parseN(fibaHome.score) ?? parseN(fibaHome.pts)
+  const awayScore = parseN(fibaAway.score) ?? parseN(fibaAway.pts)
+
+  // Period scores
+  const periodScores: Array<{ home: number; away: number }> = []
+  const numPeriods = Math.max(
+    Object.keys(fibaHome?.per ?? {}).length,
+    Object.keys(fibaAway?.per ?? {}).length
+  )
+  for (let p = 1; p <= numPeriods; p++) {
+    const h = parseN(fibaHome?.per?.[p]?.sc) ?? 0
+    const a = parseN(fibaAway?.per?.[p]?.sc) ?? 0
+    // Skip cuartos sin datos (los próximos)
+    if (h === 0 && a === 0 && p > 1) continue
+    periodScores.push({ home: h, away: a })
+  }
+
+  const mapPlayers = (team: any): BoxscorePlayer[] => {
+    if (!team?.pl) return []
+    return Object.values(team.pl).map(mapPlayer)
+  }
+
+  // Estado: FibaLiveStats no siempre lo expone limpio. Inferimos:
+  //   - si totalMin === 40 (o más) y hay score → COMPLETE
+  //   - si hay score y al menos 1 cuarto con datos → IN_PROGRESS
+  //   - si no hay score → SCHEDULED
+  let estado: string | null = null
+  const periodMax = fibaData?.period ?? fibaData?.actual?.period ?? null
+  const fibaStatus = fibaData?.matchStatus ?? fibaData?.status ?? null
+  if (typeof fibaStatus === "string") {
+    estado = fibaStatus.toUpperCase()
+  } else if (homeScore != null && awayScore != null) {
+    estado = periodScores.length >= 4 && periodMax === null ? "COMPLETE" : "IN_PROGRESS"
+  } else {
+    estado = "SCHEDULED"
+  }
+
+  return {
+    matchId: String(matchId),
+    fecha: null,
+    competicionId: null,
+    competicionName: fibaData?.match?.competition?.name
+      ?? fibaData?.match?.competitionName
+      ?? null,
+    equipoLocal: homeName,
+    equipoLocalSigla: homeSigla,
+    equipoVisit: awayName,
+    equipoVisitSigla: awaySigla,
+    scoreLocal: homeScore,
+    scoreVisit: awayScore,
+    totalPuntos: homeScore != null && awayScore != null ? homeScore + awayScore : null,
+    periodScores,
+    estadoPartido: estado,
+    home: {
+      name: homeName, sigla: homeSigla, score: homeScore,
+      players: mapPlayers(fibaHome),
+    },
+    away: {
+      name: awayName, sigla: awaySigla, score: awayScore,
+      players: mapPlayers(fibaAway),
+    },
+  }
+}
+
 /** Convenience: pickLogo exportado por si la UI lo necesita. */
 export { pickLogo }

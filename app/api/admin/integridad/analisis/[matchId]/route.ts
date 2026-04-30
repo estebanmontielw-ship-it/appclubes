@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
 import { detectPatterns, esPartidoCritico, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
-import { buildMatchSnapshot } from "@/lib/integridad-fetch"
+import { buildMatchSnapshot, buildLiveSnapshotFromFiba } from "@/lib/integridad-fetch"
 
 export const dynamic = "force-dynamic"
 
@@ -67,6 +67,7 @@ export async function POST(
 
     const url = new URL(req.url)
     const force = url.searchParams.get("force") === "1"
+    const mode = url.searchParams.get("mode") === "live" ? "live" : "full"
 
     const existing = await prisma.integridadAnalisis.findUnique({
       where: { matchId: params.matchId },
@@ -75,12 +76,22 @@ export async function POST(
       },
     })
     // Cache permanente para partidos finalizados — sólo recalcula con force=1
-    if (existing && existing.estadoPartido === "COMPLETE" && !force) {
+    if (existing && existing.estadoPartido === "COMPLETE" && !force && mode !== "live") {
       return NextResponse.json({ analisis: existing, cached: true })
     }
 
-    // 1. Fetchear datos del partido (Genius + FibaLiveStats)
-    const snap = await buildMatchSnapshot(params.matchId)
+    // 1. Fetchear datos del partido
+    //    - mode=live → solo FibaLiveStats (cero quota Genius)
+    //    - mode=full → Genius + FibaLiveStats (canónico)
+    const snap = mode === "live"
+      ? await buildLiveSnapshotFromFiba(params.matchId)
+      : await buildMatchSnapshot(params.matchId)
+    if (!snap) {
+      return NextResponse.json(
+        { error: "FibaLiveStats todavía no tiene datos del partido" },
+        { status: 404 }
+      )
+    }
 
     // 2. Cargar jugadores tier activos
     const tierRows = await prisma.integridadJugadorTier.findMany({
@@ -167,16 +178,18 @@ export async function POST(
       })
     })
 
-    // 5. Audit log
-    await prisma.integridadAuditLog.create({
-      data: {
-        matchId: params.matchId,
-        accion: force ? "reanalizar" : "analizar",
-        userId: auth.user!.id,
-        userEmail: auth.user!.email,
-        detalles: { totalPatrones: patrones.length, severidadMax: sevMax } as any,
-      },
-    })
+    // 5. Audit log (solo full — el live se loguea cada 60s, mucho ruido)
+    if (mode !== "live") {
+      await prisma.integridadAuditLog.create({
+        data: {
+          matchId: params.matchId,
+          accion: force ? "reanalizar" : "analizar",
+          userId: auth.user!.id,
+          userEmail: auth.user!.email,
+          detalles: { totalPatrones: patrones.length, severidadMax: sevMax } as any,
+        },
+      })
+    }
 
     return NextResponse.json({ analisis, cached: false })
   } catch (error) {

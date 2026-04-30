@@ -319,9 +319,11 @@ function detectPerdidasCadena(snap: MatchSnapshot, tier: JugadorTier[]): Detecte
   return out
 }
 
-/** Capitán pasivo: capitán de equipo perdedor por >15 con ≥30 min y ≤1 ast. */
+/** Capitán pasivo: capitán de equipo perdedor por >15 con ≥30 min y ≤1 ast.
+ *  Solo aplica con score final (estadoPartido = COMPLETE). */
 function detectCapitanPasivo(snap: MatchSnapshot, tier: JugadorTier[]): DetectedPattern[] {
   const out: DetectedPattern[] = []
+  if (snap.estadoPartido !== "COMPLETE") return out
   if (snap.scoreLocal == null || snap.scoreVisit == null) return out
   const teams: Array<{ team: BoxscoreTeam; lostBy: number }> = [
     { team: snap.home, lostBy: snap.scoreVisit - snap.scoreLocal },
@@ -351,9 +353,10 @@ function detectCapitanPasivo(snap: MatchSnapshot, tier: JugadorTier[]): Detected
 }
 
 /** Selección de tiros anómala: jugador con FG2% >50% pero más triples
- *  que dos en partido perdido por >15. */
+ *  que dos en partido perdido por >15. Solo aplica con score final. */
 function detectSeleccionTirosAnomala(snap: MatchSnapshot, tier: JugadorTier[]): DetectedPattern[] {
   const out: DetectedPattern[] = []
+  if (snap.estadoPartido !== "COMPLETE") return out
   if (snap.scoreLocal == null || snap.scoreVisit == null) return out
   const teams: Array<{ team: BoxscoreTeam; lostBy: number }> = [
     { team: snap.home, lostBy: snap.scoreVisit - snap.scoreLocal },
