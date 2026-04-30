@@ -127,11 +127,17 @@ export async function GET(request: Request) {
       return 0
     })
 
+    // Contador de pendientes: monitoreados + finalizados sin análisis
+    const pendientesAnalisis = enriched.filter(
+      (p) => p.esMonitoreado && p.estado === "COMPLETE" && !p.analisis
+    ).length
+
     return NextResponse.json({
       competitionId,
       monitoreados: MONITORED_TEAMS,
       total: enriched.length,
       mostrados: filtered.length,
+      pendientesAnalisis,
       partidos: filtered,
     })
   } catch (error) {
