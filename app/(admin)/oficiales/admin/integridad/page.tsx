@@ -492,10 +492,15 @@ function Field({ label, required, children }: {
 function TabPartidos() {
   const [partidos, setPartidos] = useState<Partido[]>([])
   const [monitoreados, setMonitoreados] = useState<Array<{ name: string; sigla: string }>>([])
+  const [pendientesAnalisis, setPendientesAnalisis] = useState(0)
   const [loading, setLoading] = useState(true)
   const [filtroEstado, setFiltroEstado] = useState<"todos" | "finalizados" | "pendientes" | "criticos" | "en_vivo">("finalizados")
   const [analizandoId, setAnalizandoId] = useState<string | null>(null)
   const [seleccionado, setSeleccionado] = useState<string | null>(null)
+  const [bulkAnalizando, setBulkAnalizando] = useState(false)
+  const [bulkResultado, setBulkResultado] = useState<{
+    total: number; ok: number; errores: number; conPatrones: number
+  } | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -504,6 +509,7 @@ function TabPartidos() {
       const data = await res.json()
       setPartidos(data.partidos || [])
       setMonitoreados(data.monitoreados || [])
+      setPendientesAnalisis(data.pendientesAnalisis ?? 0)
     } catch {
       setPartidos([])
     } finally {
@@ -512,6 +518,35 @@ function TabPartidos() {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function analizarTodosPendientes() {
+    if (!confirm(`Va a analizar ${pendientesAnalisis} partidos pendientes. Puede demorar varios minutos. ¿Continuar?`)) return
+    setBulkAnalizando(true)
+    setBulkResultado(null)
+    try {
+      const res = await fetch(`/api/admin/integridad/bulk-analyze`, {
+        method: "POST",
+        credentials: "include",
+      })
+      const data = await res.json()
+      if (res.ok) {
+        const conPatrones = (data.resultados ?? []).filter((r: any) => r.ok && (r.patrones ?? 0) > 0).length
+        setBulkResultado({
+          total: data.procesados ?? 0,
+          ok: data.ok ?? 0,
+          errores: data.errores ?? 0,
+          conPatrones,
+        })
+        await load()
+      } else {
+        alert(data.error || `Error ${res.status}`)
+      }
+    } catch (err: any) {
+      alert(`Error: ${err?.message ?? err}`)
+    } finally {
+      setBulkAnalizando(false)
+    }
+  }
 
   async function analizar(matchId: string, force = false) {
     setAnalizandoId(matchId)
@@ -590,13 +625,54 @@ function TabPartidos() {
             {t.l}
           </button>
         ))}
+        {pendientesAnalisis > 0 && (
+          <button
+            onClick={analizarTodosPendientes}
+            disabled={bulkAnalizando}
+            className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-primary text-white border border-primary hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
+            title="Analiza todos los partidos finalizados sin cache"
+          >
+            {bulkAnalizando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+            Analizar pendientes ({pendientesAnalisis})
+          </button>
+        )}
         <button
           onClick={load}
-          className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+          className={`${pendientesAnalisis > 0 ? "" : "ml-auto"} inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
         >
           <RefreshCw className="h-3.5 w-3.5" /> Recargar
         </button>
       </div>
+
+      {/* Resultado de bulk analyze */}
+      {bulkResultado && (
+        <div className="bg-green-50 border border-green-100 rounded-lg p-3 flex items-start gap-3">
+          <div className="shrink-0 w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+            <Play className="h-4 w-4 text-green-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-green-800">
+              Backfill completo — {bulkResultado.ok} de {bulkResultado.total} partidos analizados
+            </p>
+            <p className="text-xs text-green-700 mt-0.5">
+              {bulkResultado.conPatrones} con patrones detectados
+              {bulkResultado.errores > 0 ? ` · ${bulkResultado.errores} errores` : ""}
+            </p>
+          </div>
+          <button onClick={() => setBulkResultado(null)} className="text-green-600 hover:text-green-800 shrink-0">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {bulkAnalizando && !bulkResultado && (
+        <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-center gap-3">
+          <Loader2 className="h-4 w-4 animate-spin text-blue-700 shrink-0" />
+          <p className="text-sm text-blue-800">
+            Analizando {pendientesAnalisis} partidos pendientes... no cierres esta pestaña.
+          </p>
+        </div>
+      )}
 
       {/* Lista */}
       {loading ? (

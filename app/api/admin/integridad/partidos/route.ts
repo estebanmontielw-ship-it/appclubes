@@ -83,20 +83,34 @@ export async function GET(request: Request) {
         ? matchTime.split(" ")
         : [matchTime, null]
 
+      const scoreLocal = homeC?.scoreString ? parseInt(homeC.scoreString, 10) : null
+      const scoreVisit = awayC?.scoreString ? parseInt(awayC.scoreString, 10) : null
+      const estadoOriginal = m.matchStatus ?? null
+      // Genius a veces tarda 24-72h en marcar matchStatus=COMPLETE pero ya
+      // tiene los scores cargados — los tratamos como finalizados igual.
+      const tieneScoresFinales =
+        scoreLocal != null && scoreVisit != null &&
+        Number.isFinite(scoreLocal) && Number.isFinite(scoreVisit) &&
+        (scoreLocal > 0 || scoreVisit > 0)
+      const estado = estadoOriginal === "COMPLETE" || tieneScoresFinales
+        ? "COMPLETE"
+        : estadoOriginal
+
       return {
         matchId: String(m.matchId),
         matchNumber: m.matchNumber ?? null,
         fecha: fecha || null,
         hora: hora ? String(hora).slice(0, 5) : null,
-        estado: m.matchStatus ?? null,
+        estado,
+        estadoOriginal,
         equipoLocal: homeName,
         equipoLocalSigla: homeSigla,
         equipoLocalLogo: homeC?.images?.logo?.T1?.url ?? homeC?.images?.logo?.S1?.url ?? null,
         equipoVisit: awayName,
         equipoVisitSigla: awaySigla,
         equipoVisitLogo: awayC?.images?.logo?.T1?.url ?? awayC?.images?.logo?.S1?.url ?? null,
-        scoreLocal: homeC?.scoreString ? parseInt(homeC.scoreString, 10) : null,
-        scoreVisit: awayC?.scoreString ? parseInt(awayC.scoreString, 10) : null,
+        scoreLocal,
+        scoreVisit,
         esMonitoreado,
         esCritico,
         analisis: cacheByMatchId.get(String(m.matchId)) ?? null,
@@ -113,11 +127,17 @@ export async function GET(request: Request) {
       return 0
     })
 
+    // Contador de pendientes: monitoreados + finalizados sin análisis
+    const pendientesAnalisis = enriched.filter(
+      (p) => p.esMonitoreado && p.estado === "COMPLETE" && !p.analisis
+    ).length
+
     return NextResponse.json({
       competitionId,
       monitoreados: MONITORED_TEAMS,
       total: enriched.length,
       mostrados: filtered.length,
+      pendientesAnalisis,
       partidos: filtered,
     })
   } catch (error) {

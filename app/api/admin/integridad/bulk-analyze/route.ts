@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server"
+import { cookies } from "next/headers"
+import { createClient } from "@/utils/supabase/server"
 import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
 import { getSchedule } from "@/lib/genius-sports"
@@ -7,40 +9,51 @@ import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot } from "@/lib/integridad-fetch"
 import { emailIntegridadAnalisis } from "@/lib/email"
 
+export const dynamic = "force-dynamic"
+export const maxDuration = 300
+
 const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
 
-export const dynamic = "force-dynamic"
-export const maxDuration = 300 // 5 min — analizar varios partidos secuencial
+async function requireSuperAdmin() {
+  const cookieStore = cookies()
+  const supabase = createClient(cookieStore)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: NextResponse.json({ error: "No autenticado" }, { status: 401 }) }
+  const u = await prisma.usuario.findUnique({
+    where: { id: user.id },
+    select: { id: true, email: true, roles: { select: { rol: true } } },
+  })
+  const isAdmin = u?.roles.some((r) => r.rol === "SUPER_ADMIN")
+  if (!u || !isAdmin) {
+    return { error: NextResponse.json({ error: "No autorizado" }, { status: 403 }) }
+  }
+  return { user: u }
+}
 
 /**
- * GET /api/cron/integridad-nightly
+ * POST /api/admin/integridad/bulk-analyze
+ *   ?force=1   → reanaliza incluso si ya hay análisis cacheado
  *
- * Cron de Vercel que corre todos los días a las 06:00 UTC (ver vercel.json).
+ * Versión manual del cron nightly. Analiza TODOS los partidos
+ * monitoreados con scores cargados que aún no tengan análisis
+ * COMPLETE en la base. Útil para hacer backfill de toda la
+ * temporada y enriquecer los dossiers de jugadores.
  *
- * Lógica:
- *   1. Trae el schedule de la competencia LNB
- *   2. Filtra los COMPLETE que involucren clubes monitoreados
- *   3. Para cada uno SIN análisis cacheado o con análisis no-COMPLETE,
- *      corre `buildMatchSnapshot` + `detectPatterns` y persiste.
- *
- * Auth: Vercel pasa header `Authorization: Bearer <CRON_SECRET>`.
- *       En desarrollo permitimos sin auth.
+ * Devuelve { total, procesados, errores, resultados[] }.
  */
-export async function GET(request: Request) {
+export async function POST(request: Request) {
   try {
-    // Auth de cron
-    const cronSecret = process.env.CRON_SECRET
-    if (cronSecret) {
-      const authHeader = request.headers.get("authorization")
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        return NextResponse.json({ error: "No autorizado" }, { status: 401 })
-      }
-    }
+    const auth = await requireSuperAdmin()
+    if (auth.error) return auth.error
+
+    const url = new URL(request.url)
+    const force = url.searchParams.get("force") === "1"
+    const sendEmails = url.searchParams.get("sendEmails") !== "0"
 
     const competitionId = process.env.GENIUS_LNB_COMPETITION_ID
     if (!competitionId) {
       return NextResponse.json(
-        { error: "Falta GENIUS_LNB_COMPETITION_ID en env" },
+        { error: "Falta GENIUS_LNB_COMPETITION_ID" },
         { status: 500 }
       )
     }
@@ -49,9 +62,7 @@ export async function GET(request: Request) {
     const raw: any = await getSchedule(competitionId)
     const matches: any[] = raw?.response?.data ?? raw?.data ?? []
 
-    // 2. Filtrar finalizados con clubes monitoreados
-    //    Tratamos como finalizado si matchStatus=COMPLETE O si tiene ambos
-    //    scores cargados (Genius a veces tarda en actualizar el status).
+    // 2. Filtrar partidos: monitoreados + finalizados (status COMPLETE o con scores cargados)
     const candidatos = matches.filter((m) => {
       const homeC = m.competitors?.find((c: any) => c.isHomeCompetitor === 1) ?? m.competitors?.[0]
       const awayC = m.competitors?.find((c: any) => c.isHomeCompetitor === 0) ?? m.competitors?.[1]
@@ -60,19 +71,12 @@ export async function GET(request: Request) {
       const tieneScores = sH != null && sA != null &&
         Number.isFinite(sH) && Number.isFinite(sA) && (sH > 0 || sA > 0)
       if (m.matchStatus !== "COMPLETE" && !tieneScores) return false
-
-      const homeMonit = isMonitoredTeam(
-        homeC?.competitorName ?? "",
-        homeC?.teamCode ?? null
-      )
-      const awayMonit = isMonitoredTeam(
-        awayC?.competitorName ?? "",
-        awayC?.teamCode ?? null
-      )
+      const homeMonit = isMonitoredTeam(homeC?.competitorName ?? "", homeC?.teamCode ?? null)
+      const awayMonit = isMonitoredTeam(awayC?.competitorName ?? "", awayC?.teamCode ?? null)
       return homeMonit || awayMonit
     })
 
-    // 3. Identificar los que NO tienen análisis COMPLETE cacheado
+    // 3. Identificar pendientes (sin análisis COMPLETE cacheado)
     const cached = await prisma.integridadAnalisis.findMany({
       where: { matchId: { in: candidatos.map((c) => String(c.matchId)) } },
       select: { matchId: true, estadoPartido: true },
@@ -80,28 +84,35 @@ export async function GET(request: Request) {
     const cachedByMatch = new Map(cached.map((c) => [c.matchId, c]))
 
     const pendientes = candidatos.filter((m) => {
+      if (force) return true
       const cur = cachedByMatch.get(String(m.matchId))
       return !cur || cur.estadoPartido !== "COMPLETE"
     })
 
-    // 4. Cargar tier list una sola vez
+    // 4. Cargar tier list
     const tierRows = await prisma.integridadJugadorTier.findMany({ where: { activo: true } })
     const tier: JugadorTier[] = tierRows.map((t) => ({
       nombre: t.nombre, nombreNorm: t.nombreNorm, club: t.club,
       clubSigla: t.clubSigla, numero: t.numero, tier: t.tier,
     }))
 
-    // 5. Analizar cada pendiente (secuencial para no saturar API)
+    // 5. Procesar cada pendiente
     const resultados: Array<{
       matchId: string
+      partido: string
       ok: boolean
       patrones?: number
       severidadMax?: string | null
+      esCritico?: boolean
       error?: string
     }> = []
 
     for (const m of pendientes) {
       const matchId = String(m.matchId)
+      const homeC = m.competitors?.find((c: any) => c.isHomeCompetitor === 1) ?? m.competitors?.[0]
+      const awayC = m.competitors?.find((c: any) => c.isHomeCompetitor === 0) ?? m.competitors?.[1]
+      const partidoLabel = `${homeC?.competitorName ?? "?"} vs ${awayC?.competitorName ?? "?"}`
+
       try {
         const snap = await buildMatchSnapshot(matchId)
         const patrones = detectPatterns(snap, tier)
@@ -130,7 +141,7 @@ export async function GET(request: Request) {
               severidadMax: sevMax,
               rawData: snap as any,
               estadoPartido: snap.estadoPartido,
-              generadoPor: "cron-nightly",
+              generadoPor: auth.user!.id,
             },
             update: {
               fecha,
@@ -158,13 +169,13 @@ export async function GET(request: Request) {
         })
 
         resultados.push({
-          matchId, ok: true,
+          matchId, partido: partidoLabel, ok: true,
           patrones: patrones.length, severidadMax: sevMax,
+          esCritico: esPartidoCritico(snap),
         })
 
-        // Email al admin si hay algo que reportar
-        const tieneAlgoQueReportar = patrones.length > 0 || esPartidoCritico(snap)
-        if (tieneAlgoQueReportar && INTEGRIDAD_NOTIFY_EMAIL) {
+        // Email solo si hay algo que reportar Y el usuario lo quiere
+        if (sendEmails && (patrones.length > 0 || esPartidoCritico(snap)) && INTEGRIDAD_NOTIFY_EMAIL) {
           emailIntegridadAnalisis(INTEGRIDAD_NOTIFY_EMAIL, {
             matchId,
             equipoLocal: snap.equipoLocal,
@@ -186,33 +197,38 @@ export async function GET(request: Request) {
         }
       } catch (err: any) {
         resultados.push({
-          matchId, ok: false,
+          matchId, partido: partidoLabel, ok: false,
           error: err?.message ?? String(err),
         })
       }
     }
 
-    // 6. Audit summary
+    // 6. Audit log
     await prisma.integridadAuditLog.create({
       data: {
-        accion: "cron_nightly",
+        accion: force ? "bulk_reanalisis" : "bulk_analisis",
+        userId: auth.user!.id,
+        userEmail: auth.user!.email,
         detalles: {
           totalCandidatos: candidatos.length,
-          pendientesProcesados: pendientes.length,
+          pendientes: pendientes.length,
           ok: resultados.filter((r) => r.ok).length,
           errores: resultados.filter((r) => !r.ok).length,
           conPatrones: resultados.filter((r) => r.ok && (r.patrones ?? 0) > 0).length,
+          force,
+          sendEmails,
         } as any,
       },
     })
 
     return NextResponse.json({
-      ok: true,
-      totalCandidatos: candidatos.length,
-      pendientesProcesados: pendientes.length,
+      total: candidatos.length,
+      procesados: pendientes.length,
+      ok: resultados.filter((r) => r.ok).length,
+      errores: resultados.filter((r) => !r.ok).length,
       resultados,
     })
   } catch (error) {
-    return handleApiError(error, { context: "GET /api/cron/integridad-nightly" })
+    return handleApiError(error, { context: "POST /api/admin/integridad/bulk-analyze" })
   }
 }
