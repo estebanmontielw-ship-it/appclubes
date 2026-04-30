@@ -5,8 +5,10 @@ import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
 import { normalizeName, parseMinutes } from "@/lib/integridad"
 import type { BoxscorePlayer, MatchSnapshot } from "@/lib/integridad"
+import { getGameLog, discoverPersonId, type GameLogEntry } from "@/lib/jugador-stats"
 
 export const dynamic = "force-dynamic"
+export const maxDuration = 60
 
 async function requireSuperAdmin() {
   const cookieStore = cookies()
@@ -38,18 +40,18 @@ interface PlayerStatLine {
   fg2m: number; fg2a: number; fg2Pct: number | null
   fg3m: number; fg3a: number; fg3Pct: number | null
   ftm: number; fta: number; ftPct: number | null
-  reb: number; ast: number
+  rebOff: number; rebDef: number; reb: number; ast: number
   stl: number; blk: number
-  to: number; pf: number
+  to: number; pf: number; fr: number
+  eff: number | null
+  plusMinus: number | null
+  pos: string | null
   starter: boolean; captain: boolean
   // Patrones detectados en este partido para este jugador
   patronesEnPartido: string[]
 }
 
-/**
- * Encuentra al jugador dentro de un MatchSnapshot (por nombre normalizado)
- * y devuelve { player, equipo: "home"|"away" } o null si no jugó.
- */
+/** Encuentra al jugador dentro de un MatchSnapshot por nombre normalizado. */
 function findPlayerInSnapshot(
   snap: MatchSnapshot,
   nombreNorm: string
@@ -68,14 +70,23 @@ function pct(made: number, att: number): number | null {
   return Math.round((made / att) * 1000) / 10
 }
 
+function findPersonIdFromSnapshots(snapshots: any[], nombreNorm: string): number | null {
+  for (const s of snapshots) {
+    const snap = s.rawData as MatchSnapshot | null
+    if (!snap) continue
+    const found = findPlayerInSnapshot(snap, nombreNorm)
+    if (found && found.player.personId != null) return found.player.personId
+  }
+  return null
+}
+
 /**
  * GET /api/admin/integridad/jugadores/[id]/detalle
  *
- * Devuelve dossier completo del jugador para análisis:
- *   - Datos de identidad y notas
- *   - Stats agregadas LNB (extraídas de los análisis cacheados — cero quota)
- *   - Patrones históricos donde aparece
- *   - Últimos 10 partidos con stats individuales
+ * Devuelve dossier completo. Si el jugador tiene personId vinculado
+ * (o lo descubrimos), usamos /api/website/jugador-partidos via el lib
+ * para obtener el game log COMPLETO de la temporada (todos los partidos
+ * de Genius, no solo los analizados).
  */
 export async function GET(
   _request: Request,
@@ -93,8 +104,7 @@ export async function GET(
       return NextResponse.json({ error: "Jugador no encontrado" }, { status: 404 })
     }
 
-    // 2. Cargar TODOS los análisis donde participó este jugador
-    //    Filtramos en JS porque el match es por nombre dentro del JSON rawData
+    // 2. Cargar todos los análisis cacheados (para patrones + fallback)
     const todosLosAnalisis = await prisma.integridadAnalisis.findMany({
       orderBy: { fecha: "desc" },
       include: {
@@ -102,62 +112,75 @@ export async function GET(
       },
     })
 
-    const partidosDelJugador: Array<{
-      analisis: (typeof todosLosAnalisis)[number]
-      stats: BoxscorePlayer
-      equipo: "home" | "away"
-    }> = []
+    // 3. Resolver personId: primero el guardado, sino descubrir
+    let personId: number | null = jugador.personId
+    let personIdSource: "stored" | "snapshot" | "discovered" | null = personId ? "stored" : null
 
-    for (const a of todosLosAnalisis) {
-      const snap = a.rawData as MatchSnapshot | null
-      if (!snap) continue
-      const found = findPlayerInSnapshot(snap, jugador.nombreNorm)
-      if (found) {
-        partidosDelJugador.push({ analisis: a, stats: found.player, equipo: found.equipo })
+    if (!personId) {
+      personId = findPersonIdFromSnapshots(todosLosAnalisis, jugador.nombreNorm)
+      if (personId) personIdSource = "snapshot"
+    }
+
+    if (!personId) {
+      const competitionId = process.env.GENIUS_LNB_COMPETITION_ID
+      if (competitionId) {
+        try {
+          personId = await discoverPersonId(jugador.nombreNorm, competitionId)
+          if (personId) personIdSource = "discovered"
+        } catch {
+          personId = null
+        }
       }
     }
 
-    // 3. Calcular stats agregadas
-    const games = partidosDelJugador.length
-    let statsAgregadas: {
-      games: number
-      mins: number; minsAvg: number
-      pts: number; ptsAvg: number; ptsHigh: number; ptsLow: number
-      fg2m: number; fg2a: number; fg2Pct: number | null
-      fg3m: number; fg3a: number; fg3Pct: number | null
-      ftm: number; fta: number; ftPct: number | null
-      reb: number; rebAvg: number
-      ast: number; astAvg: number
-      stl: number; stlAvg: number
-      blk: number; blkAvg: number
-      to: number; toAvg: number
-      pf: number; pfAvg: number
-      starts: number
-    } | null = null
+    // Persistir el personId encontrado para futuras llamadas
+    if (personId && jugador.personId !== personId) {
+      await prisma.integridadJugadorTier.update({
+        where: { id: jugador.id },
+        data: { personId },
+      }).catch(() => {})
+    }
 
-    if (games > 0) {
-      let mins = 0, pts = 0, fg2m = 0, fg2a = 0, fg3m = 0, fg3a = 0
-      let ftm = 0, fta = 0, reb = 0, ast = 0, stl = 0, blk = 0, to = 0, pf = 0
-      let starts = 0
-      let ptsHigh = -Infinity, ptsLow = Infinity
-
-      for (const { stats } of partidosDelJugador) {
-        const m = parseMinutes(stats.min) ?? 0
-        mins += m
-        pts += stats.pts
-        ptsHigh = Math.max(ptsHigh, stats.pts)
-        ptsLow = Math.min(ptsLow, stats.pts)
-        fg2m += stats.fg2m; fg2a += stats.fg2a
-        fg3m += stats.fg3m; fg3a += stats.fg3a
-        ftm += stats.ftm; fta += stats.fta
-        reb += stats.reb; ast += stats.ast
-        stl += stats.stl; blk += stats.blk
-        to += stats.to; pf += stats.pf
-        if (stats.starter) starts++
+    // 4. Si tenemos personId, traer el game log completo desde Genius
+    let gameLog: GameLogEntry[] = []
+    if (personId) {
+      const competitionId = process.env.GENIUS_LNB_COMPETITION_ID
+      if (competitionId) {
+        try {
+          gameLog = await getGameLog(personId, competitionId)
+        } catch {
+          gameLog = []
+        }
       }
+    }
 
+    // 5. Stats agregadas — preferir game log de Genius, sino caer al snapshot
+    const usaGameLog = gameLog.length > 0
+    const games = usaGameLog ? gameLog.length : 0
+    let statsAgregadas: any | null = null
+
+    if (usaGameLog) {
+      let mins = 0, pts = 0, fg2m = 0, fg2a = 0, fg3m = 0, fg3a = 0
+      let ftm = 0, fta = 0, reb = 0, rebOff = 0, rebDef = 0
+      let ast = 0, stl = 0, blk = 0, to = 0, pf = 0, fr = 0
+      let eff = 0
+      let ptsHigh = -Infinity, ptsLow = Infinity
+      let starts = 0
+      for (const g of gameLog) {
+        const m = parseMinutes(g.min) ?? 0
+        mins += m
+        pts += g.pts
+        ptsHigh = Math.max(ptsHigh, g.pts)
+        ptsLow = Math.min(ptsLow, g.pts)
+        fg2m += g.twoM; fg2a += g.twoA
+        fg3m += g.threeM; fg3a += g.threeA
+        ftm += g.ftM; fta += g.ftA
+        reb += g.reb; rebOff += g.rebOff; rebDef += g.rebDef
+        ast += g.ast; stl += g.stl; blk += g.blk
+        to += g.to; pf += g.fp; fr += g.fr
+        eff += g.eff ?? 0
+      }
       const avg = (n: number) => Math.round((n / games) * 10) / 10
-
       statsAgregadas = {
         games,
         mins, minsAvg: avg(mins),
@@ -165,34 +188,72 @@ export async function GET(
         fg2m, fg2a, fg2Pct: pct(fg2m, fg2a),
         fg3m, fg3a, fg3Pct: pct(fg3m, fg3a),
         ftm, fta, ftPct: pct(ftm, fta),
-        reb, rebAvg: avg(reb),
+        reb, rebAvg: avg(reb), rebOff, rebDef,
         ast, astAvg: avg(ast),
         stl, stlAvg: avg(stl),
         blk, blkAvg: avg(blk),
         to, toAvg: avg(to),
         pf, pfAvg: avg(pf),
+        fr,
+        effAvg: games > 0 ? Math.round((eff / games) * 10) / 10 : 0,
         starts,
+      }
+    } else {
+      // Fallback: usar snapshots cacheados
+      const partidosDelJugador: { stats: BoxscorePlayer }[] = []
+      for (const a of todosLosAnalisis) {
+        const snap = a.rawData as MatchSnapshot | null
+        if (!snap) continue
+        const found = findPlayerInSnapshot(snap, jugador.nombreNorm)
+        if (found) partidosDelJugador.push({ stats: found.player })
+      }
+      const gamesS = partidosDelJugador.length
+      if (gamesS > 0) {
+        let mins = 0, pts = 0, fg2m = 0, fg2a = 0, fg3m = 0, fg3a = 0
+        let ftm = 0, fta = 0, reb = 0, ast = 0, stl = 0, blk = 0, to = 0, pf = 0
+        let starts = 0
+        let ptsHigh = -Infinity, ptsLow = Infinity
+        for (const { stats } of partidosDelJugador) {
+          const m = parseMinutes(stats.min) ?? 0
+          mins += m
+          pts += stats.pts
+          ptsHigh = Math.max(ptsHigh, stats.pts)
+          ptsLow = Math.min(ptsLow, stats.pts)
+          fg2m += stats.fg2m; fg2a += stats.fg2a
+          fg3m += stats.fg3m; fg3a += stats.fg3a
+          ftm += stats.ftm; fta += stats.fta
+          reb += stats.reb; ast += stats.ast
+          stl += stats.stl; blk += stats.blk
+          to += stats.to; pf += stats.pf
+          if (stats.starter) starts++
+        }
+        const avg = (n: number) => Math.round((n / gamesS) * 10) / 10
+        statsAgregadas = {
+          games: gamesS,
+          mins, minsAvg: avg(mins),
+          pts, ptsAvg: avg(pts), ptsHigh: ptsHigh === -Infinity ? 0 : ptsHigh, ptsLow: ptsLow === Infinity ? 0 : ptsLow,
+          fg2m, fg2a, fg2Pct: pct(fg2m, fg2a),
+          fg3m, fg3a, fg3Pct: pct(fg3m, fg3a),
+          ftm, fta, ftPct: pct(ftm, fta),
+          reb, rebAvg: avg(reb), rebOff: 0, rebDef: 0,
+          ast, astAvg: avg(ast),
+          stl, stlAvg: avg(stl),
+          blk, blkAvg: avg(blk),
+          to, toAvg: avg(to),
+          pf, pfAvg: avg(pf), fr: 0,
+          effAvg: 0,
+          starts,
+        }
       }
     }
 
-    // 4. Lista de patrones donde aparece este jugador (en orden por fecha desc)
-    const patronesDelJugador: Array<{
-      patronId: string
-      tipo: string
-      tipoLabel: string
-      severidad: string
-      descripcion: string
-      partido: {
-        matchId: string
-        fecha: Date | null
-        equipoLocal: string
-        equipoVisit: string
-        scoreLocal: number | null
-        scoreVisit: number | null
-      }
-    }> = []
+    // 6. Indexar análisis por matchId para correlacionar patrones
+    const analisisByMatchId = new Map<string, typeof todosLosAnalisis[number]>()
+    for (const a of todosLosAnalisis) analisisByMatchId.set(a.matchId, a)
 
-    for (const { analisis } of partidosDelJugador) {
+    // 7. Lista de patrones donde aparece este jugador
+    const patronesDelJugador: any[] = []
+    for (const analisis of todosLosAnalisis) {
       for (const p of analisis.patrones) {
         const involucrados = (p.jugadoresInvolucrados as Array<{ nombre: string }> | null) ?? []
         const aparece = involucrados.some((j) => normalizeName(j.nombre) === jugador.nombreNorm)
@@ -215,10 +276,60 @@ export async function GET(
       }
     }
 
-    // 5. Últimos 10 partidos con stats line-by-line
-    const partidosRecientes: PlayerStatLine[] = partidosDelJugador
-      .slice(0, 10)
-      .map(({ analisis: a, stats, equipo }) => {
+    // 8. Partidos recientes — preferir game log, sino snapshots
+    let partidosRecientes: PlayerStatLine[]
+
+    if (usaGameLog) {
+      partidosRecientes = gameLog.slice(0, 10).map((g): PlayerStatLine => {
+        const matchId = String(g.matchId)
+        const analisis = analisisByMatchId.get(matchId)
+        const patronesEnPartido = (analisis?.patrones ?? [])
+          .filter((p) => {
+            const involucrados = (p.jugadoresInvolucrados as Array<{ nombre: string }> | null) ?? []
+            return involucrados.some((j) => normalizeName(j.nombre) === jugador.nombreNorm)
+          })
+          .map((p) => p.tipoLabel)
+
+        const diferencia =
+          g.myScore != null && g.oppScore != null ? g.myScore - g.oppScore : null
+        const resultado: "GANADO" | "PERDIDO" | "EMPATE" | null =
+          g.result === "W" ? "GANADO" : g.result === "L" ? "PERDIDO" : (diferencia === 0 ? "EMPATE" : null)
+
+        return {
+          matchId,
+          fecha: g.date,
+          oponente: g.oppName,
+          oponenteSigla: g.oppSigla,
+          esLocal: g.isHome,
+          scorePropio: g.myScore,
+          scoreOponente: g.oppScore,
+          resultado,
+          diferencia,
+          mins: parseMinutes(g.min ?? ""),
+          pts: g.pts,
+          fg2m: g.twoM, fg2a: g.twoA, fg2Pct: g.twoPct,
+          fg3m: g.threeM, fg3a: g.threeA, fg3Pct: g.threePct,
+          ftm: g.ftM, fta: g.ftA, ftPct: g.ftPct,
+          rebOff: g.rebOff, rebDef: g.rebDef, reb: g.reb,
+          ast: g.ast,
+          stl: g.stl, blk: g.blk,
+          to: g.to, pf: g.fp, fr: g.fr,
+          eff: g.eff,
+          plusMinus: g.plusMinus,
+          pos: g.pos,
+          starter: false, captain: false,
+          patronesEnPartido,
+        }
+      })
+    } else {
+      // Fallback: usar snapshots
+      const fromSnapshots: PlayerStatLine[] = []
+      for (const a of todosLosAnalisis.slice(0, 10)) {
+        const snap = a.rawData as MatchSnapshot | null
+        if (!snap) continue
+        const found = findPlayerInSnapshot(snap, jugador.nombreNorm)
+        if (!found) continue
+        const { player: stats, equipo } = found
         const esLocal = equipo === "home"
         const oponente = esLocal ? a.equipoVisit : a.equipoLocal
         const oponenteSigla = esLocal ? a.equipoVisitSigla : a.equipoLocalSigla
@@ -232,15 +343,13 @@ export async function GET(
           else if (diferencia < 0) resultado = "PERDIDO"
           else resultado = "EMPATE"
         }
-
         const patronesEnPartido = a.patrones
           .filter((p) => {
             const involucrados = (p.jugadoresInvolucrados as Array<{ nombre: string }> | null) ?? []
             return involucrados.some((j) => normalizeName(j.nombre) === jugador.nombreNorm)
           })
           .map((p) => p.tipoLabel)
-
-        return {
+        fromSnapshots.push({
           matchId: a.matchId,
           fecha: a.fecha?.toISOString().slice(0, 10) ?? null,
           oponente, oponenteSigla, esLocal,
@@ -250,19 +359,24 @@ export async function GET(
           fg2m: stats.fg2m, fg2a: stats.fg2a, fg2Pct: pct(stats.fg2m, stats.fg2a),
           fg3m: stats.fg3m, fg3a: stats.fg3a, fg3Pct: pct(stats.fg3m, stats.fg3a),
           ftm: stats.ftm, fta: stats.fta, ftPct: pct(stats.ftm, stats.fta),
-          reb: stats.reb, ast: stats.ast,
-          stl: stats.stl, blk: stats.blk,
-          to: stats.to, pf: stats.pf,
+          rebOff: 0, rebDef: 0, reb: stats.reb,
+          ast: stats.ast, stl: stats.stl, blk: stats.blk,
+          to: stats.to, pf: stats.pf, fr: 0,
+          eff: null, plusMinus: null, pos: null,
           starter: stats.starter, captain: stats.captain,
           patronesEnPartido,
-        }
-      })
+        })
+      }
+      partidosRecientes = fromSnapshots
+    }
 
     return NextResponse.json({
-      jugador,
+      jugador: { ...jugador, personId },
+      personIdSource,
       statsAgregadas,
       patrones: patronesDelJugador,
       partidosRecientes,
+      datos: usaGameLog ? "genius_warehouse" : "snapshots_cacheados",
     })
   } catch (error) {
     return handleApiError(error, { context: "GET /api/admin/integridad/jugadores/[id]/detalle" })

@@ -785,6 +785,7 @@ model IntegridadJugadorTier {
   club        String
   clubSigla   String?
   numero      Int?
+  personId    Int?           // Genius personId — descubierto automáticamente del API
   tier        IntegridadTier @default(TIER_2)
   notas       String?        @db.Text
   activo      Boolean        @default(true)
@@ -796,6 +797,7 @@ model IntegridadJugadorTier {
   @@index([nombreNorm])
   @@index([club])
   @@index([tier])
+  @@index([personId])
   @@map("integridad_jugadores_tier")
 }
 
