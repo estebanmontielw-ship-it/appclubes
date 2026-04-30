@@ -159,6 +159,7 @@ function TabJugadoresPlaceholder() {
   const [mostrarForm, setMostrarForm] = useState(false)
   const [editando, setEditando] = useState<JugadorTierRow | null>(null)
   const [seedeando, setSeedeando] = useState(false)
+  const [verDetalle, setVerDetalle] = useState<JugadorTierRow | null>(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -283,14 +284,21 @@ function TabJugadoresPlaceholder() {
               </thead>
               <tbody>
                 {jugadores.map((j) => (
-                  <tr key={j.id} className={`border-b last:border-0 hover:bg-gray-50/50 ${!j.activo ? "opacity-50" : ""}`}>
+                  <tr
+                    key={j.id}
+                    onClick={() => setVerDetalle(j)}
+                    className={`border-b last:border-0 hover:bg-primary/5 cursor-pointer transition-colors ${!j.activo ? "opacity-50" : ""}`}
+                  >
                     <td className="p-3">
                       <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${TIER_COLOR[j.tier]}`}>
                         {j.tier.replace("_", " ")}
                       </span>
                     </td>
                     <td className="p-3">
-                      <p className="font-medium text-gray-900">{j.nombre}</p>
+                      <p className="font-medium text-gray-900 inline-flex items-center gap-1.5">
+                        {j.nombre}
+                        <ChevronRight className="h-3 w-3 text-gray-300 group-hover:text-primary" />
+                      </p>
                       {j.numero != null && <p className="text-xs text-gray-400">#{j.numero}</p>}
                     </td>
                     <td className="p-3 text-gray-700 hidden sm:table-cell">
@@ -300,7 +308,7 @@ function TabJugadoresPlaceholder() {
                     <td className="p-3 text-gray-600 hidden md:table-cell text-xs max-w-md">
                       <p className="line-clamp-2">{j.notas || "—"}</p>
                     </td>
-                    <td className="p-3 text-right">
+                    <td className="p-3 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="inline-flex gap-1">
                         <button
                           onClick={() => { setEditando(j); setMostrarForm(true) }}
@@ -329,6 +337,14 @@ function TabJugadoresPlaceholder() {
           jugador={editando}
           onClose={() => setMostrarForm(false)}
           onSaved={() => { setMostrarForm(false); load() }}
+        />
+      )}
+
+      {verDetalle && (
+        <ModalDetalleJugador
+          jugador={verDetalle}
+          onClose={() => setVerDetalle(null)}
+          onEdit={() => { setEditando(verDetalle); setVerDetalle(null); setMostrarForm(true) }}
         />
       )}
     </div>
@@ -1022,6 +1038,277 @@ function RecomendacionBox({ a }: { a: Analisis }) {
     <div className={`rounded-lg border p-3 ${color}`}>
       <p className="text-xs font-bold uppercase tracking-wider mb-1">Recomendación: {label}</p>
       <p className="text-sm">{descripcion}</p>
+    </div>
+  )
+}
+
+// ─── MODAL: DETALLE DEL JUGADOR ──────────────────────────────
+
+interface DetalleJugador {
+  jugador: JugadorTierRow
+  statsAgregadas: {
+    games: number
+    minsAvg: number
+    pts: number; ptsAvg: number; ptsHigh: number; ptsLow: number
+    fg2m: number; fg2a: number; fg2Pct: number | null
+    fg3m: number; fg3a: number; fg3Pct: number | null
+    ftm: number; fta: number; ftPct: number | null
+    rebAvg: number; astAvg: number
+    stlAvg: number; blkAvg: number; toAvg: number; pfAvg: number
+    starts: number
+  } | null
+  patrones: Array<{
+    patronId: string
+    tipo: string
+    tipoLabel: string
+    severidad: Severidad
+    descripcion: string
+    partido: {
+      matchId: string
+      fecha: string | null
+      equipoLocal: string
+      equipoVisit: string
+      scoreLocal: number | null
+      scoreVisit: number | null
+    }
+  }>
+  partidosRecientes: Array<{
+    matchId: string
+    fecha: string | null
+    oponente: string
+    oponenteSigla: string | null
+    esLocal: boolean
+    scorePropio: number | null
+    scoreOponente: number | null
+    resultado: "GANADO" | "PERDIDO" | "EMPATE" | null
+    diferencia: number | null
+    mins: number | null
+    pts: number
+    fg2m: number; fg2a: number; fg2Pct: number | null
+    fg3m: number; fg3a: number; fg3Pct: number | null
+    ftm: number; fta: number; ftPct: number | null
+    reb: number; ast: number
+    stl: number; blk: number
+    to: number; pf: number
+    starter: boolean; captain: boolean
+    patronesEnPartido: string[]
+  }>
+}
+
+function ModalDetalleJugador({ jugador, onClose, onEdit }: {
+  jugador: JugadorTierRow
+  onClose: () => void
+  onEdit: () => void
+}) {
+  const [data, setData] = useState<DetalleJugador | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/admin/integridad/jugadores/${jugador.id}/detalle`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false))
+  }, [jugador.id])
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-4xl max-h-[95vh] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className={`shrink-0 w-12 h-12 rounded-xl border-2 flex items-center justify-center font-bold text-lg ${TIER_COLOR[jugador.tier]}`}>
+              {jugador.numero ?? jugador.nombre.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <h2 className="font-bold text-gray-900 text-lg truncate">{jugador.nombre}</h2>
+              <p className="text-sm text-gray-500">
+                {jugador.club}
+                {jugador.clubSigla ? ` (${jugador.clubSigla})` : ""}
+                {" · "}
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${TIER_COLOR[jugador.tier]}`}>
+                  {jugador.tier.replace("_", " ")}
+                </span>
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700 shrink-0">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
+          {loading ? (
+            <div className="py-12 text-center text-gray-400 inline-flex items-center justify-center gap-2 w-full">
+              <Loader2 className="h-4 w-4 animate-spin" /> Cargando dossier…
+            </div>
+          ) : !data ? (
+            <div className="py-12 text-center text-gray-400">No se pudo cargar el detalle</div>
+          ) : (
+            <>
+              {/* Notas internas */}
+              {jugador.notas && (
+                <div>
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Notas de seguimiento</p>
+                  <div className="bg-amber-50 border border-amber-100 rounded-lg p-3">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap">{jugador.notas}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Stats agregadas */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Stats agregadas LNB ({data.statsAgregadas?.games ?? 0} juegos)
+                </p>
+                {data.statsAgregadas ? (
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                      <StatBox label="PTS/G" value={data.statsAgregadas.ptsAvg.toFixed(1)} sub={`Max ${data.statsAgregadas.ptsHigh}`} />
+                      <StatBox label="REB/G" value={data.statsAgregadas.rebAvg.toFixed(1)} />
+                      <StatBox label="AST/G" value={data.statsAgregadas.astAvg.toFixed(1)} />
+                      <StatBox label="STL/G" value={data.statsAgregadas.stlAvg.toFixed(1)} />
+                      <StatBox label="BLK/G" value={data.statsAgregadas.blkAvg.toFixed(1)} />
+                      <StatBox label="TO/G" value={data.statsAgregadas.toAvg.toFixed(1)} highlight={data.statsAgregadas.toAvg > 3} />
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2">
+                      <StatBox label="MIN/G" value={data.statsAgregadas.minsAvg.toFixed(1)} />
+                      <StatBox label="FG2%" value={data.statsAgregadas.fg2Pct != null ? `${data.statsAgregadas.fg2Pct.toFixed(1)}%` : "—"} sub={`${data.statsAgregadas.fg2m}/${data.statsAgregadas.fg2a}`} />
+                      <StatBox label="3PT%" value={data.statsAgregadas.fg3Pct != null ? `${data.statsAgregadas.fg3Pct.toFixed(1)}%` : "—"} sub={`${data.statsAgregadas.fg3m}/${data.statsAgregadas.fg3a}`} />
+                      <StatBox label="TL%" value={data.statsAgregadas.ftPct != null ? `${data.statsAgregadas.ftPct.toFixed(1)}%` : "—"} sub={`${data.statsAgregadas.ftm}/${data.statsAgregadas.fta}`} />
+                      <StatBox label="FALTAS/G" value={data.statsAgregadas.pfAvg.toFixed(1)} />
+                      <StatBox label="TITULAR" value={`${data.statsAgregadas.starts}/${data.statsAgregadas.games}`} />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500 text-center">
+                    Sin partidos analizados todavía. Las stats aparecen una vez que se analizan partidos donde participe.
+                  </div>
+                )}
+              </div>
+
+              {/* Patrones detectados */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Patrones detectados ({data.patrones.length})
+                </p>
+                {data.patrones.length === 0 ? (
+                  <div className="bg-green-50 border border-green-100 rounded-lg p-3 text-center text-sm text-green-700">
+                    No se detectaron patrones sospechosos en partidos analizados.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {data.patrones.map((p) => (
+                      <div key={p.patronId} className={`rounded-lg border p-2.5 ${SEV_COLOR[p.severidad]}`}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold">{p.tipoLabel}</span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-white/60">
+                            {SEV_LABEL[p.severidad]}
+                          </span>
+                          <span className="text-xs opacity-70 ml-auto">
+                            {p.partido.fecha?.slice(0, 10) ?? "?"} · {p.partido.equipoLocal} {p.partido.scoreLocal ?? "–"}-{p.partido.scoreVisit ?? "–"} {p.partido.equipoVisit}
+                          </span>
+                        </div>
+                        <p className="text-sm mt-1 opacity-90">{p.descripcion}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Últimos partidos */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Últimos partidos ({data.partidosRecientes.length})
+                </p>
+                {data.partidosRecientes.length === 0 ? (
+                  <div className="bg-gray-50 rounded-lg p-3 text-sm text-gray-500 text-center">
+                    Sin partidos analizados todavía.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto bg-gray-50 rounded-lg">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left p-2 text-gray-500">Fecha</th>
+                          <th className="text-left p-2 text-gray-500">Oponente</th>
+                          <th className="text-center p-2 text-gray-500">Resultado</th>
+                          <th className="text-center p-2 text-gray-500">MIN</th>
+                          <th className="text-center p-2 text-gray-500">PTS</th>
+                          <th className="text-center p-2 text-gray-500">FG</th>
+                          <th className="text-center p-2 text-gray-500">3PT</th>
+                          <th className="text-center p-2 text-gray-500">TL</th>
+                          <th className="text-center p-2 text-gray-500">REB</th>
+                          <th className="text-center p-2 text-gray-500">AST</th>
+                          <th className="text-center p-2 text-gray-500">TO</th>
+                          <th className="text-center p-2 text-gray-500">PF</th>
+                          <th className="text-left p-2 text-gray-500">⚠️</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {data.partidosRecientes.map((p) => (
+                          <tr key={p.matchId} className="border-b border-gray-100 last:border-0 hover:bg-white">
+                            <td className="p-2 text-gray-600">{p.fecha ?? "—"}</td>
+                            <td className="p-2">
+                              {p.esLocal ? "vs" : "@"} <span className="font-medium">{p.oponenteSigla || p.oponente.slice(0, 6)}</span>
+                            </td>
+                            <td className="p-2 text-center font-mono">
+                              <span className={
+                                p.resultado === "GANADO" ? "text-green-700" :
+                                p.resultado === "PERDIDO" ? "text-red-700" : "text-gray-500"
+                              }>
+                                {p.scorePropio ?? "–"}-{p.scoreOponente ?? "–"}
+                              </span>
+                            </td>
+                            <td className="p-2 text-center font-mono">{p.mins != null ? p.mins.toFixed(0) : "–"}</td>
+                            <td className="p-2 text-center font-mono font-bold">{p.pts}</td>
+                            <td className="p-2 text-center font-mono">{p.fg2m + p.fg3m}/{p.fg2a + p.fg3a}</td>
+                            <td className="p-2 text-center font-mono">{p.fg3m}/{p.fg3a}</td>
+                            <td className="p-2 text-center font-mono">{p.ftm}/{p.fta}</td>
+                            <td className="p-2 text-center font-mono">{p.reb}</td>
+                            <td className="p-2 text-center font-mono">{p.ast}</td>
+                            <td className="p-2 text-center font-mono">{p.to}</td>
+                            <td className="p-2 text-center font-mono">{p.pf}</td>
+                            <td className="p-2 text-amber-600 font-bold">{p.patronesEnPartido.length > 0 ? p.patronesEnPartido.length : ""}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-white">
+            Cerrar
+          </button>
+          <button
+            onClick={onEdit}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90"
+          >
+            Editar jugador
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function StatBox({ label, value, sub, highlight }: {
+  label: string
+  value: string | number
+  sub?: string
+  highlight?: boolean
+}) {
+  return (
+    <div className={`bg-white rounded p-2 text-center border ${highlight ? "border-amber-300 bg-amber-50" : "border-gray-100"}`}>
+      <p className="text-[9px] uppercase tracking-wider text-gray-400 font-semibold">{label}</p>
+      <p className={`text-base font-bold ${highlight ? "text-amber-700" : "text-gray-900"}`}>{value}</p>
+      {sub && <p className="text-[10px] text-gray-400 font-mono">{sub}</p>}
     </div>
   )
 }
