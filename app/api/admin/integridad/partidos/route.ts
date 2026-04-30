@@ -8,6 +8,49 @@ import { isMonitoredTeam, MONITORED_TEAMS } from "@/lib/integridad"
 
 export const dynamic = "force-dynamic"
 
+const FIBA_BASE = "https://fibalivestats.dcd.shared.geniussports.com"
+
+/**
+ * Infiere el estado real de un partido desde FibaLiveStats.
+ * Genius Warehouse a veces tarda 24-72h en marcar matchStatus=COMPLETE
+ * y nunca pasa por IN_PROGRESS para LNB Paraguay (FPB valida manualmente).
+ *
+ * Devuelve:
+ *   "IN_PROGRESS" — período activo, partido en curso
+ *   "COMPLETE"    — terminó (período final + reloj 00:00 o flag explícito)
+ *   null          — todavía no empezó / sin datos en FibaLiveStats
+ */
+async function inferStatusFromFiba(matchId: string): Promise<"IN_PROGRESS" | "COMPLETE" | null> {
+  try {
+    const r = await fetch(`${FIBA_BASE}/data/${matchId}/data.json`, {
+      next: { revalidate: 30 },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!r.ok) return null
+    const data = await r.json()
+
+    const period = Number(data?.period ?? data?.actual?.period ?? 0)
+    const clockRaw = data?.clock ?? data?.actual?.clock ?? null
+    const clock = typeof clockRaw === "string" ? clockRaw.trim() : null
+
+    // Status explícito si lo provee FibaLiveStats
+    const explicit = String(data?.matchStatus ?? data?.status ?? "").toUpperCase()
+    if (explicit === "FINAL" || explicit === "COMPLETE" || explicit === "FINISHED") return "COMPLETE"
+    if (explicit === "IN_PROGRESS" || explicit === "PLAYING" || explicit === "LIVE") return "IN_PROGRESS"
+
+    // Inferencia por período + reloj
+    if (period <= 0) return null
+    const reglaJugar = period > 0
+    const relojCero = clock === "00:00" || clock === "00:00:00" || clock === "0:00"
+    // Período final típico = 4 (regulación). OT = 5+
+    if (reglaJugar && relojCero && period >= 4) return "COMPLETE"
+    if (reglaJugar) return "IN_PROGRESS"
+    return null
+  } catch {
+    return null
+  }
+}
+
 async function requireSuperAdmin() {
   const cookieStore = cookies()
   const supabase = createClient(cookieStore)
@@ -86,15 +129,25 @@ export async function GET(request: Request) {
       const scoreLocal = homeC?.scoreString ? parseInt(homeC.scoreString, 10) : null
       const scoreVisit = awayC?.scoreString ? parseInt(awayC.scoreString, 10) : null
       const estadoOriginal = m.matchStatus ?? null
-      // Genius a veces tarda 24-72h en marcar matchStatus=COMPLETE pero ya
-      // tiene los scores cargados — los tratamos como finalizados igual.
       const tieneScoresFinales =
         scoreLocal != null && scoreVisit != null &&
         Number.isFinite(scoreLocal) && Number.isFinite(scoreVisit) &&
         (scoreLocal > 0 || scoreVisit > 0)
-      const estado = estadoOriginal === "COMPLETE" || tieneScoresFinales
-        ? "COMPLETE"
-        : estadoOriginal
+
+      // Estado inferido del schedule (sin tocar FibaLiveStats todavía):
+      //   - COMPLETE / IN_PROGRESS / EN_CURSO de Genius → respetamos
+      //   - Para SCHEDULED solo override a COMPLETE si la fecha está en
+      //     el pasado (evita marcar COMPLETE a partidos en curso de HOY)
+      const today = new Date().toISOString().slice(0, 10)
+      const fechaPartido = fecha ?? ""
+      const esEnElPasado = fechaPartido !== "" && fechaPartido < today
+      let estado = estadoOriginal
+      if (estadoOriginal === "COMPLETE" || estadoOriginal === "IN_PROGRESS" || estadoOriginal === "EN_CURSO") {
+        estado = estadoOriginal
+      } else if (esEnElPasado && tieneScoresFinales) {
+        estado = "COMPLETE"
+      }
+      // (los partidos de HOY se chequean contra FibaLiveStats más abajo)
 
       return {
         matchId: String(m.matchId),
@@ -116,6 +169,27 @@ export async function GET(request: Request) {
         analisis: cacheByMatchId.get(String(m.matchId)) ?? null,
       }
     })
+
+    // Para partidos de HOY que figuran SCHEDULED en Genius, consultar
+    // FibaLiveStats para detectar si están EN VIVO o ya terminaron.
+    // Lo hacemos solo para los monitoreados — limita las requests.
+    const today = new Date().toISOString().slice(0, 10)
+    const candidatosLive = enriched.filter(
+      (p) => p.esMonitoreado && p.fecha === today && p.estado !== "COMPLETE" && p.estado !== "IN_PROGRESS"
+    )
+    if (candidatosLive.length > 0) {
+      const checks = await Promise.all(
+        candidatosLive.map(async (p) => ({
+          matchId: p.matchId,
+          inferredStatus: await inferStatusFromFiba(p.matchId),
+        }))
+      )
+      const statusMap = new Map(checks.map((c) => [c.matchId, c.inferredStatus]))
+      for (const p of enriched) {
+        const inferred = statusMap.get(p.matchId)
+        if (inferred) p.estado = inferred
+      }
+    }
 
     const filtered = todos ? enriched : enriched.filter((p) => p.esMonitoreado)
     filtered.sort((a, b) => {

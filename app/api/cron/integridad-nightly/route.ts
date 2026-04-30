@@ -51,7 +51,9 @@ export async function GET(request: Request) {
 
     // 2. Filtrar finalizados con clubes monitoreados
     //    Tratamos como finalizado si matchStatus=COMPLETE O si tiene ambos
-    //    scores cargados (Genius a veces tarda en actualizar el status).
+    //    scores cargados Y el partido ES DEL PASADO (no de hoy, donde
+    //    podría estar en vivo todavía).
+    const todayCron = new Date().toISOString().slice(0, 10)
     const candidatos = matches.filter((m) => {
       const homeC = m.competitors?.find((c: any) => c.isHomeCompetitor === 1) ?? m.competitors?.[0]
       const awayC = m.competitors?.find((c: any) => c.isHomeCompetitor === 0) ?? m.competitors?.[1]
@@ -59,7 +61,10 @@ export async function GET(request: Request) {
       const sA = awayC?.scoreString ? parseInt(awayC.scoreString, 10) : null
       const tieneScores = sH != null && sA != null &&
         Number.isFinite(sH) && Number.isFinite(sA) && (sH > 0 || sA > 0)
-      if (m.matchStatus !== "COMPLETE" && !tieneScores) return false
+      const matchTime: string = m.matchTime ?? ""
+      const fechaPartido = matchTime.includes(" ") ? matchTime.split(" ")[0] : matchTime.slice(0, 10)
+      const esEnElPasado = fechaPartido !== "" && fechaPartido < todayCron
+      if (m.matchStatus !== "COMPLETE" && !(tieneScores && esEnElPasado)) return false
 
       const homeMonit = isMonitoredTeam(
         homeC?.competitorName ?? "",

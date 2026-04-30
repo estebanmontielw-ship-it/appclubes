@@ -62,7 +62,9 @@ export async function POST(request: Request) {
     const raw: any = await getSchedule(competitionId)
     const matches: any[] = raw?.response?.data ?? raw?.data ?? []
 
-    // 2. Filtrar partidos: monitoreados + finalizados (status COMPLETE o con scores cargados)
+    // 2. Filtrar partidos monitoreados, finalizados y NO de hoy (los de hoy
+    //    pueden estar en vivo y no queremos cerrarlos prematuramente).
+    const todayBulk = new Date().toISOString().slice(0, 10)
     const candidatos = matches.filter((m) => {
       const homeC = m.competitors?.find((c: any) => c.isHomeCompetitor === 1) ?? m.competitors?.[0]
       const awayC = m.competitors?.find((c: any) => c.isHomeCompetitor === 0) ?? m.competitors?.[1]
@@ -70,7 +72,10 @@ export async function POST(request: Request) {
       const sA = awayC?.scoreString ? parseInt(awayC.scoreString, 10) : null
       const tieneScores = sH != null && sA != null &&
         Number.isFinite(sH) && Number.isFinite(sA) && (sH > 0 || sA > 0)
-      if (m.matchStatus !== "COMPLETE" && !tieneScores) return false
+      const matchTime: string = m.matchTime ?? ""
+      const fechaPartido = matchTime.includes(" ") ? matchTime.split(" ")[0] : matchTime.slice(0, 10)
+      const esEnElPasado = fechaPartido !== "" && fechaPartido < todayBulk
+      if (m.matchStatus !== "COMPLETE" && !(tieneScores && esEnElPasado)) return false
       const homeMonit = isMonitoredTeam(homeC?.competitorName ?? "", homeC?.teamCode ?? null)
       const awayMonit = isMonitoredTeam(awayC?.competitorName ?? "", awayC?.teamCode ?? null)
       return homeMonit || awayMonit

@@ -186,16 +186,25 @@ export async function buildMatchSnapshot(matchId: string | number): Promise<Matc
     home.score != null && away.score != null ? home.score + away.score : null
 
   // Genius a veces tarda 24-72h en marcar matchStatus=COMPLETE pero ya tiene
-  // los scores cargados (FibaLiveStats actualiza al instante, Warehouse API no).
-  // Si tenemos ambos scores válidos, lo tratamos como COMPLETE.
+  // los scores cargados. Override SCHEDULED → COMPLETE solo si el partido
+  // es del PASADO (evita marcar COMPLETE a un partido EN VIVO de hoy con
+  // scores parciales).
   const estadoOriginal: string | null = m?.matchStatus ?? null
   const tieneScoresFinales =
     home.score != null && away.score != null &&
     Number.isFinite(home.score) && Number.isFinite(away.score) &&
     (home.score > 0 || away.score > 0)
-  const estadoPartido = estadoOriginal === "COMPLETE" || tieneScoresFinales
-    ? "COMPLETE"
-    : estadoOriginal
+  const fechaIsoStr = parseDateTime(m?.matchTime)
+  const today = new Date().toISOString().slice(0, 10)
+  const fechaPart = fechaIsoStr ? fechaIsoStr.slice(0, 10) : ""
+  const esEnElPasado = fechaPart !== "" && fechaPart < today
+
+  let estadoPartido: string | null = estadoOriginal
+  if (estadoOriginal === "COMPLETE" || estadoOriginal === "IN_PROGRESS" || estadoOriginal === "EN_CURSO") {
+    estadoPartido = estadoOriginal
+  } else if (esEnElPasado && tieneScoresFinales) {
+    estadoPartido = "COMPLETE"
+  }
 
   return {
     matchId: String(matchId),
