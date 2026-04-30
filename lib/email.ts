@@ -341,3 +341,136 @@ export async function emailPagoRechazado(
     ctaUrl: `${BASE_URL}/oficiales/cursos`,
   })
 }
+
+// ─── INTEGRIDAD ──────────────────────────────────────────
+
+const TIPO_DENUNCIA_LABEL: Record<string, string> = {
+  MANIPULACION_RESULTADO: "Manipulación de resultado",
+  ACTIVIDAD_APUESTAS: "Actividad de apuestas",
+  SOBORNO_INCENTIVO: "Soborno o incentivo",
+  CONDUCTA_SOSPECHOSA: "Conducta sospechosa",
+  OTRA: "Otra situación",
+}
+
+interface DenunciaForEmail {
+  id: string
+  tipoSituacion: string
+  competencia: string | null
+  partidoEvento: string | null
+  descripcion: string
+  fechaOcurrencia: string | null
+  personasInvolucradas: string | null
+  tieneEvidencia: boolean
+  modo: string
+  contactoNombre: string | null
+  contactoEmail: string | null
+  contactoTelefono: string | null
+  createdAt: Date
+}
+
+/** Notifica al admin sobre una nueva denuncia recibida en el canal. */
+export async function emailDenunciaNueva(to: string, d: DenunciaForEmail) {
+  const tipoLabel = TIPO_DENUNCIA_LABEL[d.tipoSituacion] ?? d.tipoSituacion
+  const esAnonima = d.modo !== "identificado"
+  const corto = d.descripcion.length > 400 ? d.descripcion.slice(0, 400) + "…" : d.descripcion
+
+  const filas: string[] = []
+  filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Tipo</td><td style="padding:6px 0;font-weight:600;">${tipoLabel}</td></tr>`)
+  filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Modo</td><td style="padding:6px 0;font-weight:600;">${esAnonima ? "Anónima" : "Identificada"}</td></tr>`)
+  if (d.competencia) filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Competencia</td><td style="padding:6px 0;">${d.competencia}</td></tr>`)
+  if (d.partidoEvento) filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Partido</td><td style="padding:6px 0;">${d.partidoEvento}</td></tr>`)
+  if (d.fechaOcurrencia) filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Fecha</td><td style="padding:6px 0;">${d.fechaOcurrencia}</td></tr>`)
+  if (d.personasInvolucradas) filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Personas</td><td style="padding:6px 0;">${d.personasInvolucradas}</td></tr>`)
+  if (d.tieneEvidencia) filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Evidencia</td><td style="padding:6px 0;">Adjunta — ver en el panel</td></tr>`)
+  if (!esAnonima && d.contactoNombre) filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Contacto</td><td style="padding:6px 0;">${d.contactoNombre}${d.contactoEmail ? ` · <a href="mailto:${d.contactoEmail}">${d.contactoEmail}</a>` : ""}${d.contactoTelefono ? ` · ${d.contactoTelefono}` : ""}</td></tr>`)
+  filas.push(`<tr><td style="padding:6px 0;color:#6b7280;font-size:13px;">Recibida</td><td style="padding:6px 0;">${d.createdAt.toLocaleString("es-PY")}</td></tr>`)
+
+  const body = `
+    <p style="margin:0 0 12px;font-size:15px;color:#111827;font-weight:600;">Nueva denuncia ${esAnonima ? "anónima" : "identificada"}</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:14px;font-size:14px;">
+      ${filas.join("")}
+    </table>
+    <p style="margin:0 0 6px;color:#6b7280;font-size:13px;font-weight:600;">Descripción</p>
+    <div style="background:#ffffff;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:14px;line-height:1.6;color:#374151;white-space:pre-wrap;">${corto}</div>
+  `
+
+  return sendEmail({
+    to,
+    subject: `[CPB · Integridad] Nueva denuncia ${esAnonima ? "anónima" : ""} — ${tipoLabel}`,
+    type: "warning",
+    body,
+    ctaText: "Ver en el panel",
+    ctaUrl: `${BASE_URL}/oficiales/admin/denuncias`,
+  })
+}
+
+interface AnalisisForEmail {
+  matchId: string
+  equipoLocal: string
+  equipoLocalSigla: string | null
+  equipoVisit: string
+  equipoVisitSigla: string | null
+  scoreLocal: number | null
+  scoreVisit: number | null
+  totalPuntos: number | null
+  esCritico: boolean
+  totalPatrones: number
+  severidadMax: string | null
+  patrones: Array<{
+    tipoLabel: string
+    severidad: string
+    descripcion: string
+  }>
+}
+
+/** Reporte automático tras analizar un partido: solo se envía si hay
+ *  patrones detectados o si el partido es crítico (2 monitoreados). */
+export async function emailIntegridadAnalisis(to: string, a: AnalisisForEmail) {
+  const sevColor: Record<string, string> = {
+    BAJO: "#6b7280", MEDIO: "#d97706", ALTO: "#ea580c", CRITICO: "#dc2626",
+  }
+  const sevLabel: Record<string, string> = {
+    BAJO: "Bajo", MEDIO: "Medio", ALTO: "Alto", CRITICO: "Crítico",
+  }
+
+  const score = `${a.scoreLocal ?? "–"} : ${a.scoreVisit ?? "–"}`
+  const localTag = a.equipoLocalSigla ? `${a.equipoLocal} (${a.equipoLocalSigla})` : a.equipoLocal
+  const visitTag = a.equipoVisitSigla ? `${a.equipoVisit} (${a.equipoVisitSigla})` : a.equipoVisit
+
+  const patronesHtml = a.patrones.length === 0
+    ? `<p style="margin:0;color:#16a34a;font-size:14px;">No se detectaron patrones sospechosos.</p>`
+    : a.patrones.map((p) => `
+        <div style="background:#fff;border:1px solid #e5e7eb;border-left:3px solid ${sevColor[p.severidad] ?? "#6b7280"};border-radius:6px;padding:10px 12px;margin-bottom:8px;">
+          <p style="margin:0 0 2px;font-size:13px;font-weight:700;color:${sevColor[p.severidad] ?? "#374151"};">
+            ${p.tipoLabel} <span style="font-weight:400;color:#9ca3af;">· ${sevLabel[p.severidad] ?? p.severidad}</span>
+          </p>
+          <p style="margin:0;font-size:13px;color:#4b5563;line-height:1.5;">${p.descripcion}</p>
+        </div>
+      `).join("")
+
+  const subject = a.esCritico
+    ? `[CPB · Integridad] PARTIDO CRÍTICO — ${localTag} vs ${visitTag}`
+    : `[CPB · Integridad] ${a.totalPatrones} patrón${a.totalPatrones === 1 ? "" : "es"} — ${localTag} vs ${visitTag}`
+
+  const type: "warning" | "error" = a.severidadMax === "CRITICO" || a.esCritico ? "error" : "warning"
+
+  const body = `
+    <p style="margin:0 0 8px;font-size:18px;font-weight:700;text-align:center;">
+      ${localTag} <span style="color:#9ca3af;">${score}</span> ${visitTag}
+    </p>
+    ${a.esCritico ? `<p style="margin:0 0 12px;text-align:center;color:#dc2626;font-size:13px;font-weight:600;">⚠️ PARTIDO CRÍTICO — 2 clubes monitoreados</p>` : ""}
+    <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">
+      Patrones detectados (${a.totalPatrones}) ${a.severidadMax ? `· severidad máx: ${sevLabel[a.severidadMax] ?? a.severidadMax}` : ""}
+    </p>
+    ${patronesHtml}
+  `
+
+  return sendEmail({
+    to,
+    subject,
+    type,
+    body,
+    ctaText: "Ver análisis completo",
+    ctaUrl: `${BASE_URL}/oficiales/admin/integridad`,
+  })
+}

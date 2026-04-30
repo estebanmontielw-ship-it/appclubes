@@ -763,6 +763,112 @@ model Denuncia {
   @@map("denuncias")
 }
 
+// ─── ANÁLISIS DE INTEGRIDAD — Detección de manipulación ──
+
+enum IntegridadSeveridad {
+  BAJO
+  MEDIO
+  ALTO
+  CRITICO
+}
+
+enum IntegridadTier {
+  TIER_1
+  TIER_2
+  TIER_3
+}
+
+model IntegridadJugadorTier {
+  id          String         @id @default(uuid())
+  nombre      String
+  nombreNorm  String         // nombre normalizado (lowercase, sin tildes) para matching
+  club        String
+  clubSigla   String?
+  numero      Int?
+  tier        IntegridadTier @default(TIER_2)
+  notas       String?        @db.Text
+  activo      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  creadoPor   String?
+
+  @@unique([nombreNorm, club])
+  @@index([nombreNorm])
+  @@index([club])
+  @@index([tier])
+  @@map("integridad_jugadores_tier")
+}
+
+model IntegridadAnalisis {
+  id                String                @id @default(uuid())
+  matchId           String                @unique
+  competicionId     String?
+  competicionName   String?
+
+  fecha             DateTime?
+  equipoLocal       String
+  equipoLocalSigla  String?
+  equipoVisit       String
+  equipoVisitSigla  String?
+  scoreLocal        Int?
+  scoreVisit        Int?
+  totalPuntos       Int?
+  periodScores      Json?
+
+  esCritico         Boolean               @default(false)
+  totalPatrones     Int                   @default(0)
+  severidadMax      IntegridadSeveridad?
+  rawData           Json?
+
+  estadoPartido     String?
+
+  generadoEn        DateTime              @default(now())
+  actualizadoEn     DateTime              @updatedAt
+  generadoPor       String?
+
+  patrones          IntegridadPatron[]
+
+  @@index([matchId])
+  @@index([fecha])
+  @@index([esCritico])
+  @@index([severidadMax])
+  @@map("integridad_analisis")
+}
+
+model IntegridadPatron {
+  id                      String              @id @default(uuid())
+  analisisId              String
+  tipo                    String
+  tipoLabel               String
+  severidad               IntegridadSeveridad
+  descripcion             String              @db.Text
+  datos                   Json?
+  jugadoresInvolucrados   Json?
+  createdAt               DateTime            @default(now())
+
+  analisis IntegridadAnalisis @relation(fields: [analisisId], references: [id], onDelete: Cascade)
+
+  @@index([analisisId])
+  @@index([tipo])
+  @@index([severidad])
+  @@map("integridad_patrones")
+}
+
+model IntegridadAuditLog {
+  id          String   @id @default(uuid())
+  matchId     String?
+  accion      String
+  detalles    Json?
+  userId      String?
+  userEmail   String?
+  createdAt   DateTime @default(now())
+
+  @@index([matchId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("integridad_audit_log")
+}
+
 // ─── CPB BOT (Asistente IA) ─────────────────────────────
 
 model ConversacionBot {
