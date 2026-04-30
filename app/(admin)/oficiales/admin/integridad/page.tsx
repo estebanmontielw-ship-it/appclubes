@@ -130,12 +130,343 @@ function TabButton({ active, onClick, children }: {
   )
 }
 
-// Placeholder mientras armamos la sub-commit 4b
+// ─── TAB: JUGADORES TIER ─────────────────────────────────────
+
+interface JugadorTierRow {
+  id: string
+  nombre: string
+  nombreNorm: string
+  club: string
+  clubSigla: string | null
+  numero: number | null
+  tier: Tier
+  notas: string | null
+  activo: boolean
+  createdAt: string
+}
+
+const TIER_COLOR: Record<Tier, string> = {
+  TIER_1: "bg-red-100 text-red-700 border-red-200",
+  TIER_2: "bg-amber-100 text-amber-700 border-amber-200",
+  TIER_3: "bg-gray-100 text-gray-700 border-gray-200",
+}
+
 function TabJugadoresPlaceholder() {
+  const [jugadores, setJugadores] = useState<JugadorTierRow[]>([])
+  const [loading, setLoading] = useState(true)
+  const [filtroTier, setFiltroTier] = useState<"" | Tier>("")
+  const [buscar, setBuscar] = useState("")
+  const [mostrarForm, setMostrarForm] = useState(false)
+  const [editando, setEditando] = useState<JugadorTierRow | null>(null)
+  const [seedeando, setSeedeando] = useState(false)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (filtroTier) params.set("tier", filtroTier)
+    if (buscar) params.set("buscar", buscar)
+    try {
+      const res = await fetch(`/api/admin/integridad/jugadores?${params}`, { credentials: "include" })
+      const data = await res.json()
+      setJugadores(data.jugadores || [])
+    } catch {
+      setJugadores([])
+    } finally {
+      setLoading(false)
+    }
+  }, [filtroTier, buscar])
+
+  useEffect(() => { load() }, [load])
+
+  async function seed() {
+    if (!confirm("Va a precargar 15 jugadores tier (idempotente — los existentes no se duplican). ¿Continuar?")) return
+    setSeedeando(true)
+    try {
+      const res = await fetch(`/api/admin/integridad/seed`, {
+        method: "POST",
+        credentials: "include",
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert(`Listo: ${data.creados} creados, ${data.existentes} ya existían.`)
+        await load()
+      } else {
+        alert(data.error || `Error ${res.status}`)
+      }
+    } finally {
+      setSeedeando(false)
+    }
+  }
+
+  async function borrar(id: string, nombre: string) {
+    if (!confirm(`¿Borrar "${nombre}"?`)) return
+    const res = await fetch(`/api/admin/integridad/jugadores/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    })
+    if (res.ok) {
+      await load()
+    } else {
+      const data = await res.json().catch(() => ({}))
+      alert(data.error || `Error ${res.status}`)
+    }
+  }
+
   return (
-    <div className="py-12 text-center bg-white rounded-xl border border-gray-100">
-      <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-      <p className="text-gray-400">Gestión de jugadores tier — próximo commit</p>
+    <div className="space-y-4">
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <input
+          value={buscar}
+          onChange={(e) => setBuscar(e.target.value)}
+          placeholder="Buscar nombre, club o nota…"
+          className="flex-1 min-w-0 px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+        />
+        <select
+          value={filtroTier}
+          onChange={(e) => setFiltroTier(e.target.value as typeof filtroTier)}
+          className="px-3 py-2 rounded-lg border border-gray-200 text-sm bg-white"
+        >
+          <option value="">Todos los tiers</option>
+          <option value="TIER_1">Tier 1</option>
+          <option value="TIER_2">Tier 2</option>
+          <option value="TIER_3">Tier 3</option>
+        </select>
+        <button
+          onClick={() => { setEditando(null); setMostrarForm(true) }}
+          className="px-3 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90"
+        >
+          + Nuevo
+        </button>
+        {jugadores.length === 0 && !loading && (
+          <button
+            onClick={seed}
+            disabled={seedeando}
+            className="inline-flex items-center gap-1 px-3 py-2 rounded-lg text-sm font-medium border border-primary/30 text-primary hover:bg-primary/5 disabled:opacity-50"
+          >
+            {seedeando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            Precargar lista inicial
+          </button>
+        )}
+      </div>
+
+      {/* Lista */}
+      {loading ? (
+        <div className="py-12 text-center text-gray-400 inline-flex items-center justify-center gap-2 w-full">
+          <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
+        </div>
+      ) : jugadores.length === 0 ? (
+        <div className="py-12 text-center bg-white rounded-xl border border-gray-100">
+          <Users className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-gray-400 mb-4">No hay jugadores en seguimiento</p>
+          <button
+            onClick={seed}
+            disabled={seedeando}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-primary text-white hover:bg-primary/90 disabled:opacity-50"
+          >
+            {seedeando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            Precargar lista inicial (15 jugadores)
+          </button>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500">Tier</th>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500">Jugador</th>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden sm:table-cell">Club</th>
+                  <th className="text-left p-3 text-xs font-medium text-gray-500 hidden md:table-cell">Notas</th>
+                  <th className="text-right p-3 text-xs font-medium text-gray-500">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jugadores.map((j) => (
+                  <tr key={j.id} className={`border-b last:border-0 hover:bg-gray-50/50 ${!j.activo ? "opacity-50" : ""}`}>
+                    <td className="p-3">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${TIER_COLOR[j.tier]}`}>
+                        {j.tier.replace("_", " ")}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      <p className="font-medium text-gray-900">{j.nombre}</p>
+                      {j.numero != null && <p className="text-xs text-gray-400">#{j.numero}</p>}
+                    </td>
+                    <td className="p-3 text-gray-700 hidden sm:table-cell">
+                      <p>{j.club}</p>
+                      {j.clubSigla && <p className="text-xs text-gray-400">{j.clubSigla}</p>}
+                    </td>
+                    <td className="p-3 text-gray-600 hidden md:table-cell text-xs max-w-md">
+                      <p className="line-clamp-2">{j.notas || "—"}</p>
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="inline-flex gap-1">
+                        <button
+                          onClick={() => { setEditando(j); setMostrarForm(true) }}
+                          className="px-2 py-1 rounded text-xs text-gray-600 hover:bg-gray-100"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => borrar(j.id, j.nombre)}
+                          className="px-2 py-1 rounded text-xs text-red-600 hover:bg-red-50"
+                        >
+                          Borrar
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {mostrarForm && (
+        <FormJugador
+          jugador={editando}
+          onClose={() => setMostrarForm(false)}
+          onSaved={() => { setMostrarForm(false); load() }}
+        />
+      )}
+    </div>
+  )
+}
+
+function FormJugador({ jugador, onClose, onSaved }: {
+  jugador: JugadorTierRow | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const [nombre, setNombre] = useState(jugador?.nombre ?? "")
+  const [club, setClub] = useState(jugador?.club ?? "")
+  const [clubSigla, setClubSigla] = useState(jugador?.clubSigla ?? "")
+  const [numero, setNumero] = useState<string>(jugador?.numero != null ? String(jugador.numero) : "")
+  const [tier, setTier] = useState<Tier>(jugador?.tier ?? "TIER_2")
+  const [notas, setNotas] = useState(jugador?.notas ?? "")
+  const [activo, setActivo] = useState(jugador?.activo ?? true)
+  const [saving, setSaving] = useState(false)
+
+  async function save() {
+    if (!nombre.trim() || !club.trim()) {
+      alert("Nombre y club son requeridos")
+      return
+    }
+    setSaving(true)
+    try {
+      const body = {
+        nombre: nombre.trim(),
+        club: club.trim(),
+        clubSigla: clubSigla.trim() || null,
+        numero: numero ? parseInt(numero, 10) : null,
+        tier,
+        notas: notas.trim(),
+        activo,
+      }
+      const res = await fetch(
+        jugador ? `/api/admin/integridad/jugadores/${jugador.id}` : `/api/admin/integridad/jugadores`,
+        {
+          method: jugador ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify(body),
+        }
+      )
+      const data = await res.json()
+      if (res.ok) {
+        onSaved()
+      } else {
+        alert(data.error || `Error ${res.status}`)
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+      <div className="bg-white w-full sm:max-w-lg max-h-[95vh] sm:rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+          <h2 className="font-semibold text-gray-900">
+            {jugador ? "Editar jugador" : "Nuevo jugador tier"}
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+          <Field label="Nombre completo" required>
+            <input value={nombre} onChange={(e) => setNombre(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Club" required>
+              <input value={club} onChange={(e) => setClub(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="SAN ALFONZO" />
+            </Field>
+            <Field label="Sigla">
+              <input value={clubSigla} onChange={(e) => setClubSigla(e.target.value.toUpperCase())} maxLength={5} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="ALF" />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Tier">
+              <select value={tier} onChange={(e) => setTier(e.target.value as Tier)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                <option value="TIER_1">Tier 1 (alta sospecha)</option>
+                <option value="TIER_2">Tier 2 (media)</option>
+                <option value="TIER_3">Tier 3 (observación)</option>
+              </select>
+            </Field>
+            <Field label="Número">
+              <input type="number" value={numero} onChange={(e) => setNumero(e.target.value)} className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" />
+            </Field>
+          </div>
+          <Field label="Notas">
+            <textarea
+              value={notas}
+              onChange={(e) => setNotas(e.target.value)}
+              rows={4}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+              placeholder="Razón del seguimiento, contexto, partidos previos…"
+            />
+          </Field>
+          {jugador && (
+            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+              <input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
+              Activo
+            </label>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
+          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-white">
+            Cancelar
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90 disabled:opacity-50"
+          >
+            {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Field({ label, required, children }: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div>
+      <label className="block text-xs font-semibold text-gray-700 mb-1">
+        {label}{required && <span className="text-red-500"> *</span>}
+      </label>
+      {children}
     </div>
   )
 }
