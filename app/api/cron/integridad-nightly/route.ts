@@ -5,6 +5,7 @@ import { getSchedule } from "@/lib/genius-sports"
 import { detectPatterns, esPartidoCritico, isMonitoredTeam, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot, inferStatusFromFiba } from "@/lib/integridad-fetch"
+import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { emailIntegridadAnalisis } from "@/lib/email"
 
 const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
@@ -37,10 +38,10 @@ export async function GET(request: Request) {
       }
     }
 
-    const competitionId = process.env.GENIUS_LNB_COMPETITION_ID
+    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
     if (!competitionId) {
       return NextResponse.json(
-        { error: "Falta GENIUS_LNB_COMPETITION_ID en env" },
+        { error: "No se pudo resolver el ID de la competencia LNB." },
         { status: 500 }
       )
     }

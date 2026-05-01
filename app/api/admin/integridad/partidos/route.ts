@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server"
 import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
 import { getSchedule } from "@/lib/genius-sports"
+import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { isMonitoredTeam, MONITORED_TEAMS } from "@/lib/integridad"
 import { inferStatusFromFiba } from "@/lib/integridad-fetch"
 
@@ -38,13 +39,22 @@ export async function GET(request: Request) {
     if (auth.error) return auth.error
 
     const url = new URL(request.url)
-    const competitionId = url.searchParams.get("competitionId")
-      ?? process.env.GENIUS_LNB_COMPETITION_ID
     const todos = url.searchParams.get("todos") === "1"
+
+    // Resolver el competition ID — primero query, después auto-discovery
+    // (que respeta GENIUS_LNB_COMPETITION_ID si está seteada y si no busca
+    // la LNB activa en Genius automáticamente, igual que el resto del sitio).
+    let competitionId = url.searchParams.get("competitionId")
+    let competicionName: string | null = null
+    if (!competitionId) {
+      const resolved = await resolveLnbCompetitionIdPublic()
+      competitionId = resolved.id
+      competicionName = resolved.name
+    }
 
     if (!competitionId) {
       return NextResponse.json(
-        { error: "Falta competitionId (definí GENIUS_LNB_COMPETITION_ID o pasalo por query)" },
+        { error: "No se pudo resolver el ID de la competencia LNB. Definí GENIUS_LNB_COMPETITION_ID en Vercel o asegurate que Genius tenga una LNB activa." },
         { status: 400 }
       )
     }
@@ -166,6 +176,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       competitionId,
+      competicionName,
       monitoreados: MONITORED_TEAMS,
       total: enriched.length,
       mostrados: filtered.length,

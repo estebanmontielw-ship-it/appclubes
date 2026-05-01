@@ -6,6 +6,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { normalizeName, parseMinutes } from "@/lib/integridad"
 import type { BoxscorePlayer, MatchSnapshot } from "@/lib/integridad"
 import { getGameLog, discoverPersonId, type GameLogEntry } from "@/lib/jugador-stats"
+import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -121,15 +122,15 @@ export async function GET(
       if (personId) personIdSource = "snapshot"
     }
 
-    if (!personId) {
-      const competitionId = process.env.GENIUS_LNB_COMPETITION_ID
-      if (competitionId) {
-        try {
-          personId = await discoverPersonId(jugador.nombreNorm, competitionId)
-          if (personId) personIdSource = "discovered"
-        } catch {
-          personId = null
-        }
+    // Resolver el competition ID una sola vez (auto-discovery si env no está)
+    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
+
+    if (!personId && competitionId) {
+      try {
+        personId = await discoverPersonId(jugador.nombreNorm, competitionId)
+        if (personId) personIdSource = "discovered"
+      } catch {
+        personId = null
       }
     }
 
@@ -141,16 +142,13 @@ export async function GET(
       }).catch(() => {})
     }
 
-    // 4. Si tenemos personId, traer el game log completo desde Genius
+    // 4. Si tenemos personId + competitionId, traer game log completo
     let gameLog: GameLogEntry[] = []
-    if (personId) {
-      const competitionId = process.env.GENIUS_LNB_COMPETITION_ID
-      if (competitionId) {
-        try {
-          gameLog = await getGameLog(personId, competitionId)
-        } catch {
-          gameLog = []
-        }
+    if (personId && competitionId) {
+      try {
+        gameLog = await getGameLog(personId, competitionId)
+      } catch {
+        gameLog = []
       }
     }
 
