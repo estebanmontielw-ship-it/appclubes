@@ -5,8 +5,7 @@ import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
 import { normalizeName, parseMinutes } from "@/lib/integridad"
 import type { BoxscorePlayer, MatchSnapshot } from "@/lib/integridad"
-import { getGameLog, discoverPersonId, type GameLogEntry } from "@/lib/jugador-stats"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { getGameLog, discoverPersonId, resolveActiveLnbCompetition, type GameLogEntry } from "@/lib/jugador-stats"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -122,12 +121,12 @@ export async function GET(
       if (personId) personIdSource = "snapshot"
     }
 
-    // Resolver el competition ID una sola vez (auto-discovery si env no está)
-    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
+    // Resolver el competition ID activo (con validación contra schedule)
+    const { id: competitionId } = await resolveActiveLnbCompetition()
 
     if (!personId && competitionId) {
       try {
-        personId = await discoverPersonId(jugador.nombreNorm, competitionId)
+        personId = await discoverPersonId(jugador.nombreNorm, competitionId, jugador.clubSigla)
         if (personId) personIdSource = "discovered"
       } catch {
         personId = null

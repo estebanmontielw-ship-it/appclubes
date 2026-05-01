@@ -4,9 +4,9 @@ import { createClient } from "@/utils/supabase/server"
 import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
 import { getSchedule } from "@/lib/genius-sports"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { isMonitoredTeam, MONITORED_TEAMS } from "@/lib/integridad"
 import { inferStatusFromFiba } from "@/lib/integridad-fetch"
+import { resolveActiveLnbCompetition } from "@/lib/jugador-stats"
 
 export const dynamic = "force-dynamic"
 
@@ -40,27 +40,34 @@ export async function GET(request: Request) {
 
     const url = new URL(request.url)
     const todos = url.searchParams.get("todos") === "1"
+    const queryCompId = url.searchParams.get("competitionId")
 
-    // Resolver el competition ID — primero query, después auto-discovery
-    // (que respeta GENIUS_LNB_COMPETITION_ID si está seteada y si no busca
-    // la LNB activa en Genius automáticamente, igual que el resto del sitio).
-    let competitionId = url.searchParams.get("competitionId")
+    // Si vino por query, respetarlo. Si no, resolver activa con validación
+    // (env var → si tiene partidos lo usa, sino auto-discovery)
+    let competitionId: string | null = null
     let competicionName: string | null = null
-    if (!competitionId) {
-      const resolved = await resolveLnbCompetitionIdPublic()
+    let matches: any[] = []
+    if (queryCompId) {
+      competitionId = queryCompId
+      try {
+        const raw: any = await getSchedule(queryCompId)
+        matches = raw?.response?.data ?? raw?.data ?? []
+      } catch {
+        matches = []
+      }
+    } else {
+      const resolved = await resolveActiveLnbCompetition()
       competitionId = resolved.id
       competicionName = resolved.name
+      matches = resolved.matches
     }
 
     if (!competitionId) {
       return NextResponse.json(
-        { error: "No se pudo resolver el ID de la competencia LNB. Definí GENIUS_LNB_COMPETITION_ID en Vercel o asegurate que Genius tenga una LNB activa." },
+        { error: "No se pudo resolver el ID de la competencia LNB. Verificá que Genius tenga una LNB activa." },
         { status: 400 }
       )
     }
-
-    const raw: any = await getSchedule(competitionId)
-    const matches: any[] = raw?.response?.data ?? raw?.data ?? []
 
     const matchIds = matches.map((m) => String(m.matchId)).filter(Boolean)
     const cached = matchIds.length
