@@ -6,6 +6,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { detectPatterns, esPartidoCritico, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot, buildLiveSnapshotFromFiba } from "@/lib/integridad-fetch"
+import { generateExpertSummary } from "@/lib/integridad-ai"
 import { emailIntegridadAnalisis } from "@/lib/email"
 
 const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
@@ -115,8 +116,32 @@ export async function POST(
     const fechaParsed = snap.fecha ? new Date(snap.fecha) : null
     const fecha = fechaParsed && !isNaN(fechaParsed.getTime()) ? fechaParsed : null
 
+    // 3b. Generar análisis experto con Claude (solo si hay patrones, modo full)
+    //     El live polling no genera AI summary cada 60s para no quemar tokens.
+    let aiSummary: string | null = null
+    let aiSummaryModel: string | null = null
+    let aiSummaryGeneradoEn: Date | null = null
+    if (mode !== "live" && patrones.length > 0) {
+      const ai = await generateExpertSummary(snap, patrones, tier)
+      if (ai) {
+        aiSummary = ai.summary
+        aiSummaryModel = ai.model
+        aiSummaryGeneradoEn = new Date()
+      }
+    }
+
     // 4. Persistir (upsert + reemplazar patrones)
     const analisis = await prisma.$transaction(async (tx) => {
+      // Si la AI no produjo nuevo summary pero el partido ya tenía uno
+      // (ej. no se regeneró), preservamos el viejo
+      const aiUpdate = aiSummary != null
+        ? {
+            aiSummary,
+            aiSummaryModel,
+            aiSummaryGeneradoEn,
+          }
+        : {}
+
       const upserted = await tx.integridadAnalisis.upsert({
         where: { matchId: params.matchId },
         create: {
@@ -138,6 +163,7 @@ export async function POST(
           rawData: snap as any,
           estadoPartido: snap.estadoPartido,
           generadoPor: auth.user!.id,
+          ...aiUpdate,
         },
         update: {
           competicionId: snap.competicionId,
@@ -156,6 +182,7 @@ export async function POST(
           severidadMax: sevMax,
           rawData: snap as any,
           estadoPartido: snap.estadoPartido,
+          ...aiUpdate,
         },
       })
 
@@ -215,6 +242,7 @@ export async function POST(
         esCritico: esPartidoCritico(snap),
         totalPatrones: patrones.length,
         severidadMax: sevMax,
+        aiSummary,
         patrones: patrones.map((p) => ({
           tipoLabel: p.tipoLabel,
           severidad: p.severidad,

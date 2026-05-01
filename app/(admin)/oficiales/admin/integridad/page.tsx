@@ -64,6 +64,9 @@ interface Analisis {
   severidadMax: Severidad | null
   estadoPartido: string | null
   generadoEn: string
+  aiSummary: string | null
+  aiSummaryModel: string | null
+  aiSummaryGeneradoEn: string | null
   patrones: Patron[]
 }
 
@@ -1043,6 +1046,28 @@ function DetalleAnalisis({ a }: { a: Analisis }) {
               <p className="font-bold">{totalH2}</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Análisis experto generado por Claude */}
+      {a.aiSummary && (
+        <div>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-primary uppercase tracking-wider inline-flex items-center gap-1.5">
+              <Activity className="h-3.5 w-3.5" /> Análisis experto
+            </p>
+            {a.aiSummaryGeneradoEn && (
+              <span className="text-[10px] text-gray-400">
+                {new Date(a.aiSummaryGeneradoEn).toLocaleDateString("es-PY", { day: "2-digit", month: "short", year: "numeric" })}
+              </span>
+            )}
+          </div>
+          <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+            <div className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{a.aiSummary}</div>
+          </div>
+          {a.aiSummaryModel && (
+            <p className="text-[10px] text-gray-300 mt-1 text-right">Generado por {a.aiSummaryModel}</p>
+          )}
         </div>
       )}
 

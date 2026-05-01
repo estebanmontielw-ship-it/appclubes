@@ -416,6 +416,7 @@ interface AnalisisForEmail {
   esCritico: boolean
   totalPatrones: number
   severidadMax: string | null
+  aiSummary?: string | null
   patrones: Array<{
     tipoLabel: string
     severidad: string
@@ -454,11 +455,19 @@ export async function emailIntegridadAnalisis(to: string, a: AnalisisForEmail) {
 
   const type: "warning" | "error" = a.severidadMax === "CRITICO" || a.esCritico ? "error" : "warning"
 
+  const aiSummaryHtml = a.aiSummary
+    ? `
+      <p style="margin:0 0 8px;color:#1e40af;font-size:13px;font-weight:600;">📋 Análisis experto</p>
+      <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin-bottom:14px;font-size:14px;line-height:1.6;color:#1f2937;white-space:pre-wrap;">${a.aiSummary.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>
+    `
+    : ""
+
   const body = `
     <p style="margin:0 0 8px;font-size:18px;font-weight:700;text-align:center;">
       ${localTag} <span style="color:#9ca3af;">${score}</span> ${visitTag}
     </p>
     ${a.esCritico ? `<p style="margin:0 0 12px;text-align:center;color:#dc2626;font-size:13px;font-weight:600;">⚠️ PARTIDO CRÍTICO — 2 clubes monitoreados</p>` : ""}
+    ${aiSummaryHtml}
     <p style="margin:0 0 8px;color:#6b7280;font-size:13px;font-weight:600;">
       Patrones detectados (${a.totalPatrones}) ${a.severidadMax ? `· severidad máx: ${sevLabel[a.severidadMax] ?? a.severidadMax}` : ""}
     </p>
