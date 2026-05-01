@@ -273,7 +273,35 @@ function TabJugadoresPlaceholder() {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <>
+          {/* Vista mobile: cards */}
+          <div className="md:hidden space-y-2">
+            {jugadores.map((j) => (
+              <button
+                key={j.id}
+                onClick={() => setVerDetalle(j)}
+                className={`w-full text-left bg-white rounded-xl border p-3 hover:shadow-sm transition-shadow ${!j.activo ? "opacity-50" : ""} ${TIER_COLOR[j.tier].includes("red") ? "border-red-200" : "border-gray-100"}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${TIER_COLOR[j.tier]}`}>
+                        {j.tier.replace("_", " ")}
+                      </span>
+                      <p className="font-medium text-gray-900 text-sm">{j.nombre}</p>
+                      {j.numero != null && <span className="text-xs text-gray-400">#{j.numero}</span>}
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1">{j.club}{j.clubSigla ? ` (${j.clubSigla})` : ""}</p>
+                    {j.notas && <p className="text-xs text-gray-500 mt-1.5 line-clamp-2">{j.notas}</p>}
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-gray-300 shrink-0 mt-1" />
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Vista desktop: tabla */}
+          <div className="hidden md:block bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -332,7 +360,8 @@ function TabJugadoresPlaceholder() {
               </tbody>
             </table>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {mostrarForm && (
@@ -596,12 +625,12 @@ function TabPartidos() {
         ))}
       </div>
 
-      {/* Filtros */}
+      {/* Filtros (scrollable horizontal en mobile) */}
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {liveCount > 0 && (
           <button
             onClick={() => setFiltroEstado("en_vivo")}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border ${
+            className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border ${
               filtroEstado === "en_vivo"
                 ? "bg-red-600 text-white border-red-600"
                 : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
@@ -616,14 +645,14 @@ function TabPartidos() {
         )}
         {[
           { v: "finalizados", l: "Finalizados" },
-          { v: "criticos", l: "Críticos (2 monitoreados)" },
+          { v: "criticos", l: "Críticos" },
           { v: "pendientes", l: "Pendientes" },
           { v: "todos", l: "Todos" },
         ].map((t) => (
           <button
             key={t.v}
             onClick={() => setFiltroEstado(t.v as typeof filtroEstado)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border ${
+            className={`shrink-0 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap border ${
               filtroEstado === t.v
                 ? "bg-primary text-white border-primary"
                 : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
@@ -632,24 +661,30 @@ function TabPartidos() {
             {t.l}
           </button>
         ))}
-        {pendientesAnalisis > 0 && (
-          <button
-            onClick={analizarTodosPendientes}
-            disabled={bulkAnalizando}
-            className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-primary text-white border border-primary hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
-            title="Analiza todos los partidos finalizados sin cache"
-          >
-            {bulkAnalizando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
-            Analizar pendientes ({pendientesAnalisis})
-          </button>
-        )}
-        <button
-          onClick={load}
-          className={`${pendientesAnalisis > 0 ? "" : "ml-auto"} inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50`}
-        >
-          <RefreshCw className="h-3.5 w-3.5" /> Recargar
-        </button>
       </div>
+
+      {/* Acciones (segunda fila en mobile) */}
+      {(pendientesAnalisis > 0 || true) && (
+        <div className="flex gap-2 flex-wrap">
+          {pendientesAnalisis > 0 && (
+            <button
+              onClick={analizarTodosPendientes}
+              disabled={bulkAnalizando}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary text-white border border-primary hover:bg-primary/90 disabled:opacity-50 whitespace-nowrap"
+              title="Analiza todos los partidos finalizados sin cache"
+            >
+              {bulkAnalizando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+              Analizar pendientes ({pendientesAnalisis})
+            </button>
+          )}
+          <button
+            onClick={load}
+            className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+          >
+            <RefreshCw className="h-3.5 w-3.5" /> Recargar
+          </button>
+        </div>
+      )}
 
       {/* Resultado de bulk analyze */}
       {bulkResultado && (
@@ -743,9 +778,9 @@ function PartidoCard({ partido: p, analizando, onAnalizar, onVer }: {
     <div className={`bg-white rounded-xl border p-4 transition-shadow hover:shadow-sm ${
       enVivo ? "border-red-300 ring-1 ring-red-200" : p.esCritico ? "border-red-200" : "border-gray-100"
     }`}>
-      <div className="flex items-start gap-3">
-        {/* Badges izquierda */}
-        <div className="shrink-0 flex flex-col gap-1">
+      <div className="flex items-start gap-3 flex-wrap sm:flex-nowrap">
+        {/* Badges */}
+        <div className="shrink-0 flex sm:flex-col gap-1 flex-wrap">
           {enVivo && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600 text-white">
               <span className="relative flex h-1.5 w-1.5">
@@ -768,7 +803,7 @@ function PartidoCard({ partido: p, analizando, onAnalizar, onVer }: {
         </div>
 
         {/* Equipos + score */}
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 w-full sm:w-auto">
           <div className="flex items-center gap-2 flex-wrap">
             <TeamBadge logo={p.equipoLocalLogo} sigla={p.equipoLocalSigla} name={p.equipoLocal} />
             <span className="font-mono text-sm text-gray-600">
@@ -787,8 +822,8 @@ function PartidoCard({ partido: p, analizando, onAnalizar, onVer }: {
           </div>
         </div>
 
-        {/* Acciones derecha */}
-        <div className="shrink-0 flex gap-2">
+        {/* Acciones (full width en mobile, stuck a la derecha en sm+) */}
+        <div className="shrink-0 flex gap-2 w-full sm:w-auto justify-end">
           {tieneAnalisis ? (
             <>
               <button
