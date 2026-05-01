@@ -63,9 +63,21 @@ export async function POST(
 
     // Persistir cada intento (los exitosos como cuotas reales,
     // los fallidos como registros de auditoría con errorMessage)
-    const filas = resultados.flatMap((r) => {
+    type FilaCuota = {
+      matchId: string
+      fuente: string
+      fuenteUrl: string | null
+      mercado: string
+      linea: number | null
+      lado: string | null
+      cuota: number
+      raw: any
+      ok: boolean
+      errorMessage: string | null
+    }
+    const filas: FilaCuota[] = resultados.flatMap((r): FilaCuota[] => {
       if (r.ok && r.cuotas.length > 0) {
-        return r.cuotas.map((c) => ({
+        return r.cuotas.map((c): FilaCuota => ({
           matchId: params.matchId,
           fuente: r.fuente,
           fuenteUrl: c.fuenteUrl ?? null,
