@@ -861,6 +861,27 @@ model IntegridadPatron {
   @@map("integridad_patrones")
 }
 
+model IntegridadCuota {
+  id            String   @id @default(uuid())
+  matchId       String
+  fuente        String   // "leovegas" | "casa_apostas" | "orenes" | "draftkings" | "oddsportal" | etc
+  fuenteUrl     String?
+  mercado       String   // "total_over_under" | "spread" | "money_line"
+  linea         Decimal? @db.Decimal(6, 2)
+  lado          String?  // "over" | "under" | "home" | "away"
+  cuota         Decimal  @db.Decimal(8, 3)
+  capturadoEn   DateTime @default(now())
+  raw           Json?
+  errorMessage  String?
+  ok            Boolean  @default(true)
+
+  @@index([matchId])
+  @@index([fuente])
+  @@index([capturadoEn])
+  @@index([matchId, mercado, fuente])
+  @@map("integridad_cuotas")
+}
+
 model IntegridadAuditLog {
   id          String   @id @default(uuid())
   matchId     String?
