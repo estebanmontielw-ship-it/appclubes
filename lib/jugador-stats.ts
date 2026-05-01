@@ -36,6 +36,21 @@ export interface GameLogEntry {
 }
 
 /**
+ * Filtro permisivo: un partido está "completado" si Genius lo marca
+ * COMPLETE O si tiene scores cargados (porque LNB Paraguay tarda en
+ * consolidar el matchStatus, pero los scoreString sí se actualizan).
+ */
+function isCompletedMatch(m: any): boolean {
+  if (m.matchStatus === "COMPLETE") return true
+  const competitors: any[] = m.competitors ?? []
+  for (const c of competitors) {
+    const s = c?.scoreString ? parseInt(c.scoreString, 10) : null
+    if (s != null && Number.isFinite(s) && s > 0) return true
+  }
+  return false
+}
+
+/**
  * Construye el game log de un jugador llamando a /matches/{id}/teams/{tid}/players
  * para cada partido completo de la competencia. Maneja correctamente jugadores
  * que cambiaron de equipo a mitad de temporada.
@@ -46,7 +61,7 @@ export async function getGameLog(
 ): Promise<GameLogEntry[]> {
   const matchesRaw = await geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "medium")
   const allMatches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
-  const completed = allMatches.filter((m: any) => m.matchStatus === "COMPLETE")
+  const completed = allMatches.filter(isCompletedMatch)
 
   const gameLog: GameLogEntry[] = []
 
@@ -145,7 +160,7 @@ export async function discoverPersonId(
 ): Promise<number | null> {
   const matchesRaw = await geniusFetch(`/competitions/${competitionId}/matches?limit=100`, "medium")
   const allMatches: any[] = matchesRaw?.response?.data ?? matchesRaw?.data ?? []
-  const completed = allMatches.filter((m: any) => m.matchStatus === "COMPLETE")
+  const completed = allMatches.filter(isCompletedMatch)
 
   // Iterar partidos y buscar el primer match con el nombre normalizado
   for (const match of completed) {
