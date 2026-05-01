@@ -224,12 +224,16 @@ export async function POST(
     // 6. Email al admin si el partido finalizó y hay algo que reportar
     //    Solo dispara cuando el partido pasó a COMPLETE en este análisis.
     //    Para evitar spam, requerimos: patrones detectados o partido crítico.
-    const transitionToComplete =
+    // Email solo cuando el partido recién termina detectado automáticamente
+    // (live polling). Manual analizar/re-analizar NO envía email para evitar
+    // ruido cuando el admin está revisando partidos viejos.
+    const transitionToCompleteAuto =
+      mode === "live" &&
       snap.estadoPartido === "COMPLETE" &&
-      (existing?.estadoPartido !== "COMPLETE" || force)
+      existing?.estadoPartido !== "COMPLETE"
     const tieneAlgoQueReportar = patrones.length > 0 || esPartidoCritico(snap)
 
-    if (transitionToComplete && tieneAlgoQueReportar && INTEGRIDAD_NOTIFY_EMAIL) {
+    if (transitionToCompleteAuto && tieneAlgoQueReportar && INTEGRIDAD_NOTIFY_EMAIL) {
       emailIntegridadAnalisis(INTEGRIDAD_NOTIFY_EMAIL, {
         matchId: params.matchId,
         equipoLocal: snap.equipoLocal,

@@ -48,7 +48,9 @@ export async function POST(request: Request) {
 
     const url = new URL(request.url)
     const force = url.searchParams.get("force") === "1"
-    const sendEmails = url.searchParams.get("sendEmails") !== "0"
+    // Default: NO enviar emails en bulk analyze porque es una acción manual
+    // (el admin clickeó "Analizar pendientes"). Para forzar envío usar ?sendEmails=1
+    const sendEmails = url.searchParams.get("sendEmails") === "1"
 
     const { id: competitionId, matches: schedMatches } = await resolveActiveLnbCompetition()
     if (!competitionId) {
