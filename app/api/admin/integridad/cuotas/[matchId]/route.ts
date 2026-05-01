@@ -50,15 +50,16 @@ export async function POST(
     const auth = await requireSuperAdmin()
     if (auth.error) return auth.error
 
-    // Resolver nombres de equipos del partido (del último análisis cacheado)
+    // Resolver nombres + fecha del partido (del análisis cacheado)
     const analisis = await prisma.integridadAnalisis.findUnique({
       where: { matchId: params.matchId },
-      select: { equipoLocal: true, equipoVisit: true },
+      select: { equipoLocal: true, equipoVisit: true, fecha: true },
     })
     const equipoLocal = analisis?.equipoLocal ?? ""
     const equipoVisit = analisis?.equipoVisit ?? ""
+    const fecha = analisis?.fecha ? analisis.fecha.toISOString().slice(0, 10) : undefined
 
-    const resultados = await scrapeCuotasPartido(params.matchId, equipoLocal, equipoVisit)
+    const resultados = await scrapeCuotasPartido(params.matchId, equipoLocal, equipoVisit, fecha)
 
     // Persistir cada intento (los exitosos como cuotas reales,
     // los fallidos como registros de auditoría con errorMessage)

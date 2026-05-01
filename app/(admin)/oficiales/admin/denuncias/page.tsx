@@ -96,18 +96,18 @@ export default function AdminDenunciasPage() {
   }, [load])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 overflow-x-hidden">
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-xl font-bold md:text-2xl flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" /> Canal de Denuncias
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold md:text-2xl flex items-center gap-2 break-words">
+            <Shield className="h-6 w-6 text-primary shrink-0" /> Canal de Denuncias
           </h1>
           <p className="text-sm text-gray-500 mt-1">
             Integridad del básquetbol — denuncias confidenciales recibidas
           </p>
         </div>
         {totalNuevas > 0 && (
-          <div className="px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold border border-blue-200">
+          <div className="px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-semibold border border-blue-200 shrink-0">
             {totalNuevas} {totalNuevas === 1 ? "nueva" : "nuevas"}
           </div>
         )}
@@ -132,8 +132,8 @@ export default function AdminDenunciasPage() {
         </div>
 
         <div className="flex gap-2 flex-wrap">
-          <div className="flex items-center gap-2 flex-1 min-w-[200px] px-3 py-2 rounded-lg border border-gray-200 bg-white">
-            <Search className="h-4 w-4 text-gray-400" />
+          <div className="flex items-center gap-2 flex-1 min-w-0 sm:min-w-[200px] px-3 py-2 rounded-lg border border-gray-200 bg-white">
+            <Search className="h-4 w-4 text-gray-400 shrink-0" />
             <input
               type="text"
               value={buscar}
@@ -195,12 +195,12 @@ export default function AdminDenunciasPage() {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-700 mt-1 line-clamp-2">{d.descripcion}</p>
-                  <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                  <p className="text-sm text-gray-700 mt-1 line-clamp-2 break-words">{d.descripcion}</p>
+                  <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-400 flex-wrap">
                     <span>{new Date(d.createdAt).toLocaleString("es-PY")}</span>
-                    {d.competencia && <span>· {d.competencia}</span>}
+                    {d.competencia && <span className="break-words">· {d.competencia}</span>}
                     {d.modo === "identificado" && d.contactoNombre && (
-                      <span>· {d.contactoNombre}</span>
+                      <span className="break-words">· {d.contactoNombre}</span>
                     )}
                   </div>
                 </div>
