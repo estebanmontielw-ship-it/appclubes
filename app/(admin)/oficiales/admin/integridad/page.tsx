@@ -1316,7 +1316,74 @@ function ModalDetalleJugador({ jugador, onClose, onEdit }: {
                     Sin partidos analizados todavía.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto bg-gray-50 rounded-lg">
+                  <>
+                    {/* Vista mobile: cards */}
+                    <div className="md:hidden space-y-2">
+                      {data.partidosRecientes.map((p) => (
+                        <div key={p.matchId} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <div className="min-w-0">
+                              <p className="text-xs text-gray-500">{p.fecha ?? "—"}</p>
+                              <p className="text-sm font-medium text-gray-800">
+                                {p.esLocal ? "vs" : "@"} {p.oponenteSigla || p.oponente}
+                              </p>
+                              <p className={`text-xs font-mono ${
+                                p.resultado === "GANADO" ? "text-green-700" :
+                                p.resultado === "PERDIDO" ? "text-red-700" : "text-gray-500"
+                              }`}>
+                                {p.scorePropio ?? "–"}-{p.scoreOponente ?? "–"} · {p.resultado === "GANADO" ? "Ganado" : p.resultado === "PERDIDO" ? "Perdido" : "—"}
+                              </p>
+                            </div>
+                            {p.patronesEnPartido.length > 0 && (
+                              <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200">
+                                <AlertCircle className="h-3 w-3" /> {p.patronesEnPartido.length}
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-4 gap-2 text-center">
+                            <div className="bg-white rounded p-1.5 border border-gray-100">
+                              <p className="text-[9px] uppercase text-gray-400">PTS</p>
+                              <p className="text-base font-bold text-gray-900">{p.pts}</p>
+                            </div>
+                            <div className="bg-white rounded p-1.5 border border-gray-100">
+                              <p className="text-[9px] uppercase text-gray-400">MIN</p>
+                              <p className="text-base font-bold text-gray-700">{p.mins != null ? p.mins.toFixed(0) : "–"}</p>
+                            </div>
+                            <div className="bg-white rounded p-1.5 border border-gray-100">
+                              <p className="text-[9px] uppercase text-gray-400">REB</p>
+                              <p className="text-base font-bold text-gray-700">{p.reb}</p>
+                            </div>
+                            <div className="bg-white rounded p-1.5 border border-gray-100">
+                              <p className="text-[9px] uppercase text-gray-400">AST</p>
+                              <p className="text-base font-bold text-gray-700">{p.ast}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 mt-1.5 text-center text-[11px]">
+                            <div><span className="text-gray-400">2PT</span> <span className="font-mono">{p.fg2m}/{p.fg2a}</span></div>
+                            <div><span className="text-gray-400">3PT</span> <span className="font-mono">{p.fg3m}/{p.fg3a}</span></div>
+                            <div><span className="text-gray-400">TL</span> <span className="font-mono">{p.ftm}/{p.fta}</span></div>
+                            <div><span className="text-gray-400">STL</span> <span className="font-mono">{p.stl}</span></div>
+                            <div><span className="text-gray-400">BLK</span> <span className="font-mono">{p.blk}</span></div>
+                            <div><span className="text-gray-400">TO</span> <span className="font-mono">{p.to}</span></div>
+                          </div>
+                          {(p.eff != null || p.plusMinus != null) && (
+                            <div className="grid grid-cols-2 gap-2 mt-1.5 text-center text-[11px]">
+                              {p.eff != null && (
+                                <div><span className="text-gray-400">EFF</span> <span className="font-mono font-bold">{Math.round(p.eff)}</span></div>
+                              )}
+                              {p.plusMinus != null && (
+                                <div><span className="text-gray-400">+/-</span> <span className={`font-mono font-bold ${p.plusMinus > 0 ? "text-green-600" : p.plusMinus < 0 ? "text-red-500" : "text-gray-400"}`}>
+                                  {p.plusMinus > 0 ? `+${p.plusMinus}` : String(p.plusMinus)}
+                                </span></div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Vista desktop: tabla completa */}
+                    <div className="hidden md:block overflow-x-auto bg-gray-50 rounded-lg">
                     <table className="w-full text-xs">
                       <thead>
                         <tr className="border-b border-gray-200">
@@ -1382,7 +1449,8 @@ function ModalDetalleJugador({ jugador, onClose, onEdit }: {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                    </div>
+                  </>
                 )}
               </div>
             </>

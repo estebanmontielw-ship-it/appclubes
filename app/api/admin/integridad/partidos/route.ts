@@ -5,51 +5,9 @@ import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
 import { getSchedule } from "@/lib/genius-sports"
 import { isMonitoredTeam, MONITORED_TEAMS } from "@/lib/integridad"
+import { inferStatusFromFiba } from "@/lib/integridad-fetch"
 
 export const dynamic = "force-dynamic"
-
-const FIBA_BASE = "https://fibalivestats.dcd.shared.geniussports.com"
-
-/**
- * Infiere el estado real de un partido desde FibaLiveStats.
- * Genius Warehouse a veces tarda 24-72h en marcar matchStatus=COMPLETE
- * y nunca pasa por IN_PROGRESS para LNB Paraguay (FPB valida manualmente).
- *
- * Devuelve:
- *   "IN_PROGRESS" — período activo, partido en curso
- *   "COMPLETE"    — terminó (período final + reloj 00:00 o flag explícito)
- *   null          — todavía no empezó / sin datos en FibaLiveStats
- */
-async function inferStatusFromFiba(matchId: string): Promise<"IN_PROGRESS" | "COMPLETE" | null> {
-  try {
-    const r = await fetch(`${FIBA_BASE}/data/${matchId}/data.json`, {
-      next: { revalidate: 30 },
-      signal: AbortSignal.timeout(5000),
-    })
-    if (!r.ok) return null
-    const data = await r.json()
-
-    const period = Number(data?.period ?? data?.actual?.period ?? 0)
-    const clockRaw = data?.clock ?? data?.actual?.clock ?? null
-    const clock = typeof clockRaw === "string" ? clockRaw.trim() : null
-
-    // Status explícito si lo provee FibaLiveStats
-    const explicit = String(data?.matchStatus ?? data?.status ?? "").toUpperCase()
-    if (explicit === "FINAL" || explicit === "COMPLETE" || explicit === "FINISHED") return "COMPLETE"
-    if (explicit === "IN_PROGRESS" || explicit === "PLAYING" || explicit === "LIVE") return "IN_PROGRESS"
-
-    // Inferencia por período + reloj
-    if (period <= 0) return null
-    const reglaJugar = period > 0
-    const relojCero = clock === "00:00" || clock === "00:00:00" || clock === "0:00"
-    // Período final típico = 4 (regulación). OT = 5+
-    if (reglaJugar && relojCero && period >= 4) return "COMPLETE"
-    if (reglaJugar) return "IN_PROGRESS"
-    return null
-  } catch {
-    return null
-  }
-}
 
 async function requireSuperAdmin() {
   const cookieStore = cookies()
