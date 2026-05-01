@@ -7,6 +7,7 @@ import { getSchedule } from "@/lib/genius-sports"
 import { detectPatterns, esPartidoCritico, isMonitoredTeam, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot, inferStatusFromFiba } from "@/lib/integridad-fetch"
+import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
 import { emailIntegridadAnalisis } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
@@ -50,10 +51,10 @@ export async function POST(request: Request) {
     const force = url.searchParams.get("force") === "1"
     const sendEmails = url.searchParams.get("sendEmails") !== "0"
 
-    const competitionId = process.env.GENIUS_LNB_COMPETITION_ID
+    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
     if (!competitionId) {
       return NextResponse.json(
-        { error: "Falta GENIUS_LNB_COMPETITION_ID" },
+        { error: "No se pudo resolver el ID de la competencia LNB." },
         { status: 500 }
       )
     }
