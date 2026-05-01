@@ -501,21 +501,25 @@ function TabPartidos() {
   const [bulkResultado, setBulkResultado] = useState<{
     total: number; ok: number; errores: number; conPatrones: number
   } | null>(null)
+  const [totalSchedule, setTotalSchedule] = useState(0)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch(`/api/admin/integridad/partidos`, { credentials: "include" })
+      // Si el usuario está en "Todos", traer TODO el schedule (no solo monitoreados)
+      const queryParam = filtroEstado === "todos" ? "?todos=1" : ""
+      const res = await fetch(`/api/admin/integridad/partidos${queryParam}`, { credentials: "include" })
       const data = await res.json()
       setPartidos(data.partidos || [])
       setMonitoreados(data.monitoreados || [])
       setPendientesAnalisis(data.pendientesAnalisis ?? 0)
+      setTotalSchedule(data.total ?? 0)
     } catch {
       setPartidos([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [filtroEstado])
 
   useEffect(() => { load() }, [load])
 
@@ -680,9 +684,16 @@ function TabPartidos() {
           <Loader2 className="h-4 w-4 animate-spin" /> Cargando partidos…
         </div>
       ) : filtrados.length === 0 ? (
-        <div className="py-12 text-center bg-white rounded-xl border border-gray-100">
+        <div className="py-12 text-center bg-white rounded-xl border border-gray-100 px-4">
           <Shield className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-gray-400">No hay partidos para este filtro</p>
+          <p className="text-gray-400 mb-1">No hay partidos para este filtro</p>
+          <p className="text-xs text-gray-300">
+            {totalSchedule === 0
+              ? "El calendario LNB no devolvió partidos. Verificá GENIUS_LNB_COMPETITION_ID."
+              : partidos.length === 0
+                ? `${totalSchedule} partidos en LNB, pero ninguno con clubes monitoreados. Tocá "Todos" para verlos.`
+                : `${partidos.length} partidos cargados — ninguno coincide con este filtro.`}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
