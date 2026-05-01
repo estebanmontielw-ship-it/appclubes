@@ -4,7 +4,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { getSchedule } from "@/lib/genius-sports"
 import { detectPatterns, esPartidoCritico, isMonitoredTeam, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
-import { buildMatchSnapshot } from "@/lib/integridad-fetch"
+import { buildMatchSnapshot, inferStatusFromFiba } from "@/lib/integridad-fetch"
 import { emailIntegridadAnalisis } from "@/lib/email"
 
 const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
@@ -49,22 +49,16 @@ export async function GET(request: Request) {
     const raw: any = await getSchedule(competitionId)
     const matches: any[] = raw?.response?.data ?? raw?.data ?? []
 
-    // 2. Filtrar finalizados con clubes monitoreados
-    //    Tratamos como finalizado si matchStatus=COMPLETE O si tiene ambos
-    //    scores cargados Y el partido ES DEL PASADO (no de hoy, donde
-    //    podría estar en vivo todavía).
+    // 2. Pre-filtro: monitoreados con scores cargados
     const todayCron = new Date().toISOString().slice(0, 10)
-    const candidatos = matches.filter((m) => {
+    const candidatosPre = matches.filter((m) => {
       const homeC = m.competitors?.find((c: any) => c.isHomeCompetitor === 1) ?? m.competitors?.[0]
       const awayC = m.competitors?.find((c: any) => c.isHomeCompetitor === 0) ?? m.competitors?.[1]
       const sH = homeC?.scoreString ? parseInt(homeC.scoreString, 10) : null
       const sA = awayC?.scoreString ? parseInt(awayC.scoreString, 10) : null
       const tieneScores = sH != null && sA != null &&
         Number.isFinite(sH) && Number.isFinite(sA) && (sH > 0 || sA > 0)
-      const matchTime: string = m.matchTime ?? ""
-      const fechaPartido = matchTime.includes(" ") ? matchTime.split(" ")[0] : matchTime.slice(0, 10)
-      const esEnElPasado = fechaPartido !== "" && fechaPartido < todayCron
-      if (m.matchStatus !== "COMPLETE" && !(tieneScores && esEnElPasado)) return false
+      if (m.matchStatus !== "COMPLETE" && !tieneScores) return false
 
       const homeMonit = isMonitoredTeam(
         homeC?.competitorName ?? "",
@@ -76,6 +70,24 @@ export async function GET(request: Request) {
       )
       return homeMonit || awayMonit
     })
+
+    // 3. Para hoy: chequear FibaLiveStats (descartar IN_PROGRESS)
+    const candidatos: any[] = []
+    for (const m of candidatosPre) {
+      if (m.matchStatus === "COMPLETE") {
+        candidatos.push(m)
+        continue
+      }
+      const matchTime: string = m.matchTime ?? ""
+      const fechaPartido = matchTime.includes(" ") ? matchTime.split(" ")[0] : matchTime.slice(0, 10)
+      const esEnElPasado = fechaPartido !== "" && fechaPartido < todayCron
+      if (esEnElPasado) {
+        candidatos.push(m)
+        continue
+      }
+      const inferred = await inferStatusFromFiba(String(m.matchId))
+      if (inferred === "COMPLETE") candidatos.push(m)
+    }
 
     // 3. Identificar los que NO tienen análisis COMPLETE cacheado
     const cached = await prisma.integridadAnalisis.findMany({
