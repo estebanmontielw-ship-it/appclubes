@@ -3,11 +3,10 @@ import { cookies } from "next/headers"
 import { createClient } from "@/utils/supabase/server"
 import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
-import { getSchedule } from "@/lib/genius-sports"
 import { detectPatterns, esPartidoCritico, isMonitoredTeam, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot, inferStatusFromFiba } from "@/lib/integridad-fetch"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { resolveActiveLnbCompetition } from "@/lib/jugador-stats"
 import { emailIntegridadAnalisis } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
@@ -51,17 +50,17 @@ export async function POST(request: Request) {
     const force = url.searchParams.get("force") === "1"
     const sendEmails = url.searchParams.get("sendEmails") !== "0"
 
-    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
+    const { id: competitionId, matches: schedMatches } = await resolveActiveLnbCompetition()
     if (!competitionId) {
       return NextResponse.json(
-        { error: "No se pudo resolver el ID de la competencia LNB." },
+        { error: "No se pudo resolver el ID de la competencia LNB activa." },
         { status: 500 }
       )
     }
 
     // 1. Schedule
-    const raw: any = await getSchedule(competitionId)
-    const matches: any[] = raw?.response?.data ?? raw?.data ?? []
+    // Reusar las matches que ya trajo el resolver (cache de geniusFetch)
+    const matches: any[] = schedMatches
 
     // 2. Pre-filtro: monitoreados con scores cargados
     //    (descartamos los que no se jugaron todavía sin tocar FibaLiveStats)

@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
 import prisma from "@/lib/prisma"
 import { handleApiError } from "@/lib/api-errors"
-import { getSchedule } from "@/lib/genius-sports"
 import { detectPatterns, esPartidoCritico, isMonitoredTeam, maxSeveridad } from "@/lib/integridad"
 import type { JugadorTier } from "@/lib/integridad"
 import { buildMatchSnapshot, inferStatusFromFiba } from "@/lib/integridad-fetch"
-import { resolveLnbCompetitionIdPublic } from "@/lib/programacion-lnb"
+import { resolveActiveLnbCompetition } from "@/lib/jugador-stats"
 import { emailIntegridadAnalisis } from "@/lib/email"
 
 const INTEGRIDAD_NOTIFY_EMAIL = process.env.INTEGRIDAD_NOTIFY_EMAIL ?? "estebanmontielw@gmail.com"
@@ -38,17 +37,16 @@ export async function GET(request: Request) {
       }
     }
 
-    const { id: competitionId } = await resolveLnbCompetitionIdPublic()
+    const { id: competitionId, matches: schedMatches } = await resolveActiveLnbCompetition()
     if (!competitionId) {
       return NextResponse.json(
-        { error: "No se pudo resolver el ID de la competencia LNB." },
+        { error: "No se pudo resolver el ID de la competencia LNB activa." },
         { status: 500 }
       )
     }
 
-    // 1. Schedule
-    const raw: any = await getSchedule(competitionId)
-    const matches: any[] = raw?.response?.data ?? raw?.data ?? []
+    // 1. Schedule (reusar el del resolver)
+    const matches: any[] = schedMatches
 
     // 2. Pre-filtro: monitoreados con scores cargados
     const todayCron = new Date().toISOString().slice(0, 10)
