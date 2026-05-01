@@ -824,6 +824,11 @@ model IntegridadAnalisis {
 
   estadoPartido     String?
 
+  // Análisis experto generado por Claude
+  aiSummary             String?           @db.Text
+  aiSummaryGeneradoEn   DateTime?
+  aiSummaryModel        String?
+
   generadoEn        DateTime              @default(now())
   actualizadoEn     DateTime              @updatedAt
   generadoPor       String?
