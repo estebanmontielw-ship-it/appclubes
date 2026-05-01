@@ -143,28 +143,224 @@ async function scrapeDraftKings(_matchId: string): Promise<ScrapeResultado> {
 // ─── Sites con LNB Paraguay (más probable que funcione) ──────
 
 /**
- * SofaScore — tiene cuotas de LNB Paraguay (parcialmente).
- * Estructura: requiere matchId de SofaScore (distinto al de Genius).
- * Estrategia: buscar por nombres de equipos.
+ * Normaliza un nombre para comparación (lowercase, sin tildes, etc.)
  */
-async function scrapeSofaScore(matchId: string, equipoLocal: string, equipoVisit: string): Promise<ScrapeResultado> {
-  // Search API pública de SofaScore (sin auth)
-  const q = encodeURIComponent(equipoLocal.split(" ")[0])
-  const r = await safeFetch(`https://api.sofascore.com/api/v1/search/teams?q=${q}`, {}, 6000)
+function normName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z\s]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+/** Convierte odds fraccional ("5/4") a decimal (2.25). */
+function fractionalToDecimal(frac: string | undefined): number | null {
+  if (!frac) return null
+  const m = frac.match(/^(\d+)\/(\d+)$/)
+  if (!m) return null
+  const num = parseInt(m[1], 10), den = parseInt(m[2], 10)
+  if (den === 0) return null
+  return Math.round((num / den + 1) * 1000) / 1000
+}
+
+/**
+ * SofaScore — API JSON pública, sin auth. Cubre LNB Paraguay.
+ *
+ * Estrategia:
+ * 1. Llamar /sport/basketball/scheduled-events/{fecha} para traer todos
+ *    los partidos de basket de ese día a nivel global.
+ * 2. Filtrar por nombres de equipos normalizados.
+ * 3. Para el event encontrado, llamar /event/{id}/odds/1/all.
+ * 4. Parsear los markets (Total over/under, 1X2 money line, Asian handicap).
+ */
+async function scrapeSofaScore(
+  matchId: string,
+  equipoLocal: string,
+  equipoVisit: string,
+  fecha?: string
+): Promise<ScrapeResultado> {
+  if (!fecha) {
+    return {
+      fuente: "sofascore",
+      ok: false,
+      cuotas: [],
+      errorMessage: "FECHA_REQUERIDA",
+      notas: "Necesito la fecha del partido para buscarlo en SofaScore",
+    }
+  }
+
+  // 1. Traer partidos del día
+  const r = await safeFetch(
+    `https://api.sofascore.com/api/v1/sport/basketball/scheduled-events/${fecha}`,
+    {},
+    8000
+  )
   if (!r || !r.ok) {
     return {
       fuente: "sofascore",
       ok: false,
       cuotas: [],
       errorMessage: r ? `HTTP ${r.status}` : "TIMEOUT",
+      notas: "SofaScore scheduled-events no respondió",
     }
   }
+  const data = await r.json()
+  const events: any[] = data?.events ?? []
+
+  // 2. Buscar match por nombre de equipos
+  const localNorm = normName(equipoLocal)
+  const visitNorm = normName(equipoVisit)
+  let evento: any = null
+  for (const ev of events) {
+    const home = normName(ev.homeTeam?.name ?? "")
+    const away = normName(ev.awayTeam?.name ?? "")
+    const matchHome =
+      home === localNorm || home.includes(localNorm) || localNorm.includes(home)
+    const matchAway =
+      away === visitNorm || away.includes(visitNorm) || visitNorm.includes(away)
+    if (matchHome && matchAway) {
+      evento = ev
+      break
+    }
+  }
+
+  if (!evento) {
+    // Filtrar a Paraguay para mejor diagnóstico
+    const enParaguay = events.filter((ev) =>
+      String(ev.tournament?.category?.name ?? "")
+        .toLowerCase()
+        .includes("paraguay")
+    )
+    return {
+      fuente: "sofascore",
+      ok: false,
+      cuotas: [],
+      errorMessage: "NOT_FOUND",
+      notas: `No se encontró el partido en SofaScore (${events.length} eventos basket ese día, ${enParaguay.length} en Paraguay). Buscado: ${localNorm} vs ${visitNorm}.`,
+    }
+  }
+
+  const sofaEventId = evento.id
+
+  // 3. Traer odds del event
+  const oddsR = await safeFetch(
+    `https://api.sofascore.com/api/v1/event/${sofaEventId}/odds/1/all`,
+    {},
+    8000
+  )
+  if (!oddsR || !oddsR.ok) {
+    return {
+      fuente: "sofascore",
+      ok: false,
+      cuotas: [],
+      errorMessage: oddsR ? `ODDS_HTTP_${oddsR.status}` : "ODDS_TIMEOUT",
+      notas: `Match encontrado (SofaScore eventId ${sofaEventId}) pero el endpoint de odds falló. Posible: el partido es muy antiguo o no tiene cuotas en SofaScore.`,
+    }
+  }
+  const oddsData = await oddsR.json()
+  const markets: any[] = oddsData?.markets ?? []
+
+  if (markets.length === 0) {
+    return {
+      fuente: "sofascore",
+      ok: false,
+      cuotas: [],
+      errorMessage: "NO_ODDS",
+      notas: `SofaScore tiene el partido (eventId ${sofaEventId}) pero no publica cuotas. Esto es típico de ligas tier-2 latinoamericanas.`,
+    }
+  }
+
+  // 4. Parsear markets a CuotaCapturada
+  const cuotas: CuotaCapturada[] = []
+  const fuenteUrl = `https://www.sofascore.com/event/${sofaEventId}`
+
+  for (const market of markets) {
+    const name = String(market.marketName ?? "").toLowerCase()
+
+    // Money line (1X2)
+    if (name === "1x2" || name === "full time") {
+      for (const c of market.choices ?? []) {
+        const decimal = fractionalToDecimal(c.fractionalValue)
+        if (decimal == null) continue
+        const lado: "home" | "away" | null =
+          c.name === "1" ? "home" : c.name === "2" ? "away" : null
+        if (!lado) continue
+        cuotas.push({
+          fuente: "sofascore",
+          fuenteUrl,
+          mercado: "money_line",
+          linea: null,
+          lado,
+          cuota: decimal,
+          raw: { marketName: market.marketName, choice: c },
+        })
+      }
+    }
+
+    // Total over/under
+    else if (name === "total" || name === "total points" || name.includes("total")) {
+      const linea = market.choiceGroup ? parseFloat(market.choiceGroup) : null
+      for (const c of market.choices ?? []) {
+        const decimal = fractionalToDecimal(c.fractionalValue)
+        if (decimal == null) continue
+        const cn = String(c.name ?? "").toLowerCase()
+        const lado: "over" | "under" | null = cn.includes("over")
+          ? "over"
+          : cn.includes("under")
+            ? "under"
+            : null
+        if (!lado) continue
+        cuotas.push({
+          fuente: "sofascore",
+          fuenteUrl,
+          mercado: "total_over_under",
+          linea,
+          lado,
+          cuota: decimal,
+          raw: { marketName: market.marketName, choice: c },
+        })
+      }
+    }
+
+    // Asian handicap (spread)
+    else if (name.includes("handicap") || name.includes("spread")) {
+      const linea = market.choiceGroup ? parseFloat(market.choiceGroup) : null
+      for (const c of market.choices ?? []) {
+        const decimal = fractionalToDecimal(c.fractionalValue)
+        if (decimal == null) continue
+        const lado: "home" | "away" | null =
+          c.name === "1" ? "home" : c.name === "2" ? "away" : null
+        if (!lado) continue
+        cuotas.push({
+          fuente: "sofascore",
+          fuenteUrl,
+          mercado: "spread",
+          linea,
+          lado,
+          cuota: decimal,
+          raw: { marketName: market.marketName, choice: c },
+        })
+      }
+    }
+  }
+
+  if (cuotas.length === 0) {
+    return {
+      fuente: "sofascore",
+      ok: false,
+      cuotas: [],
+      errorMessage: "MARKETS_NO_PARSED",
+      notas: `SofaScore devolvió ${markets.length} markets pero ninguno parseable a 1X2 / Total / Spread. Markets: ${markets.map((m) => m.marketName).join(", ")}`,
+    }
+  }
+
   return {
     fuente: "sofascore",
-    ok: false,
-    cuotas: [],
-    errorMessage: "MATCH_RESOLVE_PENDIENTE",
-    notas: `Equipo encontrado en SofaScore pero el cruce con Genius matchId ${matchId} requiere mapeo manual. Pasame ejemplo de partido SofaScore para implementarlo.`,
+    ok: true,
+    cuotas,
+    notas: `Match encontrado en SofaScore (eventId ${sofaEventId}, "${evento.tournament?.name}"). ${cuotas.length} cuotas extraídas.`,
   }
 }
 
@@ -190,14 +386,15 @@ async function scrapeFlashscore(_matchId: string): Promise<ScrapeResultado> {
 export async function scrapeCuotasPartido(
   matchId: string,
   equipoLocal: string,
-  equipoVisit: string
+  equipoVisit: string,
+  fecha?: string
 ): Promise<ScrapeResultado[]> {
   const resultados = await Promise.all([
     scrapeLeoVegas(matchId),
     scrapeCasaApostas(matchId),
     scrapeOrenes(matchId),
     scrapeDraftKings(matchId),
-    scrapeSofaScore(matchId, equipoLocal, equipoVisit),
+    scrapeSofaScore(matchId, equipoLocal, equipoVisit, fecha),
     scrapeFlashscore(matchId),
   ])
   return resultados
