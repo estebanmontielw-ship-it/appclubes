@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import {
   Activity, AlertTriangle, AlertCircle, Loader2, RefreshCw, Play,
-  Shield, Users, ExternalLink, ChevronRight, X, FileText, Clock, Radio,
+  Shield, Users, ExternalLink, ChevronRight, X, FileText, Clock, Radio, Download,
 } from "lucide-react"
 
 // ─── TIPOS ───────────────────────────────────────────────────
@@ -945,7 +945,7 @@ function ModalAnalisis({ matchId, partidoEnVivo, onClose, onReanalizar, reanaliz
           )}
         </div>
 
-        <div className="flex justify-between gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
+        <div className="flex flex-wrap justify-between gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
           <a
             href={`https://fibalivestats.dcd.shared.geniussports.com/u/FPB/${matchId}/`}
             target="_blank"
@@ -954,13 +954,25 @@ function ModalAnalisis({ matchId, partidoEnVivo, onClose, onReanalizar, reanaliz
           >
             <ExternalLink className="h-4 w-4" /> Ver en FibaLiveStats
           </a>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-white"
             >
               Cerrar
             </button>
+            {analisis && (
+              <button
+                onClick={async () => {
+                  const { generarPDFAnalisis } = await import("@/lib/integridad-pdf")
+                  await generarPDFAnalisis(analisis)
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-primary text-sm font-medium hover:bg-primary/5"
+                title="Descargar reporte en PDF"
+              >
+                <Download className="h-4 w-4" /> PDF
+              </button>
+            )}
             <button
               onClick={onReanalizar}
               disabled={reanalizando}
@@ -1493,10 +1505,22 @@ function ModalDetalleJugador({ jugador, onClose, onEdit }: {
           )}
         </div>
 
-        <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
+        <div className="flex flex-wrap justify-end gap-2 px-5 py-3 border-t border-gray-100 bg-gray-50 shrink-0">
           <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm font-medium text-gray-700 hover:bg-white">
             Cerrar
           </button>
+          {data && (
+            <button
+              onClick={async () => {
+                const { generarPDFJugador } = await import("@/lib/integridad-pdf")
+                await generarPDFJugador(data)
+              }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-primary text-sm font-medium hover:bg-primary/5"
+              title="Descargar dossier en PDF"
+            >
+              <Download className="h-4 w-4" /> PDF
+            </button>
+          )}
           <button
             onClick={onEdit}
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:bg-primary/90"
