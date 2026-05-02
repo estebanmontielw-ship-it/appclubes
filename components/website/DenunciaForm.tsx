@@ -11,6 +11,85 @@ const TIPOS = [
   { value: "OTRA", label: "Otra situación irregular" },
 ]
 
+/**
+ * Recolecta metadata del browser para audit trail.
+ * Cumple con el disclaimer del form ("se conservan datos técnicos del envío").
+ */
+async function collectFingerprint(): Promise<Record<string, unknown>> {
+  if (typeof window === "undefined") return {}
+  try {
+    const nav = window.navigator as Navigator & { deviceMemory?: number }
+    const screen = window.screen
+    const screenInfo = `${screen.width}x${screen.height}@${window.devicePixelRatio ?? 1}x · ${screen.colorDepth}bpp`
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const languages = Array.isArray(nav.languages) ? nav.languages.join(",") : nav.language
+
+    // Canvas fingerprint
+    let canvasHash = ""
+    try {
+      const canvas = document.createElement("canvas")
+      canvas.width = 200; canvas.height = 50
+      const ctx = canvas.getContext("2d")
+      if (ctx) {
+        ctx.textBaseline = "top"
+        ctx.font = "14px Arial"
+        ctx.fillStyle = "#f60"
+        ctx.fillRect(0, 0, 100, 50)
+        ctx.fillStyle = "#069"
+        ctx.fillText("CPB-FP-2026", 2, 15)
+        ctx.fillStyle = "rgba(102, 204, 0, 0.7)"
+        ctx.fillText("CPB-FP-2026", 4, 17)
+        canvasHash = canvas.toDataURL().slice(-50)
+      }
+    } catch { /* canvas blocked by privacy extensions */ }
+
+    // WebGL fingerprint
+    let webglHash = ""
+    try {
+      const c = document.createElement("canvas")
+      const gl = c.getContext("webgl") || c.getContext("experimental-webgl") as WebGLRenderingContext | null
+      if (gl) {
+        const debug = gl.getExtension("WEBGL_debug_renderer_info")
+        if (debug) {
+          webglHash = `${gl.getParameter(debug.UNMASKED_VENDOR_WEBGL)}|${gl.getParameter(debug.UNMASKED_RENDERER_WEBGL)}`
+        }
+      }
+    } catch { /* webgl blocked */ }
+
+    // Hash combinado
+    const fpString = [
+      nav.userAgent, screenInfo, tz, languages, nav.platform,
+      nav.hardwareConcurrency, (nav as any).deviceMemory,
+      canvasHash, webglHash,
+    ].join("|")
+    const fpHash = await sha256(fpString)
+
+    return {
+      browserFingerprint: fpHash,
+      screenInfo,
+      timezone: tz,
+      platform: nav.platform || null,
+      languages: languages || null,
+      hardwareConcurrency: nav.hardwareConcurrency ?? null,
+      deviceMemory: nav.deviceMemory ?? null,
+    }
+  } catch {
+    return {}
+  }
+}
+
+async function sha256(input: string): Promise<string> {
+  if (typeof crypto !== "undefined" && crypto.subtle) {
+    const buf = new TextEncoder().encode(input)
+    const hash = await crypto.subtle.digest("SHA-256", buf)
+    return Array.from(new Uint8Array(hash)).map((b) => b.toString(16).padStart(2, "0")).join("")
+  }
+  // Fallback simple (rare)
+  let h = 0
+  for (let i = 0; i < input.length; i++) h = ((h << 5) - h + input.charCodeAt(i)) | 0
+  return Math.abs(h).toString(16)
+}
+
 interface ArchivoSubido {
   path: string
   name: string
@@ -85,6 +164,8 @@ export default function DenunciaForm() {
 
     setSubmitting(true)
     try {
+      // Recolectar metadata de auditoría (compliant con disclaimer del form)
+      const fingerprint = await collectFingerprint()
       const res = await fetch("/api/denuncias", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,6 +183,7 @@ export default function DenunciaForm() {
           contactoNombre: modo === "identificado" ? contactoNombre.trim() : null,
           contactoEmail: modo === "identificado" ? contactoEmail.trim() : null,
           contactoTelefono: modo === "identificado" ? contactoTelefono.trim() : null,
+          ...fingerprint,
         }),
       })
       const data = await res.json()
@@ -356,7 +438,7 @@ export default function DenunciaForm() {
               className="mt-0.5"
             />
             <div>
-              <p className="text-sm font-semibold text-gray-900">Enviar de forma anónima</p>
+              <p className="text-sm font-semibold text-gray-900">Enviar de forma confidencial</p>
               <p className="text-xs text-gray-500 mt-0.5">No se guarda tu nombre ni datos de contacto.</p>
             </div>
           </label>
@@ -381,6 +463,9 @@ export default function DenunciaForm() {
             </div>
           </label>
         </div>
+        <p className="text-[11px] text-gray-400 italic mt-3 leading-relaxed">
+          Las denuncias confidenciales son resguardadas por el equipo CPB. Para auditoría y prevención de spam se conservan datos técnicos del envío.
+        </p>
 
         {modo === "identificado" && (
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">

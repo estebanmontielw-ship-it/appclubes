@@ -25,6 +25,11 @@ yarn-error.log*
 
 # local env files
 .env*.local
+.env
+.env.development
+.env.production
+.env.test
+.env.staging
 
 # vercel
 .vercel
@@ -33,3 +38,22 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 .apple-pass/
+
+# datos sensibles / backups (denuncias, integridad, etc.)
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql.bak
+/backups/
+/data-exports/
+/dumps/
+
+# secrets / certs
+*.key
+*.pfx
+*.p12
+*.cer
+service-account*.json
+firebase-adminsdk*.json
+
