@@ -501,23 +501,17 @@ export default function DenunciaForm() {
       </div>
 
       {/* Aviso de privacidad */}
-      <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
-        <div className="flex gap-3">
-          <Shield className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
-          <div className="text-xs text-blue-900 space-y-2">
-            <p className="font-semibold">Aviso de privacidad y confidencialidad</p>
+      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
+        <div className="flex gap-2.5">
+          <Shield className="h-4 w-4 text-gray-500 shrink-0 mt-0.5" />
+          <div className="text-xs text-gray-700 space-y-2">
+            <p className="font-semibold text-gray-800">Aviso de privacidad y confidencialidad</p>
             <p>
-              Toda la información recibida será tratada con <strong>absoluta confidencialidad</strong> por la
-              Confederación Paraguaya de Básquetbol y, si corresponde, por las autoridades de integridad
-              deportiva (FIBA, Justicia Ordinaria).
+              Para verificar la autenticidad de las denuncias y prevenir spam,
+              se registran datos técnicos del envío. Esta información solo es accedida por el
+              equipo de integridad de la CPB. <strong>Tu identidad no se hace pública.</strong>
             </p>
-            <p>
-              Para prevenir el abuso del sistema, se registran datos técnicos mínimos (fecha y hora del envío,
-              navegador y un <strong>hash anónimo</strong> de la dirección IP). Estos datos no permiten
-              identificarte personalmente y se utilizan únicamente para detectar denuncias falsas reiteradas o
-              spam. Tu IP real <strong>no se almacena</strong>.
-            </p>
-            <label className="flex items-start gap-2 mt-3 cursor-pointer">
+            <label className="flex items-start gap-2 mt-2 cursor-pointer">
               <input
                 type="checkbox"
                 checked={aceptoTerminos}
