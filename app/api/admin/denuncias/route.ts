@@ -67,7 +67,23 @@ export async function GET(request: Request) {
       prisma.denuncia.count({ where: { estado: "NUEVA" } }),
     ])
 
-    return NextResponse.json({ denuncias, totalNuevas })
+    // Cross-clustering: para cada denuncia, contar cuántas otras denuncias
+    // hay del mismo reportante (matched por ipReal, ipHash o fingerprint)
+    const denunciasConCluster = await Promise.all(
+      denuncias.map(async (d) => {
+        const orConditions: any[] = []
+        if (d.ipReal) orConditions.push({ ipReal: d.ipReal })
+        if (d.ipHash) orConditions.push({ ipHash: d.ipHash })
+        if (d.browserFingerprint) orConditions.push({ browserFingerprint: d.browserFingerprint })
+        if (orConditions.length === 0) return { ...d, relacionadas: 0 }
+        const total = await prisma.denuncia.count({
+          where: { id: { not: d.id }, OR: orConditions },
+        })
+        return { ...d, relacionadas: total }
+      })
+    )
+
+    return NextResponse.json({ denuncias: denunciasConCluster, totalNuevas })
   } catch (error) {
     return handleApiError(error, { context: "GET /api/admin/denuncias" })
   }

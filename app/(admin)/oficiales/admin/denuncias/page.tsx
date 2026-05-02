@@ -64,6 +64,8 @@ interface Denuncia {
   notasAdmin: string | null
   createdAt: string
   updatedAt: string
+  // Cross-clustering
+  relacionadas?: number
 }
 
 const TABS = [
@@ -209,6 +211,14 @@ export default function AdminDenunciasPage() {
                         <Paperclip className="h-3 w-3" /> Evidencia
                       </span>
                     )}
+                    {d.relacionadas != null && d.relacionadas > 0 && (
+                      <span
+                        className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200"
+                        title="Otras denuncias de este reportante"
+                      >
+                        🔗 +{d.relacionadas}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-gray-700 mt-1 line-clamp-2 break-words">{d.descripcion}</p>
                   <div className="flex items-center gap-x-3 gap-y-1 mt-1.5 text-xs text-gray-400 flex-wrap">
@@ -254,6 +264,12 @@ function DenunciaDetalle({
   const [saving, setSaving] = useState(false)
   const [evidencia, setEvidencia] = useState<{ path: string; url: string | null; error?: string }[]>([])
   const [loadingEvidencia, setLoadingEvidencia] = useState(false)
+  const [relacionadas, setRelacionadas] = useState<Array<{
+    id: string; tipoSituacion: string; descripcion: string; modo: string;
+    contactoNombre: string | null; estado: string; createdAt: string;
+    motivos: string[]; pais: string | null; ciudad: string | null;
+  }>>([])
+  const [loadingRel, setLoadingRel] = useState(false)
 
   useEffect(() => {
     setEstado(denuncia.estado)
@@ -268,6 +284,13 @@ function DenunciaDetalle({
     } else {
       setEvidencia([])
     }
+    // Traer denuncias relacionadas (mismo reportante)
+    setLoadingRel(true)
+    fetch(`/api/admin/denuncias/${denuncia.id}/relacionadas`, { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => setRelacionadas(data.relacionadas || []))
+      .catch(() => setRelacionadas([]))
+      .finally(() => setLoadingRel(false))
   }, [denuncia])
 
   async function save() {
@@ -405,6 +428,58 @@ function DenunciaDetalle({
                 <p className="text-sm text-gray-800 inline-flex items-center gap-2">
                   <Phone className="h-3.5 w-3.5 text-gray-400" /> {denuncia.contactoTelefono}
                 </p>
+              )}
+            </div>
+          )}
+
+          {/* Otras denuncias del mismo reportante (cross-clustering) */}
+          {(loadingRel || relacionadas.length > 0) && (
+            <div className="bg-purple-50 border border-purple-100 rounded-lg p-3">
+              <p className="text-xs font-semibold text-purple-800 mb-2 inline-flex items-center gap-1.5">
+                🔗 Otras denuncias de este reportante {relacionadas.length > 0 && `(${relacionadas.length})`}
+              </p>
+              {loadingRel ? (
+                <p className="text-xs text-purple-600 inline-flex items-center gap-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Buscando relaciones...
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {relacionadas.map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => onUpdated({ ...denuncia, id: r.id } as Denuncia)}
+                      className="block w-full text-left bg-white border border-purple-100 rounded-lg p-2.5 hover:border-purple-300 hover:shadow-sm transition-all"
+                    >
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold border ${ESTADO_COLORS[r.estado]}`}>
+                          {ESTADO_LABELS[r.estado]}
+                        </span>
+                        <span className="text-[10px] text-gray-500">{TIPO_LABELS[r.tipoSituacion]}</span>
+                        <span className="text-[10px] text-gray-400 ml-auto">
+                          {new Date(r.createdAt).toLocaleString("es-PY", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-700 line-clamp-2">{r.descripcion}</p>
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {r.motivos.includes("misma_ip") && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-red-100 text-red-700">MISMA IP</span>
+                        )}
+                        {r.motivos.includes("mismo_navegador") && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">MISMO NAVEGADOR</span>
+                        )}
+                        {r.motivos.includes("mismo_ip_hash") && !r.motivos.includes("misma_ip") && (
+                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">MISMA RED</span>
+                        )}
+                        {r.modo === "identificado" && r.contactoNombre && (
+                          <span className="text-[10px] text-purple-700">· {r.contactoNombre}</span>
+                        )}
+                        {r.pais && (
+                          <span className="text-[10px] text-gray-400 ml-auto">{r.ciudad ?? ""} {r.pais}</span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           )}
