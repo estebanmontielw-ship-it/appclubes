@@ -45,6 +45,21 @@ interface Denuncia {
   contactoTelefono: string | null
   ipHash: string | null
   userAgent: string | null
+  // Captura forense
+  ipReal: string | null
+  pais: string | null
+  region: string | null
+  ciudad: string | null
+  asn: string | null
+  referer: string | null
+  acceptLanguage: string | null
+  browserFingerprint: string | null
+  screenInfo: string | null
+  timezone: string | null
+  platform: string | null
+  languages: string | null
+  hardwareConcurrency: number | null
+  deviceMemory: number | null
   estado: string
   notasAdmin: string | null
   createdAt: string
@@ -394,13 +409,52 @@ function DenunciaDetalle({
             </div>
           )}
 
-          {/* Metadata técnica */}
-          <details className="bg-gray-50 rounded-lg p-3 text-xs">
-            <summary className="cursor-pointer font-semibold text-gray-600">Metadata técnica</summary>
-            <div className="mt-2 space-y-1 text-gray-500 font-mono">
-              <p>IP hash: {denuncia.ipHash || "—"}</p>
-              <p className="break-all">User agent: {denuncia.userAgent || "—"}</p>
-              <p>ID interno: {denuncia.id}</p>
+          {/* Forensic data — solo visible para SUPER_ADMIN */}
+          <details className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs">
+            <summary className="cursor-pointer font-semibold text-amber-800">
+              🔒 Datos forenses del reportante
+            </summary>
+            <div className="mt-3 space-y-3">
+              {/* Ubicación */}
+              {(denuncia.pais || denuncia.ciudad || denuncia.asn) && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">Ubicación / Conexión</p>
+                  <div className="space-y-0.5 text-gray-700 font-mono">
+                    {denuncia.pais && <p>País: {denuncia.pais}{denuncia.region ? ` · ${denuncia.region}` : ""}{denuncia.ciudad ? ` · ${denuncia.ciudad}` : ""}</p>}
+                    {denuncia.asn && <p>ASN: {denuncia.asn}</p>}
+                    {denuncia.ipReal && <p className="break-all">IP: {denuncia.ipReal}</p>}
+                    <p className="break-all">IP hash: {denuncia.ipHash || "—"}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Browser fingerprint */}
+              {(denuncia.browserFingerprint || denuncia.screenInfo) && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">Browser Fingerprint</p>
+                  <div className="space-y-0.5 text-gray-700 font-mono">
+                    {denuncia.browserFingerprint && <p className="break-all">FP: {denuncia.browserFingerprint.slice(0, 32)}…</p>}
+                    {denuncia.screenInfo && <p>Pantalla: {denuncia.screenInfo}</p>}
+                    {denuncia.platform && <p>Plataforma: {denuncia.platform}</p>}
+                    {denuncia.timezone && <p>Zona horaria: {denuncia.timezone}</p>}
+                    {denuncia.languages && <p>Idiomas: {denuncia.languages}</p>}
+                    {denuncia.hardwareConcurrency != null && <p>CPU cores: {denuncia.hardwareConcurrency}</p>}
+                    {denuncia.deviceMemory != null && <p>RAM (GB): {denuncia.deviceMemory}</p>}
+                  </div>
+                </div>
+              )}
+
+              {/* Headers */}
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-amber-700 font-bold mb-1">Request</p>
+                <div className="space-y-0.5 text-gray-700 font-mono">
+                  <p className="break-all">User agent: {denuncia.userAgent || "—"}</p>
+                  {denuncia.acceptLanguage && <p>Accept-Lang: {denuncia.acceptLanguage}</p>}
+                  {denuncia.referer && <p className="break-all">Referer: {denuncia.referer}</p>}
+                </div>
+              </div>
+
+              <p className="text-[10px] text-gray-400 mt-2 pt-2 border-t border-amber-200">ID interno: {denuncia.id}</p>
             </div>
           </details>
 

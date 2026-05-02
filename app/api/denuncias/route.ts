@@ -30,6 +30,19 @@ function getClientIp(request: Request): string {
   return "unknown"
 }
 
+/** Extrae geo del header de Vercel/Cloudflare. */
+function getGeoFromHeaders(request: Request): {
+  pais: string | null; region: string | null; ciudad: string | null; asn: string | null
+} {
+  const h = request.headers
+  return {
+    pais: h.get("x-vercel-ip-country") ?? h.get("cf-ipcountry") ?? null,
+    region: h.get("x-vercel-ip-country-region") ?? null,
+    ciudad: h.get("x-vercel-ip-city") ?? h.get("cf-ipcity") ?? null,
+    asn: h.get("x-vercel-ip-asn") ?? h.get("cf-ipasn") ?? null,
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
@@ -86,7 +99,11 @@ export async function POST(request: Request) {
 
     const ip = getClientIp(request)
     const ipHash = ip !== "unknown" ? hashIp(ip) : null
+    const ipReal = ip !== "unknown" ? ip : null
     const userAgent = request.headers.get("user-agent")?.slice(0, 500) || null
+    const geo = getGeoFromHeaders(request)
+    const referer = request.headers.get("referer")?.slice(0, 500) || null
+    const acceptLanguage = request.headers.get("accept-language")?.slice(0, 200) || null
 
     // Anti-spam: bloquear si hay > 5 denuncias del mismo ipHash en las últimas 24 hs
     if (ipHash) {
@@ -101,6 +118,15 @@ export async function POST(request: Request) {
         )
       }
     }
+
+    // Datos forenses del cliente (capturados por el form)
+    const browserFingerprint = typeof body.browserFingerprint === "string" ? body.browserFingerprint.slice(0, 200) : null
+    const screenInfo = typeof body.screenInfo === "string" ? body.screenInfo.slice(0, 100) : null
+    const timezone = typeof body.timezone === "string" ? body.timezone.slice(0, 100) : null
+    const platform = typeof body.platform === "string" ? body.platform.slice(0, 100) : null
+    const languages = typeof body.languages === "string" ? body.languages.slice(0, 200) : null
+    const hardwareConcurrency = typeof body.hardwareConcurrency === "number" ? body.hardwareConcurrency : null
+    const deviceMemory = typeof body.deviceMemory === "number" ? body.deviceMemory : null
 
     const denuncia = await prisma.denuncia.create({
       data: {
@@ -121,6 +147,21 @@ export async function POST(request: Request) {
         contactoTelefono: modoFinal === "identificado" ? contactoTelefono?.toString().slice(0, 50) || null : null,
         ipHash,
         userAgent,
+        // Captura forense ampliada (cumple con disclaimer del form)
+        ipReal,
+        pais: geo.pais,
+        region: geo.region,
+        ciudad: geo.ciudad,
+        asn: geo.asn,
+        referer,
+        acceptLanguage,
+        browserFingerprint,
+        screenInfo,
+        timezone,
+        platform,
+        languages,
+        hardwareConcurrency,
+        deviceMemory,
       },
       select: { id: true, createdAt: true },
     })

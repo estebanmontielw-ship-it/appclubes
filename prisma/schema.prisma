@@ -752,6 +752,21 @@ model Denuncia {
   contactoTelefono        String?
   ipHash                  String?
   userAgent               String?
+  // Captura forense ampliada (cumplimiento Ley 6534/2020 con disclaimer en form)
+  ipReal                  String?
+  pais                    String?
+  region                  String?
+  ciudad                  String?
+  asn                     String?
+  referer                 String?               @db.Text
+  acceptLanguage          String?
+  browserFingerprint      String?
+  screenInfo              String?
+  timezone                String?
+  platform                String?
+  languages               String?
+  hardwareConcurrency     Int?
+  deviceMemory            Int?
   estado                  EstadoDenuncia        @default(NUEVA)
   notasAdmin              String?               @db.Text
   createdAt               DateTime              @default(now())
@@ -760,7 +775,26 @@ model Denuncia {
   @@index([estado])
   @@index([createdAt])
   @@index([ipHash])
+  @@index([ipReal])
+  @@index([browserFingerprint])
+  @@index([pais])
   @@map("denuncias")
+}
+
+model DenunciaAccesoLog {
+  id              String   @id @default(uuid())
+  denunciaId      String
+  userId          String?
+  userEmail       String?
+  accion          String   // 'view' | 'edit' | 'export'
+  ipAdmin         String?
+  userAgentAdmin  String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  @@index([denunciaId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("denuncias_acceso_log")
 }
 
 // ─── ANÁLISIS DE INTEGRIDAD — Detección de manipulación ──
